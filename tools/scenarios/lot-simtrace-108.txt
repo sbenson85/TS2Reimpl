@@ -1,0 +1,26 @@
+# SimAntics primitive trace (host control "simtrace", host/control_simtrace.cpp): load Belladonna
+# Cove, enter lot 108 (household FAMI 0x3, two Sims; the second scenario for person primitives), close the aspiration tutorial and the
+# game-tips question (a modal dialog: the game stays paused under it), press play (the lot opens
+# paused) and write the next 300000 primitives and calls to simtrace.txt next to the executable.
+# Every click is a host "click" at a fixed tick or simulator frame (wall-clock clicks seen at ticks ~900, 1027, 3085
+# and 3304), so with -Seed each run starts the trace from the same inputs (compare runs with
+# tools/simtrace.py diff). Run with -ResetUserData -Seed N.
+start; wait:5                      # the host empties ts2control.txt as it starts
+ctl:atframe 950 click 1004 660     # Belladonna Cove thumbnail
+ctl:atframe 1100 click 1216 1022   # Play
+ctl:atframe 3300 click 1272 858    # OK on the "expansion packs have no neighbourhood" notice
+ctl:atframe 3500 click 1280 962    # close the welcome album
+ctl:atframe 4200 loadlot 108
+# On the lot: counted in simulator frames from the enter-lot request (the load's stages finish a
+# frame or two apart between runs; simulator frames line up). ~1000 is about tick 5400.
+ctl:atframe 4200 aftersimframes 1000 click 2376 116   # Continue, tutorial steps 1-4
+ctl:atframe 4200 aftersimframes 1040 click 2376 116
+ctl:atframe 4200 aftersimframes 1080 click 2376 116
+ctl:atframe 4200 aftersimframes 1120 click 2376 116
+ctl:atframe 4200 aftersimframes 1160 click 1346 766   # No on "enable Game Tips?"
+ctl:atframe 4200 aftersimframes 1200 click 304 1328   # play (normal speed)
+ctl:atframe 4200 aftersimframes 1240 simtrace 300000
+until:simtrace: tracing,900
+shot:running
+wait:60
+shot:traced; log; stop; wait:5

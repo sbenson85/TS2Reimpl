@@ -1,0 +1,28 @@
+# Load / re-save on a household lot: load Belladonna Cove, enter lot 10 (family FAMI 0x8, one Sim),
+# screenshot it once loaded (the live-mode panel shows the household's funds), save through the UI and
+# screenshot again. Run with -ResetUserData -Seed N, and -Baseline for a prepared or edited user-data
+# folder (local/baselines/). Coordinates are client pixels of the 2560x1360 window (screenshots are
+# downscaled by 2).
+#
+# The save goes through the Options panel's Save button, not `post 0xacfd5984`: on a household lot the
+# posted message faults in the original as well (cTSGameStateController::DoMessage reaches an interface
+# 0x65297976 lookup that is null without the UI's state), and so does any save while a modal dialog is
+# open. The sim stays paused after the lot loads, so the click's wall-clock timing doesn't change what
+# is saved.
+start; wait:35
+ctl:atframe 4200 loadlot 10
+click:1004,660; wait:5        # Belladonna Cove thumbnail
+click:1216,1022; wait:80      # Play
+click:1272,858; wait:8        # OK on the "expansion packs have no neighbourhood" notice
+click:1280,962                # close the welcome album
+until:control: frame 4200,300
+wait:45
+shot:loaded
+# On first entry: the 4-step "Your Sims Have Aspirations!" tutorial, then the stuff pack's Game Tips
+# question. A prepared baseline has seen both, so these clicks then land on the lot view (harmless).
+click:2376,116; wait:3; click:2376,116; wait:3; click:2376,116; wait:3; click:2376,116; wait:3
+click:1346,766; wait:3        # "No" to Game Tips
+click:192,1310; wait:3        # Options ("...")
+click:294,1294; wait:40       # Save
+shot:saved; log; stop; wait:5
+snap:saved

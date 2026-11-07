@@ -1,0 +1,16 @@
+# Milestone E run (docs/subsystems/startup.md, "Milestone E: the exact run"): boot, load Belladonna Cove, enter lot 6,
+# let it run 600 simulator frames, then quit through the game's own quit request (host `quit`) and wait for the process
+# to end by itself; the exit line (ts2exit.txt) is printed. Set [Startup] OwnStart in ts2reimpl.ini (0, 1, 2) first.
+# For modes 1/2 also check the host log's own start lines (runbook). Run with -ResetUserData.
+start; wait:5
+ctl:atframe 950 click 1004 660     # Belladonna Cove thumbnail
+ctl:atframe 1100 click 1216 1022   # Play
+ctl:atframe 3300 click 1272 858    # OK on the "expansion packs have no neighbourhood" notice
+ctl:atframe 3500 click 1280 962    # close the welcome album
+ctl:atframe 4100 mark hood-loaded
+ctl:atframe 4200 loadlot 6
+ctl:atframe 4200 aftersimframes 600 mark lot-running
+until:control: mark hood-loaded,420
+until:control: mark lot-running,600
+shot:lot; log
+quit:300

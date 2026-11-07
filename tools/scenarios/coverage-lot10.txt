@@ -1,0 +1,28 @@
+# Wider coverage (2026-11-03): an occupied lot in live mode, so Sims walk (routing), use objects and the clock runs.
+# The inputs of coverage-phases with lot 10 (household FAMI 0x8, docs/save-diff.md) and lot-simtrace's tutorial
+# clicks and Play, then about 3000 simulator frames of live mode at normal speed. Rounds as coverage-phases, plus:
+#   round 5 lot-live   from Play to the end
+# Run: scenario.ps1 @coverage-lot10 -ResetUserData -Quiet -Reference -Coverage <main>\local\coverage\sites.txt [-Instance N]
+start; wait:5
+ctl:atframe 900 coverage menu-idle
+ctl:atframe 950 coverage hood-load
+ctl:atframe 950 click 1004 660     # Belladonna Cove thumbnail
+ctl:atframe 1100 click 1216 1022   # Play
+ctl:atframe 3300 click 1272 858    # OK on the "expansion packs have no neighbourhood" notice
+ctl:atframe 3500 click 1280 962    # close the welcome album
+ctl:atframe 4000 coverage hood-idle
+ctl:atframe 4100 mark hood-loaded
+ctl:atframe 4200 coverage lot-load
+ctl:atframe 4200 loadlot 10
+ctl:atframe 4200 aftersimframes 1000 click 2376 116   # Continue, tutorial steps 1-4
+ctl:atframe 4200 aftersimframes 1040 click 2376 116
+ctl:atframe 4200 aftersimframes 1080 click 2376 116
+ctl:atframe 4200 aftersimframes 1120 click 2376 116
+ctl:atframe 4200 aftersimframes 1160 click 1346 766   # No on "enable Game Tips?"
+ctl:atframe 4200 aftersimframes 1200 coverage lot-live
+ctl:atframe 4200 aftersimframes 1200 click 304 1328   # play (normal speed)
+ctl:atframe 4200 aftersimframes 4200 mark lot-running
+until:control: mark hood-loaded,420
+until:control: mark lot-running,1800
+wait:2                             # the coverage writer flushes every 250 ms
+shot:lot10-live; log; stop

@@ -1,0 +1,62 @@
+#include "hook/hooks.h"
+#include "misc/ClassesRound3.h"
+
+namespace {
+
+const HookSpec kHooks[] = {
+    {"AV_cTSTriple_F_vf0", 0x4311c0, 32, 0x21822346, reinterpret_cast<void *>(&cTSTripleAdapters::DeletingDestructor)},
+    {"FUN_a03efff0", 0x3efff0, 32, 0x0ff598dc, MemberAddress(&nTSWorld::tRoofObject::GetMaxX)},
+    {"FUN_a03f0060", 0x3f0060, 32, 0x2ad84b64, MemberAddress(&nTSWorld::tRoofObject::GetMaxY)},
+    {"FUN_a03f00d0", 0x3f00d0, 32, 0xf12f4f0e, MemberAddress(&nTSWorld::tRoofObject::GetMinX)},
+    {"FUN_a03f0140", 0x3f0140, 32, 0xbf46efae, MemberAddress(&nTSWorld::tRoofObject::GetMinY)},
+    {"nTSWorld_tRoofObject_vf0", 0x3f3e00, 32, 0x00288549, MemberAddress(&nTSWorld::tRoofObject::GetXVertexCount)},
+    {"nTSWorld_tRoofObject_vf1", 0x3f3e40, 32, 0xe42ea654, MemberAddress(&nTSWorld::tRoofObject::GetYVertexCount)},
+    {"nTSSG_cQueryStrategyManager_QueryInterface", 0x2c10f0, 32, 0x69b23f82, MemberAddress(&nTSSG::cQueryStrategyManager::QueryInterface)},
+    {"nTSSG_cQueryStrategyManager_Release", 0x2c1190, 21, 0x2bceddac, MemberAddress(&nTSSG::cQueryStrategyManager::Release)},
+    {"nTSSG_cQueryStrategyManager_vf21", 0x2c0c00, 32, 0x603477fa, MemberAddress(&nTSSG::cQueryStrategyManager::DeletingDestructor)},
+    {"nTSSG_cImageReadback_AddRef", 0x4020e0, 8, 0x16ce2733, MemberAddress(&nTSSG::cImageReadback::AddRef)},
+    {"nTSSG_cImageReadback_QueryInterface", 0x402cb0, 28, 0x4f4a9ca4, MemberAddress(&nTSSG::cImageReadback::QueryInterface)},
+    {"nTSSG_cImageReadback_Release", 0x403e70, 32, 0xb8f04879, MemberAddress(&nTSSG::cImageReadback::Release)},
+    {"cCompletionObj_QueryInterface", 0xb2523a, 32, 0x77fb88b1, MemberAddress(&cCompletionObj::QueryInterface)},
+    {"cCompletionObj_Release", 0xb25272, 30, 0x64d3458c, MemberAddress(&cCompletionObj::Release)},
+    {"cRZNullIStream_Skip", 0x1b672b, 9, 0x3f8a61be, MemberAddress(&cRZNullIStream::Skip)},
+    {"cRZNullIStream_GetVoid", 0x1b5f33, 9, 0x933f2eb2, MemberAddress(&cRZNullIStream::GetVoid)},
+    {"FUN_a01b52c2", 0x1b52c2, 11, 0xaa2cf9a6, MemberAddress(&cRZNullIStream::Destruct)},
+    {"cRZNullIStream_vf21", 0x1b57ad, 31, 0xd8cb05e6, MemberAddress(&cRZNullIStream::DeletingDestructor)},
+    {"nGZEvent_cConnectionChangedEvent_vf0", 0x1aa749, 32, 0xd51dc729, MemberAddress(&nGZEvent::cConnectionChangedEvent::DeletingDestructor)},
+    {"FUN_a01aa6c4", 0x1aa6c4, 32, 0xe24d321f, MemberAddress(&nGZEvent::cConnectionChangedEvent::Assign)},
+    {"nGZEvent_cConnectionChangedEvent_vf3", 0x1aafc5, 6, 0x65b2d0dc, MemberAddress(&nGZEvent::cConnectionChangedEvent::GetEventType)},
+    {"nGZEvent_cConnectionChangedEvent_vf6", 0x1aaab0, 13, 0x7276aaf2, MemberAddress(&nGZEvent::cConnectionChangedEvent::CloneInto)},
+    {"FUN_a01aa5d2", 0x1aa5d2, 32, 0x2d752939, MemberAddress(&nGZEvent::cConnectionChangedEvent::CopyConstruct)},
+    {"AVcTSFridgeTokenFilter_A0x96e3b7e9_vf0", 0x6fd791, 32, 0xb7aa11a5, MemberAddress(&cTSFridgeTokenFilter::Accept)},
+    {"AVcTSJuicerTokenFilter_A0xccbac708_vf0", 0x700698, 32, 0xb475e297, MemberAddress(&cTSJuicerTokenFilter::Accept)},
+    {"AVcTSLeftoverTokenFilter_A0x18f21592_vf0", 0x700c64, 32, 0x93a90d91, MemberAddress(&cTSLeftoverTokenFilter::Accept)},
+    {"AVcTSFoodJudgingTokenFilter_A0xf593d5d5_vf0", 0x7150cf, 32, 0x0fa43208, MemberAddress(&cTSFoodJudgingTokenFilter::Accept)},
+    {"cHitSem_QueryInterface", 0xb2e266, 32, 0xcb9d905f, MemberAddress(&cHitSem::QueryInterface)},
+    {"cHitSem_Release", 0xb2e3d0, 23, 0x902c77d8, MemberAddress(&cHitSem::Release)},
+    {"cHitSem_vf4", 0xb2d992, 22, 0x5daa5db3, MemberAddress(&cHitSem::GiveName)},
+    {"cHitSem_vf7", 0xb2d2ba, 31, 0x9ad7e0f2, MemberAddress(&cHitSem::DeletingDestructor)},
+    {"FUN_a0b2d191", 0xb2d191, 21, 0x9321f515, MemberAddress(&cHitSem::Destruct)},
+    {"cRZFTPClientLowLevel_Release", 0x997ea6, 21, 0xa8d13509, MemberAddress(&cRZFTPClientLowLevel::Release)},
+    {"cRZFTPClientLowLevel_vf3", 0x994c3e, 32, 0xe325d112, MemberAddress(&cRZFTPClientLowLevel::DeletingDestructor)},
+    {"cRZFTPClientLowLevel_vf4", 0x99766b, 23, 0x69a0531e, MemberAddress(&cRZFTPClientLowLevel::Destroy)},
+    {"nPathPlanner_cDistancePathHeuristic_vf0", 0x20d380, 32, 0xfb6166b5, MemberAddress(&nPathPlanner::cDistancePathHeuristic::Estimate)},
+    {"cTSPerson_cMotiveInc_vf0", 0x5243a0, 32, 0x5b0599ba, MemberAddress(&cTSPersonMotiveInc::Write)},
+    {"cTSPerson_cMotiveInc_vf1", 0x51e8e0, 32, 0x34b2a4e0, MemberAddress(&cTSPersonMotiveInc::Read)},
+    {"cTSPerson_cObjectRecord_vf0", 0x5243f0, 32, 0x7ee76329, MemberAddress(&cTSPersonObjectRecord::Write)},
+    {"cTSPerson_cObjectRecord_vf1", 0x51e930, 32, 0xc8849a99, MemberAddress(&cTSPersonObjectRecord::Read)},
+    {"nTSSG_cDisplayListDynamicRenderStrategyState_QueryInterface", 0x373d20, 32, 0x929707f2, MemberAddress(&nTSSG::cDisplayListDynamicRenderStrategyState::QueryInterface)},
+    {"nTSSG_cDisplayListDynamicRenderStrategyState_AddRef", 0x370cc0, 8, 0x5f9189d0, MemberAddress(&nTSSG::cDisplayListDynamicRenderStrategyState::AddRef)},
+    {"nTSSG_cDisplayListDynamicRenderStrategyState_Release", 0x373d50, 23, 0x07a664d7, MemberAddress(&nTSSG::cDisplayListDynamicRenderStrategyState::Release)},
+    {"nTSSG_cDisplayListDynamicRenderStrategyState_vf3", 0x36fbb0, 32, 0x6cfe2a92, MemberAddress(&nTSSG::cDisplayListDynamicRenderStrategyState::DeletingDestructor)},
+    {"cRZFTPClient_QueryInterface", 0x997c9e, 32, 0x9224d5ef, MemberAddress(&cRZFTPClient::QueryInterface)},
+    {"cRZFTPClient_Release", 0x997e91, 21, 0x27b3a25e, MemberAddress(&cRZFTPClient::Release)},
+    {"cRZFTPClient_vf4", 0x994c1f, 31, 0x1d7ce103, MemberAddress(&cRZFTPClient::DeletingDestructor)},
+    {"cRZFTPClient_vf5", 0x997654, 23, 0xd4864f07, MemberAddress(&cRZFTPClient::Destroy)},
+    // shared_vf bodies of cTSImgFileFilter only (its two anonymous-namespace copies; no other reference in the image)
+    {"shared_vf_6f8f52", 0x6f8f52, 32, 0x955322e3, MemberAddress(&cTSImgFileFilter::QueryInterface)},
+    {"shared_vf_6f877e", 0x6f877e, 29, 0x1c738d89, MemberAddress(&cTSImgFileFilter::Accept)},
+};
+REGISTER_HOOKS(kHooks);
+
+} // namespace

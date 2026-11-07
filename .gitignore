@@ -1,0 +1,20 @@
+# Game binaries and anything derived from them that contains original code/bytes.
+# Never commit these: only scripts and the facts they extract.
+local/
+*.exe
+*.dll
+*.asi
+*.pdb
+*.gpr
+*.rep/
+
+# External reference checkouts (cloned by tools/fetch-refs.ps1)
+refs/
+
+# Build output
+build/
+build-*/
+out/
+__pycache__/
+.venv/
+.claude/worktrees/

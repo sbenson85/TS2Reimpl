@@ -1,0 +1,13 @@
+# Milestone I's measurement (docs/roadmap.md, "I. The service spine is ours"): own-start-menu with the host's "services"
+# command at the main menu (frame 900, the neighbourhood chooser). The keep: step leaves <stamp>-services.ts2services.txt
+# and .ts2host.log in local/saves; read them with
+#   tools/py -I tools/services.py local/saves/<stamp>-services.ts2services.txt [--todo]
+# The host log's line "control: services "main-menu": N services: X ours, Y image, ..." is the acceptance figure
+# (milestone I: 0 image). Then quits through the game's own quit request, as own-start-menu does (exit code 0 expected).
+start; wait:5
+ctl:atframe 900 services main-menu
+ctl:atframe 900 mark menu
+until:control: mark menu,300
+wait:10
+keep:services
+quit:300

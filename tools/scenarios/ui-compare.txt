@@ -1,0 +1,28 @@
+# In-game comparison points for UI and rendering work (docs/ui-testing.md). The inputs of coverage-phases (host clicks
+# at fixed ticks), plus at three points (main menu 900, neighbourhood 4000, a lot 300 simulator frames in) a full device
+# call list of 3 frames, a window tree and the frame clock's state. Run with the frame clock and the device log:
+#   scenario.ps1 @ui-compare -ResetUserData -Quiet -Seed 1 -FrameClock -DeviceLog on [-Reference] [-Instance N]
+# The keep: step leaves <stamp>-ui.ts2devlog.txt, .ts2wintree.txt and .ts2host.log in local/saves; compare two runs with
+#   tools/py -I tools/devlog.py compare REF.ts2devlog.txt RUN.ts2devlog.txt --ref2 REF2.ts2devlog.txt --align menu
+# (and --align hood, --align lot), and the window trees with a plain diff (git diff --no-index).
+start; wait:5
+ctl:atframe 900 devlog 3 menu
+ctl:atframe 900 wintree menu
+ctl:atframe 900 frameclock
+ctl:atframe 950 click 1004 660     # Belladonna Cove thumbnail
+ctl:atframe 1100 click 1216 1022   # Play
+ctl:atframe 3300 click 1272 858    # OK on the "expansion packs have no neighbourhood" notice
+ctl:atframe 3500 click 1280 962    # close the welcome album
+ctl:atframe 4000 devlog 3 hood
+ctl:atframe 4000 wintree hood
+ctl:atframe 4000 frameclock
+ctl:atframe 4100 mark hood-loaded
+ctl:atframe 4200 loadlot 6
+ctl:atframe 4200 aftersimframes 300 devlog 3 lot
+ctl:atframe 4200 aftersimframes 300 wintree lot
+ctl:atframe 4200 aftersimframes 300 frameclock
+ctl:atframe 4200 aftersimframes 330 mark lot-running
+until:control: mark hood-loaded,420
+until:control: mark lot-running,600
+wait:2
+keep:ui; log; stop

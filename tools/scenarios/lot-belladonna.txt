@@ -1,0 +1,14 @@
+# Milestone B: load Belladonna Cove, enter a fixed lot through host control (no clicks on the
+# neighbourhood), dump the lot state with the game's own cheat, stop.
+start; wait:35
+click:1004,660; wait:5        # Belladonna Cove thumbnail
+click:1216,1022; wait:80      # Play
+click:1272,858; wait:8        # OK on the "expansion packs have no neighbourhood" notice
+click:1280,962; wait:30       # close the welcome album
+ctl:loadlot 6; wait:90        # 120 Siena Street (lot 6)
+shot:lot
+ctl:probe 0x417a00 0x417a32 0x417b22; wait:1
+cheat:DumpLotState; wait:5
+cheat:boolProp testingCheatsEnabled true; wait:2
+cheat:DumpLotState; wait:5
+shot:dumped; log; stop

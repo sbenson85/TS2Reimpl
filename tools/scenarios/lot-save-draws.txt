@@ -1,0 +1,98 @@
+# Diagnostic variant of lot-save-probe: also logs generator draw counts (run with -Draws -Seed N)
+# at frames around lot load, to find a generator whose draw count before the townie generated on
+# lot load varies between runs.
+start; wait:35
+ctl:atframe 4190 probe 0xb5e5f8:0x14 0xb5e6e3 0xb5e742 0xb5e6a3
+ctl:atframe 4200 loadlot 6
+ctl:atframe 6600 post 0xacfd5984   # save 2400 ticks after the enter-lot request
+ctl:atframe 1000 draws
+ctl:atframe 2000 draws
+ctl:atframe 3000 draws
+ctl:atframe 4000 draws
+ctl:atframe 4190 draws
+ctl:atframe 4201 draws
+ctl:atframe 4202 draws
+ctl:atframe 4203 draws
+ctl:atframe 4204 draws
+ctl:atframe 4205 draws
+ctl:atframe 4206 draws
+ctl:atframe 4207 draws
+ctl:atframe 4208 draws
+ctl:atframe 4209 draws
+ctl:atframe 4210 draws
+ctl:atframe 4211 draws
+ctl:atframe 4212 draws
+ctl:atframe 4213 draws
+ctl:atframe 4214 draws
+ctl:atframe 4215 draws
+ctl:atframe 4216 draws
+ctl:atframe 4217 draws
+ctl:atframe 4218 draws
+ctl:atframe 4219 draws
+ctl:atframe 4220 draws
+ctl:atframe 4221 draws
+ctl:atframe 4222 draws
+ctl:atframe 4223 draws
+ctl:atframe 4224 draws
+ctl:atframe 4225 draws
+ctl:atframe 4226 draws
+ctl:atframe 4227 draws
+ctl:atframe 4228 draws
+ctl:atframe 4229 draws
+ctl:atframe 4230 draws
+ctl:atframe 4231 draws
+ctl:atframe 4232 draws
+ctl:atframe 4233 draws
+ctl:atframe 4234 draws
+ctl:atframe 4235 draws
+ctl:atframe 4236 draws
+ctl:atframe 4237 draws
+ctl:atframe 4238 draws
+ctl:atframe 4239 draws
+ctl:atframe 4240 draws
+ctl:atframe 4250 draws
+ctl:atframe 4260 draws
+ctl:atframe 4270 draws
+ctl:atframe 4280 draws
+ctl:atframe 4290 draws
+ctl:atframe 4300 draws
+ctl:atframe 4310 draws
+ctl:atframe 4320 draws
+ctl:atframe 4330 draws
+ctl:atframe 4340 draws
+ctl:atframe 4350 draws
+ctl:atframe 4360 draws
+ctl:atframe 4370 draws
+ctl:atframe 4380 draws
+ctl:atframe 4390 draws
+ctl:atframe 4400 draws
+ctl:atframe 4500 draws
+ctl:atframe 4600 draws
+ctl:atframe 4700 draws
+ctl:atframe 4800 draws
+ctl:atframe 4900 draws
+ctl:atframe 5000 draws
+ctl:atframe 5100 draws
+ctl:atframe 5200 draws
+ctl:atframe 5300 draws
+ctl:atframe 5400 draws
+ctl:atframe 5500 draws
+ctl:atframe 5600 draws
+ctl:atframe 5700 draws
+ctl:atframe 5800 draws
+ctl:atframe 5900 draws
+ctl:atframe 6000 draws
+ctl:atframe 6100 draws
+ctl:atframe 6200 draws
+ctl:atframe 6300 draws
+ctl:atframe 6400 draws
+ctl:atframe 6500 draws
+click:1004,660; wait:5        # Belladonna Cove thumbnail
+click:1216,1022; wait:80      # Play
+click:1272,858; wait:8        # OK on the "expansion packs have no neighbourhood" notice
+click:1280,962                # close the welcome album
+until:control: post done,400
+ctl:draws
+wait:30
+shot:saved; log; stop; wait:5
+snap:saved

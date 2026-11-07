@@ -1,0 +1,17 @@
+# Review B, the townie-age question: lot-save-frames (load Belladonna Cove, enter 120 Siena Street,
+# lot 6, save at a fixed tick) with every click a host click at a fixed tick, and a SimAntics trace
+# (host "simtrace") from the enter-lot request through the load, where a BHAV generates a townie
+# whose age is 0x08 in some runs and 0x10 in others (NOTES). Run with -ResetUserData -Seed N; the
+# townie's age is in the snapshot (tools/lotcheck.py reads it), the trace in simtrace.txt.
+start; wait:5                      # the host empties ts2control.txt as it starts
+ctl:atframe 950 click 1004 660     # Belladonna Cove thumbnail
+ctl:atframe 1100 click 1216 1022   # Play
+ctl:atframe 3300 click 1272 858    # OK on the "expansion packs have no neighbourhood" notice
+ctl:atframe 3500 click 1280 962    # close the welcome album
+ctl:atframe 4199 simtrace 600000
+ctl:atframe 4200 loadlot 6
+ctl:atframe 6600 post 0xacfd5984   # save 2400 ticks after the enter-lot request
+until:control: post done,600
+wait:30
+shot:saved; log; stop; wait:5
+snap:saved

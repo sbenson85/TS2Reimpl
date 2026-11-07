@@ -1,0 +1,2 @@
+{"iface": "cRZRefCount", "class": "cRZRefCount", "slot": 1, "name": "Release", "ret": "u32", "params": [], "source": "lane NV: cRZRefCount vtable 0xda2fa8 slot 1 0x1b94af (deletes through slot 0 at zero); the macro definitions' holders call it", "lane": "NV"}
+{"iface": "cRZRefCount", "class": "cRZRefCount", "slot": 2, "name": "AddRef", "ret": "u32", "params": [], "source": "lane NV: cRZRefCount slot 2 0x148fb0 (increments +4); the macro definitions' holders call it", "lane": "NV"}

@@ -1,0 +1,29 @@
+# Wider coverage (lot 50, 1500 live frames; 2026-11-03). First-call coverage by phase (docs/coverage.md; src/hook/coverage.h). Same
+# inputs as load-check (host clicks at fixed ticks), plus a host "coverage <label>" command at each phase boundary, so
+# ts2coverage.txt (next to the host) holds one round per phase:
+#   round 0 start      entry point to frame 900 (the main menu is up: own-start-menu marks it there)
+#   round 1 menu-idle  frames 900-950: what a steady main-menu frame runs
+#   round 2 hood-load  the thumbnail click, Play, the neighbourhood load and its two notices
+#   round 3 hood-idle  frames 4000-4200: the neighbourhood view, steady
+#   round 4 lot-load   loadlot 50 up to 300 simulator frames
+#   round 5 lot-live   the next 300 simulator frames of live mode
+# Run: tools/py -I tools/coverage.py sites (once per db/ change), then
+#   scenario.ps1 @coverage-phases -ResetUserData -Quiet -Coverage <main>\local\coverage\sites.txt [-Reference] [-Instance N]
+# and tools/py -I tools/coverage.py report <game folder>\TSBin\ts2coverage.txt.
+start; wait:5
+ctl:atframe 900 coverage menu-idle
+ctl:atframe 950 coverage hood-load
+ctl:atframe 950 click 1004 660     # Belladonna Cove thumbnail
+ctl:atframe 1100 click 1216 1022   # Play
+ctl:atframe 3300 click 1272 858    # OK on the "expansion packs have no neighbourhood" notice
+ctl:atframe 3500 click 1280 962    # close the welcome album
+ctl:atframe 4000 coverage hood-idle
+ctl:atframe 4100 mark hood-loaded
+ctl:atframe 4200 coverage lot-load
+ctl:atframe 4200 loadlot 50
+ctl:atframe 4200 aftersimframes 300 coverage lot-live
+ctl:atframe 4200 aftersimframes 1500 mark lot-running
+until:control: mark hood-loaded,420
+until:control: mark lot-running,1200
+wait:2                             # the coverage writer flushes every 250 ms
+log; stop

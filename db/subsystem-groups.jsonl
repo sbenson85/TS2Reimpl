@@ -1,0 +1,78 @@
+{"group": "AppCOMDirectors", "subsystem": "framework-gz", "reason": "cTSAppFW::AddCOMDirector's tail (src/app/AppCOMDirectors.h): application framework start-up"}
+{"group": "AppDebugger", "subsystem": "framework-gz", "force": true, "reason": "start-up logging, cheat console and stream helpers plus the allocator-service helpers FreeStringBuffer 0x152b80 and AllocateListNodes 0x1e7190 (dozens of callers across campaigns): application framework; the 2/3 majority said ui-game from a few placed members (lanes XN, XO)"}
+{"group": "AppCtor", "subsystem": "framework-gz", "reason": "cTSAppCommonImpl container and cRZString-list teardown (src/app/AppCtor.h): the app object's construction"}
+{"group": "AppServices2", "subsystem": "framework-gz", "reason": "the unplaced members are string conversion, allocator-service and find-file helpers of the app services (src/app/AppServices2.h); cGZFileSystem / cTSGlobals members keep their vtables"}
+{"group": "ChangeRecordSet", "subsystem": "persist-dbpf", "reason": "cTSPersistSystem's change records, read and written as a store record (src/ts/ChangeRecordSet.h)"}
+{"group": "ClassesRound4", "subsystem": "mixed", "reason": "a batch of unrelated classes' functions (window filters, nTSSG triangles, ...)"}
+{"group": "COMDirectors", "subsystem": "mixed", "reason": "each subsystem's COM director (UI, audio, sim, scenegraph): members placed by their own vtables"}
+{"group": "cTSCompDescription", "subsystem": "mixed", "reason": "component descriptions of camera, decal, screen and other classes, each its own subsystem"}
+{"group": "DirectoryListing", "subsystem": "persist-dbpf", "reason": "the folder listing cTSPersistSystem builds when it opens content folders (src/ts/DirectoryListing.h)"}
+{"group": "DirectoryScan", "subsystem": "persist-dbpf", "reason": "directory walk (FindFirst/FindNext) under rz/, file-system code as RULES files cRZDirectory / cRZFile"}
+{"group": "DynamicLibraryList", "subsystem": "framework-gz", "reason": "the plug-in DLLs cTSAppFW::AddDynamicLibrariesHere loads at start-up (src/ts/DynamicLibraryList.h)"}
+{"group": "EffectsTransform", "subsystem": "rendering-gfx", "reason": "the effects transform helpers (src/ts/EffectsTransform.h): rendering effects, as the roadmap places effects classes"}
+{"group": "GeneralAllocator", "subsystem": "framework-gz", "reason": "the RZ general heap allocator (src/rz/GeneralAllocator.h), beside RZMemory (framework-gz)"}
+{"group": "Gimex", "subsystem": "mixed", "held": true, "reason": "Gimex image code: third-party (db/third-party.jsonl) or EA is the coordinator's call; members stay per function"}
+{"group": "GimexBmp", "subsystem": "mixed", "held": true, "reason": "Gimex image code: see Gimex"}
+{"group": "GimexFsh", "subsystem": "mixed", "held": true, "reason": "Gimex image code: see Gimex"}
+{"group": "GimexFshDecodeRecords", "subsystem": "mixed", "held": true, "reason": "Gimex image code: see Gimex"}
+{"group": "GimexFshLeaves", "subsystem": "mixed", "held": true, "reason": "Gimex image code: see Gimex"}
+{"group": "GimexFshWrite", "subsystem": "mixed", "held": true, "reason": "Gimex image code: see Gimex"}
+{"group": "GimexIjl", "subsystem": "mixed", "held": true, "reason": "Gimex image code: see Gimex"}
+{"group": "GimexJpeg", "subsystem": "mixed", "held": true, "reason": "Gimex image code: see Gimex"}
+{"group": "GimexPng", "subsystem": "mixed", "held": true, "reason": "Gimex image code: see Gimex"}
+{"group": "GimexTga", "subsystem": "mixed", "held": true, "reason": "Gimex image code: see Gimex"}
+{"group": "GraphicsClassIds", "subsystem": "rendering-gfx", "reason": "the graphics COM directors' class id functions (src/gz/GraphicsClassIds.h): rendering device classes"}
+{"group": "GZConvertPixels", "subsystem": "rendering-gfx", "reason": "the pixel-format converter and its loops (src/gz/GZConvertPixels.h): image / bitmap code, as RULES files cGZImage / cGZBitmap"}
+{"group": "GZServiceString", "subsystem": "framework-gz", "reason": "the service-allocator string's buffer (src/std/GZServiceString.h): framework strings"}
+{"group": "GZWinHelpers", "subsystem": "ui-windowing", "reason": "GZWin drawing helpers (bevel, frame, shade colour; src/ui/GZWinHelpers.h)"}
+{"group": "HexParse", "subsystem": "framework-gz", "reason": "hex and GUID text parsing (src/misc/HexParse.h), beside RZTextParse"}
+{"group": "IniFile", "subsystem": "framework-gz", "reason": "the unplaced members are the ini reader's path and string helpers (CombinePath, MakeAbsolutePath; src/app/IniFile.h)"}
+{"group": "MiscHelpersB", "subsystem": "framework-gz", "reason": "cached service getters and key-map walkers of the RZ framework (src/rz/MiscHelpersB.h)"}
+{"group": "MmxResampleTables", "subsystem": "audio-video", "reason": "the audio resampler's MMX tables (src/audio/MmxResampleTables.h)"}
+{"group": "MultiMon", "subsystem": "rendering-gfx", "reason": "multimon.h stubs (monitor enumeration) the graphics device code calls (src/gz/MultiMon.h)"}
+{"group": "NameValueTableSort", "subsystem": "mixed", "reason": "std::sort instantiations over a name/value table; the STL single-user rule places them"}
+{"group": "PathAttributes", "subsystem": "persist-dbpf", "reason": "file path attribute test beside cRZFile, as PathFileOps"}
+{"group": "PathFileOps", "subsystem": "persist-dbpf", "reason": "temp files, delete, file times (src/rz/PathFileOps.h): file-system code as RULES files cRZFile"}
+{"group": "ProductInfo", "subsystem": "framework-gz", "reason": "product paths and newer-executable lookup at start-up (src/app/ProductInfo.h)"}
+{"group": "Quaternion", "subsystem": "rendering-gfx", "reason": "quaternion maths (src/misc/Quaternion.h), as RULES files nGZNumerics"}
+{"group": "RefPack", "subsystem": "persist-dbpf", "reason": "the RefPack (QFS) codec of package resources, beside cRZFastCompression3 (persist-dbpf by vtable)"}
+{"group": "ReporterDump", "subsystem": "framework-gz", "reason": "the exception reporter's minidump and DbgHelp loader (src/app/ReporterDump.h)"}
+{"group": "RZAutoRef", "subsystem": "framework-gz", "reason": "RZ reference-count holders (src/rz/RZAutoRef.h)"}
+{"group": "RZFixedAllocator", "subsystem": "framework-gz", "reason": "cRZFastFixedAllocator2's page helpers (src/rz/RZFixedAllocator.h)"}
+{"group": "RZFrameworkHelpers", "subsystem": "framework-gz", "reason": "RZ smart-pointer slots, list visitor and cRZUnknown helpers (src/rz/RZFrameworkHelpers.h)"}
+{"group": "RZMessageServer", "subsystem": "framework-gz", "reason": "the cached message-server getter (src/rz/RZMessageServer.h)"}
+{"group": "RZTextParse", "subsystem": "framework-gz", "reason": "RZ text parsing (split, numbers, hex; src/rz/RZTextParse.h), beside the other RZText groups"}
+{"group": "ServiceGetters", "subsystem": "framework-gz", "reason": "cached framework service getters (src/rz/ServiceGetters.h)"}
+{"group": "SGResourceBlockers", "subsystem": "scenegraph", "reason": "scenegraph resource helpers (src/sg/SGResourceBlockers.h)"}
+{"group": "SimAnticsGeometry", "subsystem": "simantics-vm", "reason": "the primitives' vector and quaternion helpers (src/simantics/SimGeometry.h)"}
+{"group": "SimAnticsPersonInteractions", "subsystem": "mixed", "reason": "PrimPersonObject (sim-person), cEdithObjectTestSim (objects) and shared deque helpers; the placed majority is just under 2/3"}
+{"group": "SimAnticsPrimExpression", "subsystem": "simantics-vm", "force": true, "reason": "the Expression primitive (opcode 2, src/simantics/PrimExpression.h)"}
+{"group": "SimAnticsPrims", "subsystem": "simantics-vm", "reason": "SimAntics primitive handlers (src/simantics/PrimHandlers.h)"}
+{"group": "SimAnticsPrimsAA", "subsystem": "simantics-vm", "reason": "SimAntics primitives 0x6d MaterialChange and 0x70 Effect (src/simantics/PrimAA*.cpp)"}
+{"group": "SimAnticsPrimSetToNext", "subsystem": "simantics-vm", "reason": "the Set To Next primitive (0x1f, src/simantics/PrimSetToNext.h)"}
+{"group": "SimAnticsPrimsGenericSimCall", "subsystem": "simantics-vm", "force": true, "reason": "SimAntics opcode 0x01 and its case handlers (src/simantics/PrimGenericSimCall*.cpp), though named on cTSObject: the primitive campaign owns them (lane XJ)"}
+{"group": "SimAnticsPrimsMid", "subsystem": "simantics-vm", "reason": "SimAntics primitives (Idle, DistanceTo, DirectionTo, OnTimer...; src/simantics/PrimMid*.cpp)"}
+{"group": "SimAnticsPrimsR", "subsystem": "simantics-vm", "reason": "SimAntics primitives (src/simantics/PrimR*.cpp)"}
+{"group": "SimAnticsPrimsS", "subsystem": "simantics-vm", "reason": "SimAntics primitives (CreateObject, UIEffect, Message...; src/simantics/PrimS*.cpp)"}
+{"group": "SimAnticsPrimsT", "subsystem": "simantics-vm", "reason": "SimAntics primitives (PlaySound, Dialog, ArrayOperation, SnapInto; src/simantics/PrimT*.cpp)"}
+{"group": "SimAnticsPrimsW", "subsystem": "simantics-vm", "reason": "SimAntics primitive 0x33 (src/simantics/PrimW.h)"}
+{"group": "SimAnticsPrimsX", "subsystem": "simantics-vm", "reason": "SimAntics primitives 0x2e Snap and 0x73 (src/simantics/PrimX.h)"}
+{"group": "SimAnticsSnapReport", "subsystem": "simantics-vm", "reason": "Snap primitive error reports (src/simantics/SnapReport.h)"}
+{"group": "SimAnticsTreeSim", "subsystem": "simantics-vm", "reason": "the interpreter's trace log and tree replay map (src/simantics/TreeReplay.h, SimTraceLog.h); the cTSTreeSim slots the cEdith* vtables place under objects keep that"}
+{"group": "Singleton_20ddfb", "subsystem": "framework-gz", "reason": "a cached framework singleton and its scoped reference (src/rz/Singleton_20ddfb.h)"}
+{"group": "SpecialFolders", "subsystem": "framework-gz", "reason": "special-folder paths for the app's user data (src/app/SpecialFolders.h)"}
+{"group": "StartupObjects", "subsystem": "mixed", "reason": "static objects of several subsystems built at start-up"}
+{"group": "StaticGetters", "subsystem": "framework-gz", "reason": "framework static getters (COM director object, id set; src/rz/StaticGetters.h)"}
+{"group": "StaticGetters2", "subsystem": "framework-gz", "reason": "framework static getters and service cells (src/rz/StaticGetters2.h)"}
+{"group": "StaticInit", "subsystem": "mixed", "reason": "static initialisers of every subsystem: static-init and data-ref place them one by one"}
+{"group": "StaticInitCpu", "subsystem": "framework-gz", "reason": "CPU feature detection at start-up (src/app/StaticInitContainers.h)"}
+{"group": "StaticInitParser", "subsystem": "mixed", "reason": "one-byte static flag objects of several users"}
+{"group": "StdGameTypes", "subsystem": "mixed", "reason": "std container instantiations for several classes; the STL single-user rule places them"}
+{"group": "StdHash", "subsystem": "mixed", "reason": "hash-table lookups instantiated for several subsystems' keys"}
+{"group": "StdInstances", "subsystem": "mixed", "reason": "std instantiations of several users"}
+{"group": "TopCallersA", "subsystem": "mixed", "reason": "a batch of unrelated callers (window enable, command-parser, mem iterators)"}
+{"group": "UtilitiesB", "subsystem": "mixed", "reason": "utilities with callers in many subsystems"}
+{"group": "UtilitiesD", "subsystem": "mixed", "reason": "utilities with callers in many subsystems (window, origin, tree helpers)"}
+{"group": "WinApiTables", "subsystem": "framework-gz", "reason": "RZ wide-character Win32 function tables (src/rz/WinApiTables.h)"}
+{"group": "WinMain", "subsystem": "framework-gz", "reason": "WinMain and the app start-up (src/app/WinMain.h), as RULES files cTSApp / cRZCmdLine"}
+{"group": "WinMainInfra", "subsystem": "framework-gz", "reason": "WinMain's crash reporter, analytics and terminate handlers (src/app/WinMainInfra.h)"}

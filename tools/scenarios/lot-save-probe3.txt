@@ -1,0 +1,14 @@
+# Diagnostic variant of lot-save-frames: probes the CAS system call that queues the townie job
+# (vf28_5, 0x5011d0; its callers) and the job at each step.
+start; wait:35
+ctl:atframe 4190 probe 0x5011d0 0x508424:0x8
+ctl:atframe 4200 loadlot 6
+ctl:atframe 6600 post 0xacfd5984   # save 2400 ticks after the enter-lot request
+click:1004,660; wait:5        # Belladonna Cove thumbnail
+click:1216,1022; wait:80      # Play
+click:1272,858; wait:8        # OK on the "expansion packs have no neighbourhood" notice
+click:1280,962                # close the welcome album
+until:control: post done,400
+wait:30
+shot:saved; log; stop; wait:5
+snap:saved

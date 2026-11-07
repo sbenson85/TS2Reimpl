@@ -1,0 +1,19 @@
+# UNRELIABLE: the neighbourhood camera does not settle in the same place every run, so the lot
+# click (1520,750) can hit a different lot. Kept for reference; entering lots needs a robust method.
+# Boot, load Belladonna Cove, enter the Clevelands' apartment (Bella Park Condominiums) and run the
+# simulation for 90 s at normal speed. Run with -ResetUserData so the saved camera, dialogs and
+# tutorial state are always the same. Coordinates are client pixels at 2560x1440 (windowed -w).
+start; wait:20
+click:1004,660; wait:5        # Belladonna Cove thumbnail
+click:1216,1022; wait:80      # Play
+click:1272,858; wait:8        # OK on the "expansion packs have no neighbourhood" notice
+click:1280,962; wait:20       # close the welcome album; let the camera finish panning
+click:1520,750; wait:4        # Bella Park Condominiums (pool building, centre)
+click:1834,1022; wait:100     # enter the lot with the selected family (Cleveland)
+click:2376,116; wait:2        # tutorial: Continue x4 (the last one disables game tips)
+click:2376,116; wait:2
+click:2376,116; wait:2
+click:2376,116; wait:2
+click:2508,160; wait:1        # close the "game tips disabled" notice
+click:306,1330; wait:90       # Play (normal speed)
+shot:live; log; stop

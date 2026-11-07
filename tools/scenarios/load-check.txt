@@ -1,0 +1,16 @@
+# Load check (~5 min), for parallel smoke batches (tools/smoke.py --scenario load-check): boot, load
+# Belladonna Cove, enter 120 Siena Street (lot 6), let the lot run 600 simulator frames, stop. Every
+# input is a host click at a fixed framework tick (as lot-townie-trace), so it works quiet and off-screen
+# and lands at the same tick on every run. Passes when both checkpoints are logged in time (until:).
+# Run with -ResetUserData (smoke.py --reset-userdata) so every run starts from the same neighbourhood.
+start; wait:5                      # the host empties ts2control.txt as it starts
+ctl:atframe 950 click 1004 660     # Belladonna Cove thumbnail
+ctl:atframe 1100 click 1216 1022   # Play
+ctl:atframe 3300 click 1272 858    # OK on the "expansion packs have no neighbourhood" notice
+ctl:atframe 3500 click 1280 962    # close the welcome album
+ctl:atframe 4100 mark hood-loaded
+ctl:atframe 4200 loadlot 6
+ctl:atframe 4200 aftersimframes 600 mark lot-running
+until:control: mark hood-loaded,420
+until:control: mark lot-running,600
+shot:lot; log; stop

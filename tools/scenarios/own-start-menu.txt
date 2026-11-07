@@ -1,0 +1,8 @@
+# Milestone E, short form: boot to the neighbourhood chooser, then quit through the game's own quit request (host
+# `quit`) and wait for the process to end by itself (exit line from ts2exit.txt). Quitting from a running lot
+# (own-start.txt) faults in the original as well (0x97317f, 2026-10-18), so the exit-code evidence uses this one.
+start; wait:5
+ctl:atframe 900 mark menu
+until:control: mark menu,300
+wait:10
+quit:300

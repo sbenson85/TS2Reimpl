@@ -1,0 +1,92 @@
+# Create-a-Sim (~11 min, frame 13710 at the end; lane JH): the CAS smoke scenario, for the CAS services (cTSCASSystem, cTSCASBodyPartSystem,
+# the skin, bin, pattern and material catalogs) and the nTSUICAS components.
+# Boot and load Belladonna Cove (frame-anchored host clicks, as load-check), open the Families bin and press
+# "Create New Family": that enters CAS. There: Create A Sim; step 1 Randomize, Female, Teen then Adult (age changes),
+# skin tone 3, both fitness types, first name typed; step 2 a premade head; step 3 a hair colour and style, a full-face
+# archetype, a nose archetype, Undo and Redo; step 4 the glasses and makeup tabs; step 5 an everyday outfit, the formal
+# category and an outfit there; step 6 an aspiration, a zodiac sign, two turn-ons and a turn-off (DONE refuses without
+# the aspiration and the turn-ons); DONE (Accept Sim);
+# family name typed; Accept Family, back to the neighbourhood; then the game's own quit (exit code 0 expected).
+# Every input is a host click at a fixed framework tick or a posted message (type: posts WM_CHAR), so it runs quiet.
+#
+# Passes when the window tree taken after Accept Family is the neighbourhood's (under 1000 windows; CAS has ~2100) and
+# the game quits by itself. Screenshots are blank in quiet mode: the window trees are the record of a failed run
+# (local/saves/<stamp>-cas.ts2wintree.txt, one block per stage, with captions: the first name shows in the editor's
+# window 0x2cb7b3d6, a refusal as a cTSWinPictureDialog with its text). Coordinates and ids come from those trees and
+# the game's UI scripts: client pixels = UI x 2560/1738, y 1360/924; the CAS 1024x768 layout sits at the bottom left
+# (UI y + 156), step panels hang from the sub panel anchor (UI 583,918). Run with -ResetUserData -Quiet [-Reference].
+start; wait:5                      # the host empties ts2control.txt as it starts
+ctl:atframe 950 click 1004 660     # Belladonna Cove thumbnail
+ctl:atframe 1100 click 1216 1022   # Play
+ctl:atframe 3300 click 1272 858    # OK on the "expansion packs have no neighbourhood" notice
+ctl:atframe 3500 click 1280 962    # close the welcome album
+ctl:atframe 4100 mark hood-loaded
+ctl:atframe 4400 click 80 1124     # Families (puck button 0x2be6f563)
+ctl:atframe 4650 coverage cas      # with -Coverage: round 1 is CAS (round 2 after Accept Family); else a no-op
+ctl:atframe 4700 click 417 1261    # Create New Family (family bin button 0xa)
+ctl:atframe 6200 wintree cas
+ctl:atframe 6200 services cas
+ctl:atframe 6210 mark cas
+ctl:atframe 6250 click 40 1058     # sim chooser: add sim (0x5)
+ctl:atframe 6400 click 110 1058    # Create A Sim (0xcde6b91f, in the "add new" flyout)
+ctl:atframe 6900 wintree step1
+ctl:atframe 6950 click 943 941     # step 1: Randomize (0xac3405df)
+ctl:atframe 7100 click 901 1069    # Female (0x401)
+ctl:atframe 7200 click 982 1129    # Teenager (0x202)
+ctl:atframe 7400 click 1022 1124   # Adult (0x203)
+ctl:atframe 7600 click 978 1192    # skin tone 3 (0x2cb70002)
+ctl:atframe 7700 click 940 1258    # fitness 2 (0x2c720001)
+ctl:atframe 7800 click 901 1258    # fitness 1 (0x2c720000)
+ctl:atframe 7900 click 985 1001    # first name edit (0x8c6b1eb9 / 0x1); typed below
+ctl:atframe 7920 mark first-name
+ctl:atframe 8300 click 834 1054    # Step 2: Heads (0x8c6b0001)
+ctl:atframe 8500 click 1170 696    # head bin: second premade head (0x20000001)
+ctl:atframe 8800 click 834 1105    # Step 3: Hair & Face (0x8c6b0002)
+ctl:atframe 9050 click 1155 571    # hair colour 2 (0x8801)
+ctl:atframe 9150 click 1214 976    # hair style 5 (0x40000004)
+ctl:atframe 9300 click 897 915     # Full Face tab (0x4cb80006)
+ctl:atframe 9450 click 1063 630    # first full-face archetype (archetype grid 0x4011)
+ctl:atframe 9600 click 897 1136    # Nose tab (0x4cb80003)
+ctl:atframe 9750 click 1214 833    # fifth nose archetype
+ctl:atframe 9850 wintree face
+ctl:atframe 9900 click 664 1311    # Undo (0x8d24d87a)
+ctl:atframe 10000 click 708 1311   # Redo (0x8d24d88d)
+ctl:atframe 10100 click 834 1157   # Step 4: Makeup, Facial Hair & Glasses (0x8c6b0003)
+ctl:atframe 10250 click 897 1066   # Sun Glasses tab (0x6c6e0001)
+ctl:atframe 10350 click 897 918    # Makeup tab (0x6c6e0002)
+ctl:atframe 10500 click 834 1208   # Step 5: Clothing (0x8c6b0004)
+ctl:atframe 10700 click 1215 905   # everyday outfit 5 (0x10000004)
+ctl:atframe 10850 click 897 864    # Formal (0x2000005)
+ctl:atframe 11000 click 1215 693   # formal outfit 2
+ctl:atframe 11100 wintree clothing
+ctl:atframe 11150 click 834 1260   # Step 6: Personality & Aspiration (0x8c6b0005)
+ctl:atframe 11300 click 1149 795   # Knowledge Aspiration (0xcdc0006)
+ctl:atframe 11400 click 1200 1087  # Leo (0xacdc0005)
+ctl:atframe 11450 click 1237 718   # Turn-Ons & Offs tab (0x6fa0634e)
+ctl:atframe 11480 click 959 873    # Turn On 1 slot (0x8001): opens the trait picker ("Make a Selection", UI 706,335)
+ctl:atframe 11560 click 1167 629   # picker: row 1, first trait
+ctl:atframe 11620 click 1091 873   # Turn On 2 slot (0x9001)
+ctl:atframe 11660 wintree picker2
+ctl:atframe 11700 click 1272 629   # picker: row 1, second trait
+ctl:atframe 11760 click 1253 873   # Turn Off 1 slot (0xa001)
+ctl:atframe 11840 click 1167 734   # picker: row 2, first trait
+ctl:atframe 11900 wintree personality
+ctl:atframe 11950 click 834 1311   # DONE! Accept Sim (0xec6b2109); refuses without aspiration and turn-ons
+ctl:atframe 12450 wintree family
+ctl:atframe 12500 click 504 1310   # family name edit (0x6c6ae0bd / 0x1); typed below
+ctl:atframe 12520 mark family-name
+ctl:atframe 12950 click 44 1318    # Accept Family (0x122)
+ctl:atframe 13700 coverage after
+ctl:atframe 13700 wintree after
+ctl:atframe 13700 services after
+ctl:atframe 13710 mark done
+until:control: mark hood-loaded,420
+until:control: mark cas,600
+until:control: mark first-name,400
+type:Jh
+until:control: mark family-name,700
+type:Jh
+until:control: mark done,400
+keep:cas; log
+until:control: wintree "after": [0-9]?[0-9]?[0-9] windows,5
+quit:300

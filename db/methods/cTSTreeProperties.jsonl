@@ -1,0 +1,14 @@
+{"iface":"cTSTreeProperties","class":"cTSTreeProperties","slot":1,"name":"AddRef","ret":"u32","params":[],"source":"Primary refcount slot, called by QueryInterface."}
+{"iface":"cTSTreeProperties","class":"cTSTreeProperties","slot":5,"name":"GetGZCLSID","ret":"u32","params":[],"source":"0x41c3d0 returns TPRP."}
+{"iface":"cTSTreeProperties","class":"cTSTreeProperties","slot":13,"name":"GetTreeId","ret":"u16","params":[],"source":"0x41c600 reads word +0x20, ret with no arguments; folded, left unhooked."}
+{"iface":"cTSTreeProperties","class":"cTSTreeProperties","slot":14,"name":"GetTree","ret":"void*","params":[],"source":"0x41c3b0 calls owner's slot 17 with unsigned tree id."}
+{"iface":"cTSTreeProperties","class":"cTSTreeProperties","slot":16,"name":"GetNameCount","ret":"i32","params":[{"type":"i32","name":"scope"}],"source":"0x41c0b0 calls selected name table's Count(0)."}
+{"iface":"cTSTreeProperties","class":"cTSTreeProperties","slot":23,"name":"InitializeParameters","ret":"void","params":[],"source":"0x41cc30 inserts param 0..3 and four true flags."}
+{"iface":"cTSTreeProperties","class":"cTSTreeProperties","slot":31,"name":"GetNameTable","ret":"void*","params":[{"type":"i32","name":"scope"}],"source":"0x41c5e0 selects parameter=0, local=1, otherwise null."}
+{"iface":"cTSTreeProperties","class":"cTSTreeProperties","slot":33,"name":"DeletingDestructor","ret":"void*","params":[{"type":"u8","name":"flags"}],"source":"0x41be70 frees this when flags bit zero is set."}
+{"iface":"TreePropertyNameTable","slot":3,"name":"GetResource","ret":"void*","params":[],"tentative":true,"source":"Constructor and Initialize set group on returned interface."}
+{"iface":"TreePropertyNameTable","slot":4,"name":"CopyFrom","ret":"void","params":[{"type":"void*","name":"source"}],"source":"CopyFrom forwards source name table."}
+{"iface":"TreePropertyNameTable","slot":5,"name":"Count","ret":"i32","params":[{"type":"i32","name":"language"}],"source":"Read/Write name loop count, language zero."}
+{"iface":"TreePropertyNameTable","slot":7,"name":"GetName","ret":"void","params":[{"type":"void*","name":"out"},{"type":"i32","name":"index"},{"type":"i32","name":"language"}],"source":"Write and GetName request one-based names into cRZString."}
+{"iface":"TreePropertyNameTable","slot":10,"name":"SetName","ret":"void","params":[{"type":"void*","name":"text"},{"type":"i32","name":"index"},{"type":"i32","name":"language"}],"source":"Read and SetName store one-based names."}
+{"iface":"TreePropertyNameTable","slot":14,"name":"RemoveName","ret":"void","params":[{"type":"i32","name":"index"},{"type":"u32","name":"language"}],"source":"RemoveName removes trailing entry with language 0xffffffff."}

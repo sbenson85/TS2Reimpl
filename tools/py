@@ -1,0 +1,4 @@
+#!/bin/sh
+# The main checkout's venv Python, from the main checkout or any worktree (Git Bash): tools/py -I tools/status.py --check
+# A literal command for lanes: the worktree shell guard refuses interpreters named through variables.
+exec "$(git rev-parse --path-format=absolute --git-common-dir)/../.venv/Scripts/python.exe" "$@"

@@ -1,0 +1,1 @@
+{"iface": "PropertyValue", "slot": 4, "name": "GetTypeId", "ret": "u32", "params": [], "tentative": true, "source": "lane AJ: the type id 0x0c264712 / 0xeb61e4f7 (integers), 0xabc78708 (float), 0x0b8bea18 (text), 0xcba908e1 (nothing printable); the value is the dword at +4"}

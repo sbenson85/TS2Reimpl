@@ -1,0 +1,8 @@
+# Append-only JSONL: both sides' new lines are kept when two branches append (lane merges). The union driver keeps
+# both versions of an entry two branches changed, so run tools/annotations_check.py after every merge (guard runs it on
+# the branch's merge result). Not the status files (entries are edited in place) or files tools regenerate whole
+# (names, classes, functions, missed-functions, library-matches, ...).
+db/annotations.jsonl merge=union
+db/methods/*.jsonl merge=union
+notes/lane-records.jsonl merge=union
+notes/lane-picks.jsonl merge=union

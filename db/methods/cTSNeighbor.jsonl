@@ -1,0 +1,50 @@
+{"iface":"NbrInStream","slot":0,"name":"QueryInterface","ret":"u8","params":[{"type":"u32","name":"id"},{"type":"void*","name":"out","cpp":"void **"}],"tentative":true,"source":"lane BB: cTSNeighbor::Read asks old-format streams (version below 0x3f) for interface 0x3b2271c0 to read the name"}
+{"iface":"NbrInStream","slot":5,"name":"GetUint8","ret":"u8","params":[{"type":"void*","name":"out","cpp":"void *"}],"tentative":true,"source":"lane BB: cIGZIStream slot 5 (0x14)"}
+{"iface":"NbrInStream","slot":6,"name":"GetUint16","ret":"u8","params":[{"type":"void*","name":"out","cpp":"void *"}],"tentative":true,"source":"lane BB: cIGZIStream slot 6 (0x18); Read pulls the attribute shorts and the id through it"}
+{"iface":"NbrInStream","slot":8,"name":"GetSint32","ret":"u8","params":[{"type":"void*","name":"out","cpp":"void *"}],"tentative":true,"source":"lane BB: cIGZIStream slot 8 (0x20)"}
+{"iface":"NbrInStream","slot":9,"name":"GetUint32","ret":"u8","params":[{"type":"void*","name":"out","cpp":"void *"}],"tentative":true,"source":"lane BB: cIGZIStream slot 9 (0x24)"}
+{"iface":"NbrInStream","slot":15,"name":"GetString","ret":"u8","params":[{"type":"void*","name":"out","cpp":"void *"}],"tentative":true,"source":"lane BB: slot 15 (0x3c); Read reads the legacy name string through it (versions 0x3f..0x6e)"}
+{"iface":"NbrInStream","slot":18,"name":"GetError","ret":"u8","params":[],"tentative":true,"source":"lane BB: slot 18 (0x48): nonzero after a failed read; Read returns its negation"}
+{"iface":"NbrOutStream","slot":5,"name":"SetUint8","ret":"u8","params":[{"type":"u32","name":"value"}],"tentative":true,"source":"lane BB: cIGZOStream slot 5 (0x14)"}
+{"iface":"NbrOutStream","slot":6,"name":"SetUint16","ret":"u8","params":[{"type":"u32","name":"value"}],"tentative":true,"source":"lane BB: cIGZOStream slot 6 (0x18)"}
+{"iface":"NbrOutStream","slot":8,"name":"SetSint32","ret":"u8","params":[{"type":"u32","name":"value"}],"tentative":true,"source":"lane BB: cIGZOStream slot 8 (0x20)"}
+{"iface":"NbrOutStream","slot":9,"name":"SetUint32","ret":"u8","params":[{"type":"u32","name":"value"}],"tentative":true,"source":"lane BB: cIGZOStream slot 9 (0x24)"}
+{"iface":"NbrOutStream","slot":18,"name":"GetError","ret":"u8","params":[],"tentative":true,"source":"lane BB: slot 18 (0x48): nonzero after a failed write; Write returns its negation"}
+{"iface":"NbrStringReader","slot":20,"name":"ReadStringInto","ret":"void","params":[{"type":"void*","name":"text","cpp":"void *"}],"tentative":true,"source":"lane BB: the old-format string reader the stream hands out for 0x3b2271c0 (Read versions below 0x3f)"}
+{"iface":"NbrRelTable","slot":1,"name":"AddRef","ret":"u32","params":[],"tentative":true,"source":"lane BB: the relationship table held at +0x18"}
+{"iface":"NbrRelTable","slot":2,"name":"Release","ret":"u32","params":[],"tentative":true,"source":"lane BB"}
+{"iface":"NbrRelTable","slot":3,"name":"WriteForPerson","ret":"u32","params":[{"type":"void*","name":"stream"},{"type":"u32","name":"person"}],"tentative":true,"source":"lane BB: cTSNeighbor::Write passes the stream and the neighbour id"}
+{"iface":"NbrRelTable","slot":4,"name":"ReadForPerson","ret":"u32","params":[{"type":"void*","name":"stream"},{"type":"u32","name":"person"}],"tentative":true,"source":"lane BB: cTSNeighbor::Read passes the stream and the neighbour id; the answer is dropped"}
+{"iface":"NbrRelTable","slot":8,"name":"Reset","ret":"void","params":[{"type":"u32","name":"flag"}],"tentative":true,"source":"lane BB: called with 0 before the neighbour lets go of its table (vf7, destructor)"}
+{"iface":"NbrRelTable","slot":9,"name":"GetRelationValue","ret":"u32","params":[{"type":"u32","name":"person"},{"type":"u32","name":"kind"}],"tentative":true,"source":"lane BB: cTSNeighbor vf45 asks kind 1 (flags, bit 0x8000 needed), 8 (a value) and 3"}
+{"iface":"NbrRelTable","slot":16,"name":"IsModified","ret":"u8","params":[],"tentative":true,"source":"lane BB: cTSNeighbor vf38 asks it when its own modified byte is clear"}
+{"iface":"NbrRelTable","slot":17,"name":"SetModified","ret":"u32","params":[{"type":"u32","name":"flag"}],"tentative":true,"source":"lane BB: cTSNeighbor vf39 tail-calls it with its own argument"}
+{"iface":"NbrAppSingleton","slot":6,"name":"GetListHolder","ret":"NbrListHolder*","params":[],"tentative":true,"source":"lane BB: app singleton (cache 0x10cc288) slot 6; vf46/vf47 ask it for the neighbour's list"}
+{"iface":"NbrAppSingleton","slot":24,"name":"GetPersonDataCache","ret":"NbrPersonDataCache*","params":[],"tentative":true,"source":"lane BB: slot 24 (0x60); Read and vf10 look the person data up through it"}
+{"iface":"NbrAppSingleton","slot":26,"name":"GetPeople","ret":"NbrPeople*","params":[],"tentative":true,"source":"lane BB: slot 26 (0x68); vf45 finds the two neighbours' people through it"}
+{"iface":"NbrPersonDataCache","slot":14,"name":"GetPersonData","ret":"void*","params":[{"type":"u32","name":"id"}],"tentative":true,"source":"lane BB: slot 14 (0x38): the (uncounted) person data object for a data id, or null"}
+{"iface":"NbrListHolder","slot":39,"name":"GetList","ret":"NbrList*","params":[{"type":"u32","name":"id"}],"tentative":true,"source":"lane BB: slot 39 (0x9c) with the neighbour's id"}
+{"iface":"NbrList","slot":28,"name":"Begin","ret":"void","params":[{"type":"void*","name":"out","cpp":"void *"}],"tentative":true,"source":"lane BB: slot 28 (0x70) writes the first iterator (a pointer to an element pointer) into out"}
+{"iface":"NbrList","slot":29,"name":"End","ret":"void*","params":[{"type":"void*","name":"out","cpp":"void *"}],"tentative":true,"source":"lane BB: slot 29 (0x74): a pointer to the end iterator"}
+{"iface":"NbrListItem","slot":6,"name":"GetTypeId","ret":"u32","params":[],"tentative":true,"source":"lane BB: slot 6 (0x18); vf46 wants 0xcf505ab0, vf47 0x8fcd5705"}
+{"iface":"NbrListItem","slot":18,"name":"GetCount","ret":"i16","params":[],"tentative":true,"source":"lane BB: slot 18 (0x48); at least 2 values needed"}
+{"iface":"NbrListItem","slot":24,"name":"GetValueRef","ret":"void*","params":[{"type":"void*","name":"scratch","cpp":"void *"},{"type":"u32","name":"index"}],"tentative":true,"source":"lane BB: slot 24 (0x60): a pointer to a pointer to the 16-bit value (the scratch is the caller's 4-byte argument slot)"}
+{"iface":"NbrPeople","slot":43,"name":"FindPerson","ret":"NbrPerson*","params":[{"type":"u32","name":"dataId"}],"tentative":true,"source":"lane BB: slot 43 (0xac) with a neighbour's slot 15 value"}
+{"iface":"NbrPerson","slot":10,"name":"GetAttributeEx","ret":"u16","params":[{"type":"u32","name":"index"},{"type":"u32","name":"flag"}],"tentative":true,"source":"lane BB: slot 10 (0x28), called with flag 1; the neighbour's own slot 16 is the fallback"}
+{"iface":"NbrPersonData","slot":4,"name":"GetKindInfo","ret":"NbrKindInfo*","params":[],"tentative":true,"source":"lane BB: slot 4 (0x10), asked twice by vf34"}
+{"iface":"NbrPersonData","slot":18,"name":"GetSimDefinition","ret":"NbrSimDefinition*","params":[],"tentative":true,"source":"lane BB: slot 18 (0x48); vf45 counts what it gives"}
+{"iface":"NbrPersonData","slot":65,"name":"IsFlagged","ret":"u8","params":[],"tentative":true,"source":"lane BB: slot 65 (0x104), vf35"}
+{"iface":"NbrPersonData","slot":67,"name":"GetOwnerInfo","ret":"NbrOwnerInfo*","params":[],"tentative":true,"source":"lane BB: slot 67 (0x10c), vf44"}
+{"iface":"NbrKindInfo","slot":3,"name":"GetKind","ret":"u32","params":[{"type":"u32","name":"which"}],"tentative":true,"source":"lane BB: vf34 asks 9 and expects 0x11"}
+{"iface":"NbrOwnerInfo","slot":11,"name":"GetValue","ret":"u32","params":[],"tentative":true,"source":"lane BB: slot 11 (0x2c), vf44 uses it as the second key word"}
+{"iface":"NbrSimDefinition","slot":1,"name":"AddRef","ret":"u32","params":[],"tentative":true,"source":"lane BB"}
+{"iface":"NbrSimDefinition","slot":2,"name":"Release","ret":"u32","params":[],"tentative":true,"source":"lane BB"}
+{"iface":"NbrSimDefinition","slot":29,"name":"GetTuningTable","ret":"void","params":[{"type":"u32","name":"id"},{"type":"u32","name":"group"},{"type":"void*","name":"out","cpp":"void **"}],"tentative":true,"source":"lane BB: slot 29 (0x74) with 0x115, 0x5b267c89 and a counted-pointer out; vf45's thresholds"}
+{"iface":"NbrTuning","slot":2,"name":"Release","ret":"u32","params":[],"tentative":true,"source":"lane BB"}
+{"iface":"NbrTuning","slot":11,"name":"GetValue","ret":"i16","params":[{"type":"u32","name":"index"}],"tentative":true,"source":"lane BB: slot 11 (0x2c): 16-bit tuning value by index"}
+{"iface":"NbrPersistService","slot":5,"name":"GetResource","ret":"u8","params":[{"type":"void*","name":"key","cpp":"const void *"},{"type":"u32","name":"interfaceId"},{"type":"void*","name":"out","cpp":"void **"},{"type":"u32","name":"arg4"},{"type":"u32","name":"arg5"}],"tentative":true,"source":"lane BB: cached persist service (0xb390c0) slot 5 (0x14), as vf14 and vf44 call it with two trailing zeroes"}
+{"iface":"NbrRecord","slot":15,"name":"Initialize","ret":"u32","params":[{"type":"u32","name":"arg"}],"tentative":true,"source":"lane BB: slot 15 (0x3c), called with 0 on the freshly created record object (vf14)"}
+{"iface":"NbrScoreObject","slot":113,"name":"GetScore","ret":"u16","params":[{"type":"u32","name":"a"},{"type":"u32","name":"b"}],"tentative":true,"source":"lane BB: slot 113 (0x1c4) vf44, 16-bit answer"}
+{"iface":"NbrPersonData","slot":28,"name":"GetDataId","ret":"u32","params":[],"tentative":true,"source":"lane BB: slot 28 (0x70); vf6 stores what it gives in +0x10"}
+{"iface": "NbrSelf", "alias_of": "cITSNeighbor", "source": "lane DE: NbrSelf (lane BB) is the neighbour's own interface, slots 8/10/12/15/16/53 of cTSNeighbor's +0 vtable 0xdcc494 (RTTI cITSNeighbor); its facts moved to cITSNeighbor with the same names", "tentative": true, "lane": "DE"}
+{"iface": "NbrKindInfo", "slot": 6, "name": "SetKind", "ret": "void", "params": [{"type": "u32", "name": "which"}, {"type": "u32", "name": "value"}], "source": "lane DE: RetireNeighbor sets kind 9 to 0x11 (what GetKind(9) / cITSNeighbor::IsRetired read)", "tentative": true, "lane": "DE"}

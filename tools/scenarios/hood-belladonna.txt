@@ -1,0 +1,8 @@
+# Boot and load Belladonna Cove to the neighbourhood view, then idle 30 s. Deterministic: the
+# standard in-game smoke test for hooks (a hood load makes millions of calls into framework code).
+start; wait:35
+click:1004,660; wait:5        # Belladonna Cove thumbnail
+click:1216,1022; wait:80      # Play
+click:1272,858; wait:8        # OK on the "expansion packs have no neighbourhood" notice
+click:1280,962; wait:30       # close the welcome album
+shot:hood; log; stop

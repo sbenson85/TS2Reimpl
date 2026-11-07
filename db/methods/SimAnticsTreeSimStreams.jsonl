@@ -1,0 +1,14 @@
+{"iface": "TreeInStream", "slot": 4, "name": "GetByte", "ret": "u8", "params": [{"type": "u8*", "name": "out"}], "source": "lane AB: cRZIStream slot 4 (slot 5 is the same function); the frame and stack Read functions use slots 4, 6, 7, 8"}
+{"iface": "TreeInStream", "slot": 6, "name": "GetWord", "ret": "u8", "params": [{"type": "u16*", "name": "out"}], "source": "lane AB: cRZIStream slot 6"}
+{"iface": "TreeInStream", "slot": 7, "name": "GetWordB", "ret": "u8", "params": [{"type": "u16*", "name": "out"}], "source": "lane AB: cRZIStream slot 7 (the same function as 6)"}
+{"iface": "TreeInStream", "slot": 8, "name": "GetDword", "ret": "u8", "params": [{"type": "u32*", "name": "out"}], "source": "lane AB: cRZIStream slot 8"}
+{"iface": "TreeInStream", "slot": 18, "name": "HasError", "ret": "u8", "params": [], "source": "lane AB: nonzero when the stream failed"}
+{"iface": "TreeInStream", "slot": 20, "name": "GetContext", "ret": "TreeStreamContext*", "params": [], "tentative": true, "source": "lane AB: the object whose slot 78 gives the stream's format version"}
+{"iface": "TreeStreamContext", "slot": 78, "name": "GetVersionAddress", "ret": "u32*", "params": [], "tentative": true, "source": "lane AB: pointer to the saved-game format version (frames add fields above 0x19 and 0xa4)"}
+{"iface": "TreeOutStream", "slot": 4, "name": "PutByte", "ret": "u8", "params": [{"type": "u32", "name": "value"}], "source": "lane AB: cRZOStream slot 4"}
+{"iface": "TreeOutStream", "slot": 6, "name": "PutWord", "ret": "u8", "params": [{"type": "u32", "name": "value"}], "source": "lane AB: cRZOStream slot 6"}
+{"iface": "TreeOutStream", "slot": 8, "name": "PutDword", "ret": "u8", "params": [{"type": "u32", "name": "value"}], "source": "lane AB: cRZOStream slot 8"}
+{"iface": "TreeOutStream", "slot": 18, "name": "HasError", "ret": "u8", "params": [], "source": "lane AB"}
+{"iface": "TreeOwnerWriter", "slot": 3, "name": "WriteOwner", "ret": "void", "params": [{"type": "void*", "name": "stream"}, {"type": "void*", "name": "owner", "cpp": "void **"}], "tentative": true, "source": "lane AB: second argument of the frame's Write; saves the owner reference"}
+{"iface": "TreeOwnerReader", "slot": 4, "name": "ReadOwner", "ret": "void", "params": [{"type": "void*", "name": "stream"}, {"type": "void*", "name": "owner", "cpp": "void **"}], "tentative": true, "source": "lane AB: second argument of the frame's Read; restores the owner reference"}
+{"iface": "TreeNameSink", "slot": 4, "name": "SetText", "ret": "void", "params": [{"type": "u8*", "name": "text", "cpp": "const char *"}], "source": "lane AB: cRZString slot 4 (FromChar(const char *))"}

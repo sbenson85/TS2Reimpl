@@ -1,0 +1,13 @@
+# Milestone B: load Belladonna Cove, enter 120 Siena Street (lot 6) through host control, save it
+# from code with the message the options panel's save button posts, exit, and snapshot the user
+# data for tools/savediff.py. Run with -ResetUserData so every run starts from the same baseline.
+start; wait:35
+click:1004,660; wait:5        # Belladonna Cove thumbnail
+click:1216,1022; wait:80      # Play
+click:1272,858; wait:8        # OK on the "expansion packs have no neighbourhood" notice
+click:1280,962; wait:30       # close the welcome album
+ctl:loadlot 6; wait:90        # 120 Siena Street (lot 6), loads paused
+shot:lot
+ctl:post 0xacfd5984; wait:30  # save (cTSWinProcOptionsPanel's save button)
+shot:saved; log; stop; wait:5
+snap:saved

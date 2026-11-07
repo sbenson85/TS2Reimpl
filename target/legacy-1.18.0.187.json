@@ -1,0 +1,24 @@
+{
+  "name": "The Sims 2 Legacy Collection (Steam)",
+  "file": "EP9/TSBin/Sims2EP9.exe",
+  "file_version": "1.18.0.187",
+  "sha1": "8E9B6BFB73D823873387764C882E80E994CFE724",
+  "size": 18662696,
+  "unpacked_sha1": "5B9917AD067ADD1E8AC551664FC150CB8BE2BDD6",
+  "steam_app_id": 3314070,
+  "steam_build_id": 18015495,
+  "pe": {
+    "machine": "i386",
+    "timestamp_utc": "2025-04-07T18:39:58Z",
+    "linker": "14.40",
+    "image_base": "0xA0000000",
+    "aslr": true,
+    "pdb_path": "C:\\dev\\sims2remaster\\DL\\out\\ReleaseSRT\\Sims2EP9.pdb",
+    "steam_drm": "SteamStub (.bind section, .text encrypted on disk)"
+  },
+  "notes": [
+    "Recompiled with MSVC 14.40 (VS 2022 17.10); Ultimate Collection addresses and STLport layouts do not apply.",
+    "No STLport RTTI; ~60 Microsoft STL RTTI names. ~4,528 unique RTTI type names overall.",
+    "Imports d3d9.dll, wininet.dll, winmm.dll, dsound.dll; the community injects via Ultimate ASI Loader as wininet.dll."
+  ]
+}

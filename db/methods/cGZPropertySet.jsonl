@@ -1,0 +1,30 @@
+{"iface": "cIGZPropertySetUint32", "slot": 0, "name": "QueryInterface", "ret": "bool", "params": [{"type": "u32", "name": "iid"}, {"type": "void*", "name": "out", "cpp": "void **"}], "source": "lane DP: 0x1bf44d", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 1, "name": "AddRef", "ret": "u32", "params": [], "source": "lane DP: cIGZUnknown", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 2, "name": "Release", "ret": "u32", "params": [], "source": "lane DP: 0x1bf485", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 3, "name": "SetProperty", "ret": "bool", "params": [{"type": "void*", "name": "key", "cpp": "const uint32_t *"}, {"type": "void*", "name": "value"}], "source": "lane DP: 0x1bf49c", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 4, "name": "RemoveProperty", "ret": "bool", "params": [{"type": "void*", "name": "key", "cpp": "const uint32_t *"}], "source": "lane DP: 0x1bee49", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 5, "name": "Clear", "ret": "void", "params": [], "source": "lane DP: 0x1bee23", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 6, "name": "GetFirst", "ret": "bool", "params": [{"type": "void*", "name": "key", "cpp": "uint32_t *"}, {"type": "void*", "name": "value", "cpp": "void **"}], "source": "lane DP: 0x1bf239", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 7, "name": "GetNext", "ret": "bool", "params": [{"type": "void*", "name": "key", "cpp": "uint32_t *"}, {"type": "void*", "name": "value", "cpp": "void **"}], "source": "lane DP: 0x1bf389", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 8, "name": "GetProperty", "ret": "void*", "params": [{"type": "void*", "name": "key", "cpp": "const uint32_t *"}], "source": "lane DP: 0x1bf5e9", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 9, "name": "GetPropertyValue", "ret": "bool", "params": [{"type": "void*", "name": "key", "cpp": "const uint32_t *"}, {"type": "void*", "name": "out"}], "source": "lane DP: 0x1bf626", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 10, "name": "HasProperty", "ret": "bool", "params": [{"type": "void*", "name": "key", "cpp": "const uint32_t *"}], "source": "lane DP: 0x1bf2cc", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 11, "name": "GetCount", "ret": "u32", "params": [], "source": "lane DP: 0x1bf41f", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 12, "name": "CopyFrom", "ret": "void", "params": [{"type": "cIGZPropertySetUint32*", "name": "other"}], "source": "lane DP: 0x1bf148", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 13, "name": "DeletingDestructor", "ret": "void*", "params": [{"type": "u32", "name": "flags"}], "source": "lane DP: 0x1bedac", "lane": "DP"}
+{"iface": "cIGZPropertySetUint32", "slot": 14, "name": "KeyToString", "ret": "void*", "cpp_ret": "const char *", "params": [{"type": "u32", "name": "key"}, {"type": "void*", "name": "out"}], "source": "lane DP: 0x1bf336", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 0, "name": "QueryInterface", "ret": "bool", "params": [{"type": "u32", "name": "iid"}, {"type": "void*", "name": "out", "cpp": "void **"}], "source": "lane DP: 0x1bf429 (iid 0x4bb0d269)", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 1, "name": "AddRef", "ret": "u32", "params": [], "source": "lane DP: cIGZUnknown", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 2, "name": "Release", "ret": "u32", "params": [], "source": "lane DP: 0x1bf485", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 3, "name": "SetProperty", "ret": "bool", "params": [{"type": "void*", "name": "key"}, {"type": "void*", "name": "value"}], "source": "lane DP: 0x1bf515 (key: a service-allocated std::string; value: a cIGZAny, copied). Was DNAPropertyStore::SetValue / SimPropertySink::SetProperty", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 4, "name": "RemoveProperty", "ret": "bool", "params": [{"type": "void*", "name": "key"}], "source": "lane DP: 0x1bee9c", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 5, "name": "Clear", "ret": "void", "params": [], "source": "lane DP: 0x1bee23", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 6, "name": "GetFirst", "ret": "bool", "params": [{"type": "void*", "name": "key"}, {"type": "void*", "name": "value", "cpp": "void **"}], "source": "lane DP: 0x1bf26d", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 7, "name": "GetNext", "ret": "bool", "params": [{"type": "void*", "name": "key"}, {"type": "void*", "name": "value", "cpp": "void **"}], "source": "lane DP: 0x1bf3c0", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 8, "name": "GetProperty", "ret": "void*", "params": [{"type": "void*", "name": "key"}], "source": "lane DP: 0x1bf670 (stored value or null). Was PropertyTextService::ParseText", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 9, "name": "GetPropertyValue", "ret": "bool", "params": [{"type": "void*", "name": "key"}, {"type": "void*", "name": "out"}], "source": "lane DP: 0x1bf69a (out->Assign(stored)). Was DNAPropertyStore / PropertyTextService::GetValue", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 10, "name": "HasProperty", "ret": "bool", "params": [{"type": "void*", "name": "key"}], "source": "lane DP: 0x1bf306. Was DNAPropertyStore::HasKey", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 11, "name": "GetCount", "ret": "u32", "params": [], "source": "lane DP: 0x1bf41f", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 12, "name": "CopyFrom", "ret": "void", "params": [{"type": "cIGZPropertySetString*", "name": "other"}], "source": "lane DP: 0x1bf0d1", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 13, "name": "DeletingDestructor", "ret": "void*", "params": [{"type": "u32", "name": "flags"}], "source": "lane DP: 0x177a70", "lane": "DP"}
+{"iface": "cIGZPropertySetString", "slot": 14, "name": "KeyToString", "ret": "void*", "cpp_ret": "const char *", "params": [{"type": "u32", "name": "keyOffset"}, {"type": "void*", "name": "out"}], "source": "lane DP: 0x1bf36a", "lane": "DP"}

@@ -1,0 +1,61 @@
+#include "hook/hooks.h"
+#include "ts/cTSObject.h"
+#include "ts/cTSObjectFootprint.h"
+
+namespace {
+
+const HookSpec kHooks[] = {
+    {"cTSObject_vf346", 0x5aacd0, 17, 0xce0e4d4e, MemberAddress(&cTSObject::vf346)},
+    {"cTSObject_vf124", 0x533bd0, 14, 0x07c8cf1b, MemberAddress(&cTSObject::vf124)},
+    {"cTSObject_vf125", 0x531250, 24, 0xd7117416, MemberAddress(&cTSObject::vf125)},
+    {"cTSObject_vf119", 0x541690, 14, 0xda7a5442, MemberAddress(&cTSObject::vf119)},
+    {"cTSObject_vf127", 0x53dc00, 14, 0xfcb29d60, MemberAddress(&cTSObject::vf127)},
+    {"cTSObject_vf37", 0x5456b0, 14, 0xfbd72a61, MemberAddress(&cTSObject::vf37)},
+    {"cTSObject_vf198", 0x5342d0, 32, 0xe2ee939e, MemberAddress(&cTSObject::vf198)},
+    {"cTSObject_vf244", 0x52df60, 32, 0xb65ff6cc, MemberAddress(&cTSObject::vf244)},
+    {"cTSObject_vf249", 0x530e80, 32, 0x4f371c3b, MemberAddress(&cTSObject::vf249)},
+    {"cTSObject_ReloadReferences", 0x531320, 32, 0xcea1d1f2, MemberAddress(&cTSObject::ReloadReferences)},
+    {"cTSObject_ResyncReferenceSource", 0x53ea00, 32, 0x659699c2, MemberAddress(&cTSObject::ResyncReferenceSource)},
+    {"cTSObject_vf314", 0x545b80, 17, 0x1723a30a, MemberAddress(&cTSObject::vf314)},
+    {"cTSObject_vf31", 0x53d780, 32, 0x9eb8a243, MemberAddress(&cTSObject::vf31)},
+    {"cTSObject_vf245", 0x52f060, 32, 0x2516f3f7, MemberAddress(&cTSObject::vf245)},
+    {"cTSObject_vf177", 0x546810, 32, 0x7521c5cc, MemberAddress(&cTSObject::vf177)},
+    {"cTSObject_vf178", 0x546890, 32, 0xf7c7f95d, MemberAddress(&cTSObject::vf178)},
+    {"cTSObject_vf221", 0x543050, 32, 0xe3b0894f, MemberAddress(&cTSObject::vf221)},
+    {"cTSObject_vf121", 0x533c20, 12, 0x274cfd8e, MemberAddress(&cTSObject::vf121)},
+    {"cTSObject_vf183", 0x5406f0, 32, 0x87ad2be4, MemberAddress(&cTSObject::vf183)},
+    {"cTSObject_vf211", 0x5343d0, 19, 0x2ab2b3c7, MemberAddress(&cTSObject::vf211)},
+    {"cTSObject_vf212", 0x534160, 19, 0xa43db424, MemberAddress(&cTSObject::vf212)},
+    {"cTSObject_vf213", 0x53d6e0, 13, 0x50563c51, MemberAddress(&cTSObject::vf213)},
+    {"cTSObject_vf214", 0x52df50, 7, 0xd4267a20, MemberAddress(&cTSObject::vf214)},
+    {"cTSObject_vf219", 0x542fa0, 12, 0x7c580676, MemberAddress(&cTSObject::vf219)},
+    {"cTSObject_vf222", 0x5456c0, 13, 0xbe39b880, MemberAddress(&cTSObject::vf222)},
+    {"cTSObject_vf224", 0x5455d0, 14, 0xfdb238f7, MemberAddress(&cTSObject::vf224)},
+    {"cTSObject_vf315", 0x545f60, 32, 0x65a71a9c, MemberAddress(&cTSObject::vf315)},
+    {"cTSObject_vf316", 0x545cd0, 8, 0x80577b28, MemberAddress(&cTSObject::vf316)},
+    {"cTSObject_vf328", 0x5ac9e0, 14, 0x7ee20ab1, MemberAddress(&cTSObject::vf328)},
+    {"cTSObject_vf276", 0x53d980, 13, 0x37e73966, MemberAddress(&cTSObject::vf276)},
+    {"cTSObject_vf205", 0x53d1a0, 32, 0x2c6f5ad5, MemberAddress(&cTSObject::vf205)},
+    {"cTSObject_vf223", 0x546620, 32, 0x24771bf1, MemberAddress(&cTSObject::vf223)},
+    {"cTSObject_vf182", 0x540560, 32, 0xe2677161, MemberAddress(&cTSObject::vf182)},
+    {"cTSObject_vf259", 0x52ec10, 32, 0x9a2c6911, MemberAddress(&cTSObject::vf259)},
+    {"cTSObject_vf284", 0x53a290, 32, 0x3248ec36, MemberAddress(&cTSObject::vf284)},
+    {"cTSObject_vf358", 0x5ae3a0, 32, 0x88c3bf87, MemberAddress(&cTSObject::vf358)},
+    {"cTSObject_vf201", 0x53ccb0, 32, 0xc80a9e85, MemberAddress(&cTSObject::vf201)},
+    {"cTSObject_vf202", 0x53aa80, 32, 0x10e3e07e, MemberAddress(&cTSObject::vf202)},
+    {"cTSObject_vf157", 0x544f60, 32, 0xfe4d7110, MemberAddress(&cTSObject::vf157)},
+    {"cTSObject_vf158", 0x544060, 32, 0x7389cc4c, MemberAddress(&cTSObject::vf158)},
+    {"cTSObject_vf324", 0x541140, 32, 0x016ddbcf, MemberAddress(&cTSObject::vf324)},
+    {"cTSObject_vf195", 0x543ae0, 32, 0xa47772fa, MemberAddress(&cTSObject::vf195)},
+    {"cTSObject_vf325", 0x540fc0, 32, 0xe2677161, MemberAddress(&cTSObject::vf325)},
+    {"cTSObject_vf261", 0x5290e0, 32, 0xfb279cb0, MemberAddress(&cTSObject::vf261)},
+    {"cTSObject_vf330", 0x53fbb0, 32, 0x93712242, MemberAddress(&cTSObject::vf330)},
+    {"cTSObject_vf65", 0x5426a0, 32, 0x27f2d3ee, MemberAddress(&cTSObject::vf65)},
+    {"cTSObject_FootprintSize", 0x7e86e0, 32, 0x5e9291a8, reinterpret_cast<void *>(&FootprintSize)},
+    {"cTSObject_FacingPointerToNotch", 0x7dd070, 24, 0xaf749504, reinterpret_cast<void *>(&FacingPointerToNotch)},
+    {"cTSObject_BuildFootprint", 0x7eaf50, 32, 0x3b0a8c20, reinterpret_cast<void *>(&BuildFootprint)},
+    {"cTSObject_PlacementEventCheck", 0x545f90, 32, 0x6c4d3da3, reinterpret_cast<void *>(&PlacementEventCheck)},
+};
+REGISTER_HOOKS(kHooks);
+
+} // namespace

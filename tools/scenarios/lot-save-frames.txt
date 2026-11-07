@@ -1,0 +1,14 @@
+# Milestone B: load Belladonna Cove, then enter 120 Siena Street (lot 6) and save it at fixed
+# framework ticks (host control "atframe"), so neither depends on wall-clock timing. Run with
+# -ResetUserData -Seed N. The neighbourhood is loaded by about tick 3300 at ~26 ticks/s.
+start; wait:35
+ctl:atframe 4200 loadlot 6
+ctl:atframe 6600 post 0xacfd5984   # save 2400 ticks after the enter-lot request
+click:1004,660; wait:5        # Belladonna Cove thumbnail
+click:1216,1022; wait:80      # Play
+click:1272,858; wait:8        # OK on the "expansion packs have no neighbourhood" notice
+click:1280,962                # close the welcome album
+until:control: post done,400
+wait:30
+shot:saved; log; stop; wait:5
+snap:saved
