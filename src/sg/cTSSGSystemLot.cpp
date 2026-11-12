@@ -5,6 +5,7 @@
 #include "game/original.h"
 #include "game/vtable.h"
 #include "rz/StaticGetters2.h"
+#include "sg/SGUtilities.h"
 
 namespace {
 
@@ -20,7 +21,10 @@ template <int kSlot, typename R = uint32_t, typename... A> __forceinline R Call(
 void *ResourceManager() { return OriginalFunction<void *(__cdecl *)(), 0x20deb5>()(); }
 void *SceneCache() { return OriginalFunction<void *(__cdecl *)(), 0x20de7c>()(); }
 void *CarManager() { return OriginalFunction<void *(__cdecl *)(), 0xb39000>()(); }
-void ReleaseSceneObject(void *object) { OriginalFunction<void(__cdecl *)(void *), 0xae3c00>()(object); }
+void ReleaseSceneObject(void *object)
+{
+    nGZSceneGraph::DetachChoreoQueue(static_cast<nGZSceneGraph::cICompositionTreeNode *>(object)); // 0xae3c00
+}
 void ReleaseCars(void *object) { OriginalFunction<void(__cdecl *)(void *), 0xb3c2b0>()(object); }
 
 // Slot 4 (with `args`) on the object when there is one, then the reference cleared and released.

@@ -6,6 +6,7 @@
 #include "game/original.h"
 #include "game/vtable.h"
 #include "rz/StaticGetters.h" // GetDirectorFrameworkObject
+#include "sg/SGUtilities.h"   // FindNodeByName, FindDataList
 
 #include <string>
 
@@ -43,11 +44,16 @@ const char *BoneName(const BoneAdjust *b)
     return VirtualCall<const char *(__thiscall *)(const void *), 5>(b);
 }
 
-// The next extension of the "bone_adjust" type on the target after `after` (null for the first).
+nGZSceneGraph::cICompositionTreeNode *TreeNode(void *node)
+{
+    return static_cast<nGZSceneGraph::cICompositionTreeNode *>(node);
+}
+
+// The next extension of the "bone_adjust" type on the target after `after` (null for the first; 0xaeb5b0, ours).
 void *NextExtension(void *target, void *after)
 {
-    return OriginalFunction<void *(__cdecl *)(void *, const char *, void *), 0xaeb5b0>()(target, GameAddress<const char>(kRvaBoneAdjust),
-                                                                                          after);
+    return nGZSceneGraph::FindDataList(TreeNode(target), GameAddress<const char>(kRvaBoneAdjust),
+                                       static_cast<nGZSceneGraph::cIDataListExtension *>(after));
 }
 
 // The extension interface's virtual base (its cIGZUnknown): the vbptr at +4, the base's offset its second entry.
@@ -66,7 +72,7 @@ bool BodyPartSystemIface::ApplyBoneAdjusts(uint32_t kind, uint32_t key, uint32_t
         SystemOf(this), kind == 7 ? 3 : kind, id == 0 ? key : 0, id, 0);
     BoneAdjust *const *const bones = reinterpret_cast<BoneAdjust *const *>(entry + 0x18); // first, last
     for (BoneAdjust *b = bones[0]; b != bones[1]; ++b) {
-        void *const node = OriginalFunction<void *(__cdecl *)(const char *, void *, uint32_t), 0xae7490>()(BoneName(b), target, 0xf);
+        void *const node = nGZSceneGraph::FindNodeByName(BoneName(b), TreeNode(target), 0xf);
         if (node == nullptr) continue;
         void *adjust = NextExtension(target, nullptr);
         while (adjust != nullptr) {

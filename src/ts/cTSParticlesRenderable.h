@@ -8,7 +8,8 @@
 // is not ours yet. Standalone shape: cRenderableNodeT<cITSParticlesRenderable, cRenderableNodeImpl, ...> plus this class.
 // The constructor and the destructor are hooked, so no object carries the game's most derived vtables and this class's slot
 // bodies are in effect through their callers (db/status/cTSParticlesRenderable.jsonl). The template levels' copies under it
-// (constructors, destructors, level vtables, 0xbb4xxx..0xbbdxxx) stay live while nTSSG::cOverlayNode 0x3ae470 uses them.
+// (constructors, destructors, level vtables, 0xbb4xxx..0xbbdxxx) were kept live by the original nTSSG::cOverlayNode 0x3ae470;
+// that constructor is ours since lane 261108d, so they are unreachable and not trapped yet (notes/backlog.md).
 #include "rz/RZAutoRef.h"
 #include "sg/SGRenderableTemplates.h"
 #include "sg/cShape.h" // ShapeMaterialHandle

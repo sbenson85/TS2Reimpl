@@ -644,6 +644,13 @@ def normalise_lot(file, fixture_root, snapshot, base_root, prevs=None):
     if pairs:
         notes.append("%s: object ids matched by type: %s" % (
             file, ", ".join("run 0x%x = fixture 0x%x" % (a, b) for a, b in sorted(pairs.items()))))
+    if bad == {OBJM_KEY} and objm_bad and all(re.fullmatch(r"schedule id 0x[0-9a-f]+", s) for s in objm_bad):
+        # Only plain schedule-id differences (entries of objects not kept from the baseline) leave OBJM unexplained:
+        # the class the user accepted (notes/decisions.md, 2026-11-06), cause unknown. OBJM stays a difference, judged
+        # against the references as bytes; the object records are still normalised, so a per-load object's varying
+        # id doesn't show as a record missing (validation 20261109-190105-ea9ec3a8).
+        notes.append("%s: object records normalised; OBJM's schedule ids stay a difference (accepted class)" % file)
+        return explained - {OBJM_KEY} - set(opened), bad, notes, opened
     if bad:
         # The mapping and countdowns explain the package only as a whole: a record that contradicts them (even
         # one byte-identical to the fixture's, so not itself a difference) leaves OBJM and every record unexplained.

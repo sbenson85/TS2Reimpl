@@ -12,6 +12,10 @@
 // replacement (the hook table's entry for that RVA) does. --replay-one f: the child side.
 // --shuffle s (s > 0, one process only, not with --jobs): runs the selected tests in an order shuffled with seed s
 // (printed first), to find tests that depend on state an earlier test left; the same seed gives the same order.
+// --repeat n (n > 1, one process only, not with --jobs): runs the selected tests n times over in this one process (an
+// intermittent failure's rate, heap layouts and predecessors varying as they do in a long run). With --shuffle s,
+// iteration k (from 0) runs in the order of seed s + k. Each result line names its iteration ("iteration k" after the
+// cases); at the end one "repeat:" line per test that failed, with its failing iterations and count.
 #include "difftest.h"
 #include "free_recorder.h"
 #include "game/game.h"
@@ -384,6 +388,7 @@ int wmain(int argc, wchar_t **argv)
     bool ours = false;
     int jobs = 1;
     uint32_t shuffleSeed = 0;
+    int repeat = 1;
     // The monitor appends this pair to the runner's command line (harness/monitor.h); found wherever it is.
     for (int i = 1; i + 1 < argc; ++i)
         if (argv[i] == std::wstring(L"--monitor-state")) monitorState = argv[i + 1];
@@ -400,9 +405,10 @@ int wmain(int argc, wchar_t **argv)
         else if (a == L"--jobs") jobs = _wtoi(argv[i + 1]);
         else if (a == L"--times") timesPath = argv[i + 1];
         else if (a == L"--shuffle") shuffleSeed = static_cast<uint32_t>(_wtoi(argv[i + 1]));
+        else if (a == L"--repeat") repeat = (std::max)(1, _wtoi(argv[i + 1]));
     }
-    if (shuffleSeed && jobs > 1) {
-        std::fprintf(stderr, "--shuffle runs in one process: drop --jobs\n");
+    if ((shuffleSeed || repeat > 1) && jobs > 1) {
+        std::fprintf(stderr, "--shuffle and --repeat run in one process: drop --jobs\n");
         return 2;
     }
     // --list-hooks: every registered hook as "name original-rva replacement-rva" (the replacement's RVA in
@@ -596,12 +602,15 @@ int wmain(int argc, wchar_t **argv)
     monitor::InstallRunner(monitorState, image.Base(), image.Size());
     std::string json = "{\"tests\":[";
     int failed = 0, run = 0;
+    std::map<std::string, std::vector<int>> failedIn; // --repeat: each failing test's iterations
+    std::vector<std::string> failedOrder;
+    for (int iteration = 0; iteration < repeat; ++iteration) {
     std::vector<difftest::Test *> order;
     for (auto &test : difftest::Registry()) order.push_back(&test);
     if (shuffleSeed) {
-        std::mt19937 shuffleRng(shuffleSeed);
+        std::mt19937 shuffleRng(shuffleSeed + static_cast<uint32_t>(iteration));
         std::shuffle(order.begin(), order.end(), shuffleRng);
-        std::printf("test order shuffled with seed %u\n", shuffleSeed);
+        std::printf("test order shuffled with seed %u\n", shuffleSeed + static_cast<uint32_t>(iteration));
     }
     for (difftest::Test *each : order) {
         auto &test = *each;
@@ -724,7 +733,15 @@ int wmain(int argc, wchar_t **argv)
         ++run;
         failed += status != "pass";
 
-        std::printf("[%s] %s (rva 0x%x, %llu cases)\n", status.c_str(), test.name, test.rva, ctx.cases);
+        if (repeat > 1) {
+            std::printf("[%s] %s (rva 0x%x, %llu cases, iteration %d)\n", status.c_str(), test.name, test.rva, ctx.cases, iteration);
+            if (status != "pass") {
+                if (!failedIn.count(name)) failedOrder.push_back(name);
+                failedIn[name].push_back(iteration);
+            }
+        } else {
+            std::printf("[%s] %s (rva 0x%x, %llu cases)\n", status.c_str(), test.name, test.rva, ctx.cases);
+        }
         for (auto &f : ctx.failures) std::printf("    %s\n", f.c_str());
         std::fflush(stdout); // the failure lines too: a crash in the next test must not lose them
 
@@ -738,6 +755,15 @@ int wmain(int argc, wchar_t **argv)
         json += "]}";
         monitor::EndTest(ctx);
     }
+    }
+    for (const std::string &name : failedOrder) {
+        const std::vector<int> &its = failedIn[name];
+        std::string list;
+        for (size_t k = 0; k < its.size() && k < 40; ++k) list += (k ? "," : "") + std::to_string(its[k]);
+        if (its.size() > 40) list += ",...";
+        std::printf("repeat: %s failed %zu of %d iterations (%s)\n", name.c_str(), its.size(), repeat, list.c_str());
+    }
+    if (repeat > 1 && failedOrder.empty()) std::printf("repeat: no test failed in %d iterations\n", repeat);
     json += "],\"run\":" + std::to_string(run) + ",\"failed\":" + std::to_string(failed) + "}\n";
 
     CleanupSandbox();

@@ -10,7 +10,7 @@
 //
 // Stood in on both sides: cRZFile::PathExists 0x1c1242 (a name exists unless it starts with 'x'), cTSAppCommonImpl slot 5
 // 0x1d0c60 (empties the list, then gives the seed's names for the option), cRZStopwatch::Start 0x1c982b (logs; the real one
-// reads the performance counter). Stood in over the image (both sides call the image's): 0x3a18b0, 0xb39000, 0x3a3c30,
+// reads the performance counter). Stood in over the image (both sides call the image's): 0x3a18b0, 0xb39000, 0x3a3c30 (ours since lane YA: a StandIn on both sides),
 // 0xb38ef0, the parser target's constructor 0x3a1ae0 (lays out a virtual-base table in the block whose two entries
 // reach fakes), the float reader 0xaf7190 (writes a value from the seed and the name) and the game's operator new / delete.
 //
@@ -30,8 +30,10 @@
 #include "rz/cRZFile.h"
 #include "rz/cRZStopwatch.h"
 #include "rz/cRZString.h"
+#include "sg/SGUtilities.h"
 #include "sg/cTSSGSystem.h"
 #include "ts/cTSCatalog.h"
+#include "world/WorldColliders.h"
 
 #include <cstdint>
 #include <cstring>
@@ -224,11 +226,11 @@ void *__cdecl StandB39000()
     Ev(0xb39000);
     return gEffects;
 }
-void __cdecl Stand3a3c30(void *effects)
+void __cdecl Stand3a3c30(cITSEffectsManager *effects)
 {
     Ev(evOriginal);
     Ev(0x3a3c30);
-    Ev(effects == gEffects);
+    Ev(static_cast<void *>(effects) == gEffects);
 }
 void *__cdecl StandB38ef0()
 {
@@ -294,10 +296,10 @@ struct Fixture {
         Image(0x824624, &GameDelete);
         Image(0x3a18b0, &Stand3a18b0);
         Image(0xb39000, &StandB39000);
-        Image(0x3a3c30, &Stand3a3c30);
+        both.emplace_back(new shape::StandIn(0x3a3c30, &world_colliders::RegisterWorldObjects, &Stand3a3c30)); // ours since lane YA
         Image(0xb38ef0, &StandB38ef0);
         Image(0x3a1ae0, &StandTargetCtor);
-        Image(0xaf7190, &StandReadFloat);
+        both.emplace_back(new shape::StandIn(0xaf7190, &nGZSceneGraph::ReadFloatProperty, &StandReadFloat));
         both.emplace_back(new shape::StandIn(0x1c1242, &cRZFile::PathExists, &StandPathExists));
         both.emplace_back(new shape::StandIn(0x1d0c60, &appinit::CommonImplSlot5, &StandCommonImpl5));
         both.emplace_back(new shape::StandIn(0x1c982b, &cRZStopwatch::Start, &StandStart));

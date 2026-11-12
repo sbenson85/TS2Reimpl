@@ -20,9 +20,11 @@
 // below; their RVAs are named in the tests that reach them.
 #include <windows.h>
 
+#include "code_patch.h"
 #include "difftest.h"
 #include "game/game.h"
 #include "game/original.h"
+#include "gz/Gimex.h"
 #include "gz/GimexFormats.h"
 
 #include <cstdint>
@@ -422,6 +424,33 @@ const gimex::Info *AsInfo(const void *p)
 }
 
 // Opens through the original's and our entry points; false when the case should stop.
+// The gimex heap, both sides, for Gimex_BmpRead: every block gets kHeapSlack bytes after it. The original reads a whole
+// dword per 16-bit pixel (0x880e88 in the row decoder 0x880cbf), so the last pixel of a row reads two bytes past the row
+// buffer it allocated; with the block at the end of a committed region that faulted (a flake in full runs: notes/log.md
+// 2026-10-28, 2026-11-08). The slack is the same on both sides and never compared; the destination stays guarded.
+constexpr uint32_t kAllocate = 0x87da65;
+constexpr size_t kHeapSlack = 16;
+
+void *__stdcall SlackAllocate(uint32_t size)
+{
+    void *const block = std::malloc(size + kHeapSlack);
+    if (block) std::memset(block, 0xa5, size + kHeapSlack);
+    return block;
+}
+
+uint8_t __stdcall SlackFree(void *block)
+{
+    std::free(block);
+    return 1;
+}
+
+struct SlackHeap {
+    shape::CodePatch allocate{kAllocate, reinterpret_cast<const void *>(&SlackAllocate)};
+    shape::CodePatch release{kFreeMemory, reinterpret_cast<const void *>(&SlackFree)};
+    shape::CodePatch ourAllocate{reinterpret_cast<void *>(&gimex::Allocate), reinterpret_cast<const void *>(&SlackAllocate)};
+    shape::CodePatch ourRelease{reinterpret_cast<void *>(&gimex::FreeMemory), reinterpret_cast<const void *>(&SlackFree)};
+};
+
 struct Side {
     Stream stream;
     gimex::Instance *instance = nullptr;
@@ -590,6 +619,7 @@ DIFF_TEST(Gimex_BmpInfo, 0x881316)
 DIFF_TEST(Gimex_BmpRead, 0x8817a2)
 {
     // Reaches the row decoder 0x880cbf and the mask shift 0x880caa.
+    SlackHeap heap;
     std::mt19937 r(0x8817a2);
     int skippedOverflow = 0;
     int rleRan = 0;

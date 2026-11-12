@@ -72,6 +72,9 @@ const HookSpec kHooks[] = {
     {"cTSEffectsManager_Shutdown", 0xbcaa00, 32, 0x5887c464, reinterpret_cast<void *>(&A::Shutdown)},
     {"cTSEffectsManager_OnTimer", 0xbc7350, 32, 0xe76932c9, reinterpret_cast<void *>(&cTSEffectsManager::OnTimer)},
     {"cTSEffectsManager_SendText",0xbca590, 32, 0xad59d7c9, reinterpret_cast<void *>(&cTSEffectsManager::SendText)},
+    {"FUN_a0bcb4c0", 0xbcb4c0, 32, 0xb0753eb0, MemberAddress<&cTSEffectsManager::ApplyDetail>()},
+    {"FUN_a0bc6050", 0xbc6050, 32, 0xe4c753be, MemberAddress<&cTSEffectsManager::MakeChild>()},
+    {"FUN_a0bcb260", 0xbcb260, 32, 0x8ac50608, MemberAddress<&cTSEffectsManager::SendChildBlend>()},
 };
 REGISTER_HOOKS(kHooks);
 

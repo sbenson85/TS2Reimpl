@@ -53,6 +53,19 @@ def utc_date(value):
 
 GUESSES = True  # main() sets it from --evidence-only
 
+# Rows in the intended campaign order (docs/roadmap.md, "Campaign order"; rough, update when the plan changes): the
+# foundations, rendering then the scenegraph, world-lot, the middle campaigns, then the leaves. Subsystems not listed
+# (order undecided) follow by size, then "other".
+CAMPAIGN_ORDER = (
+    'framework-gz',                                         # 1. foundations (shared-utility is mostly untriaged
+                                                            #    guesses, notes/backlog.md: listed with the undecided)
+    'rendering-gfx', 'scenegraph',                          # 2.
+    'world-lot',                                            # 3.
+    'neighbourhood', 'animation', 'objects', 'sim-core',    # 4. by the same dependency measure
+    'persist-dbpf', 'lua-scripting', 'ui-windowing', 'ui-game',
+    'audio-video', 'cas', 'sim-person', 'command-parser',   # 5. leaves (any time, in parallel)
+)
+
 
 def series(entry):
     """The series a map row counts under. By default a call-graph guess counts under its guessed subsystem (lanes'
@@ -98,7 +111,9 @@ def load_universe(commit):
         basis[sub.get('basis', 'unassigned').split(':')[0]] += f['size']
         if sub.get('guess'):
             guessed[sub['guess']] += f['size']
-    order = sorted((k for k in totals if k != OTHER), key=lambda k: -totals[k]) + [k for k in (OTHER,) if k in totals]
+    planned = [k for k in CAMPAIGN_ORDER if k in totals]
+    rest = sorted((k for k in totals if k != OTHER and k not in CAMPAIGN_ORDER), key=lambda k: -totals[k])
+    order = planned + rest + [k for k in (OTHER,) if k in totals]
     totals = {k: totals[k] for k in order}
     return universe, subs, totals, basis, guessed
 

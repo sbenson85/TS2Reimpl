@@ -26,7 +26,7 @@
 
 namespace worldfx {
 
-constexpr unsigned kSlots = 128;
+constexpr unsigned kSlots = 192; // 192 for the object faces of the height queries (slot 178, lane RZ)
 constexpr unsigned kMaxArgs = 8;
 
 struct Fake;
@@ -154,6 +154,15 @@ inline void Fake::SetFloatFn(unsigned slot, unsigned args, FloatFn custom)
     ffn[slot] = custom;
 }
 
+// A fake whose interface has a virtual base (a vbptr at +4, as cIIndexedMeshBuilder's): derived's word at +4 (its id,
+// so its log entries carry the vbtable's address) points at vbtable, whose second entry leads to base.
+inline void SetVirtualBase(Fake &derived, Fake &base, int32_t (&vbtable)[2])
+{
+    vbtable[0] = -4;
+    vbtable[1] = int32_t(reinterpret_cast<uint8_t *>(&base) - (reinterpret_cast<uint8_t *>(&derived) + 4));
+    derived.id = uint32_t(reinterpret_cast<uintptr_t>(vbtable));
+}
+
 // Game globals (pointer cells or words) set for the scope and restored after it.
 class Scope {
 public:
@@ -208,6 +217,7 @@ public:
     void Map(uint32_t id, unsigned index) { gIds[id] = index; }
     Fake &Entry(unsigned index) { return gEntry[index]; }
     Fake &App() { return gApp; }
+    Fake &CatalogFake() { return gCatalog; } // the catalog itself: tests Set its other slots (26, 27, 31... lane RZ)
     void Plug(Scope &scope) { scope.Set(kAppCell, &gApp); }
 
 private:

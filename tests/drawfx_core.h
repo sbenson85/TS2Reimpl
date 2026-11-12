@@ -14,7 +14,8 @@
 //      offset), a registered range tag | offset, a heap block allocated since the side started, the stack 0x5ac00000,
 //      the images; a pointer into nothing registered fails the test, naming the interface, slot and argument
 //   i  undeclared: zero logs 0, anything else fails the test, saying where to declare the argument's kind (Iface::declare)
-//      On a table without `declare` (a test table not yet converted) 'i' is still the legacy guess, Norm below.
+//      On a table without `declare` (a test table not yet converted) 'i' is still the legacy guess, Norm below, its words
+//      compared by Same's symmetric rule.
 //      Fake::Settle<Slot, Words>("kinds") declares the kinds of a slot the table has none for.
 //   u  a word as it is          b  the low byte only (bool / byte arguments: the high bytes are a register's leftovers)
 //   f  a float, compared exactly (bit for bit), printed as a float
@@ -90,7 +91,27 @@ struct Call {
                words == o.words && text == o.text;
     }
 };
-using Log = std::vector<Call>;
+// One legacy guess (Guess, below): the word it was handed, the word it gave, and whether it read the word as a pointer (a
+// fake, a registered range, the stack). Same() pairs the two sides' guesses by their order for its symmetric rule.
+struct Guessed {
+    uint32_t raw, logged;
+    bool pointer;
+};
+// Guesses kept per log: below the heap's large-block threshold, so that the lazy reserve is an ordinary block. A side that
+// guesses more keeps the first ones (Same pairs those; the rest compare as before).
+inline constexpr size_t kGuessReserve = 1 << 15;
+// A side's calls and notes, and every guess the side made (in order: the k-th Norm of each side is the same word when the
+// sides behave the same). The calls compare as the vector (operator== is the vector's); Same() also reads the guesses.
+struct Log : std::vector<Call> {
+    std::vector<Guessed> guesses;
+    bool guessesFull = false; // more than kGuessReserve guesses: the rest were not kept
+    void clear() noexcept
+    {
+        std::vector<Call>::clear();
+        guesses.clear();
+        guessesFull = false;
+    }
+};
 
 inline Log gLog;
 // A log append that reallocates inside a difftest::FreeRecorder window is counted as a free of the code under test (VH):
@@ -239,14 +260,33 @@ inline Exposure gExposure;
 // The old guess, still used by tests' own logging (notes/backlog.md, "drawfx strict normalised words", step 4: convert
 // these to Ptr for pointers and the word itself for data): a fake's address becomes its id, a registered range's word
 // tag | offset, a stack address the marker, anything else stays as it is. A data word that happens to fall inside one
-// side's registered block is rewritten on that side only (tests/norm_audit.h names it when a test fails;
-// GZDrawRenderToHardware_Slots seed 2885, lane RK). Never pass it an object's raw words: declare each word's kind (Words,
-// FakeOrData below); pointers go through Ptr. `site` names the caller for the exposure sweep.
-inline uint32_t Guess(uint32_t value, const char *site)
+// side's registered block is rewritten on that side only (GZDrawRenderToHardware_Slots seed 2885, lane RK; Particles
+// seed 47): Same() forgives that pair, below. Still, never pass it an object's raw words: declare each word's kind
+// (Words, FakeOrData below); pointers go through Ptr. `site` names the caller for the exposure sweep.
+//
+// Every guess is kept in gLog.guesses (raw word, logged word, read as a pointer or not), and Same() decides symmetrically
+// (lane 261108w): a word is compared as a pointer (its records) only when both sides' k-th guesses read it as one, else as
+// data (the raw words). So a data word inside one side's block compares as the data it is on both sides, and a pointer on
+// one side against data on the other compares their raw words, which differ (Same, "The symmetric rule").
+inline void KeepGuess(uint32_t raw, uint32_t logged, bool pointer)
 {
+    std::vector<Guessed> &kept = gLog.guesses;
+    if (kept.size() == kept.capacity()) {
+        // Growing would free the old buffer, inside a FreeRecorder window perhaps (a free of the code under test): only
+        // the first reserve, from nothing, which frees nothing.
+        if (kept.capacity()) return void(gLog.guessesFull = true);
+        difftest::NotCounted bookkeeping;
+        kept.reserve(kGuessReserve);
+    }
+    kept.push_back({raw, logged, pointer});
+}
+inline uint32_t GuessWord(uint32_t value, const char *site, bool &pointer)
+{
+    pointer = false;
     if (!value) return 0;
     Exposure::Site *const sweep = gExposure.file ? &gExposure.At(site) : nullptr;
     if (sweep) ++sweep->words;
+    pointer = true;
     for (const Fake *f : gFakes)
         if (value == P(f)) {
             if (sweep) ++sweep->hits;
@@ -262,9 +302,17 @@ inline uint32_t Guess(uint32_t value, const char *site)
     }
     const auto *tib = reinterpret_cast<const NT_TIB *>(NtCurrentTeb());
     if (value >= P(tib->StackLimit) && value < P(tib->StackBase)) return kStackMarker;
+    pointer = false;
     if (sweep) sweep->expected += bytes / 4294967296.0; // (a fake sits at one address on both sides)
     normaudit::Raw(value);
     return value;
+}
+inline uint32_t Guess(uint32_t value, const char *site)
+{
+    bool pointer;
+    const uint32_t logged = GuessWord(value, site, pointer);
+    KeepGuess(value, logged, pointer);
+    return logged;
 }
 inline uint32_t Norm(uint32_t value, std::source_location where = std::source_location::current())
 {
@@ -720,16 +768,74 @@ inline std::string Describe(const Call &c)
     return out + ')';
 }
 
+// The symmetric rule for guessed words (lane 261108w). Guess reads a word as a pointer by where it lies on its own side, so a
+// data word that happens to lie inside one side's block (the blocks sit at other addresses on the other side) was logged as
+// tag | offset on that side only: a random one-sided difference (notes/backlog.md, "One-sided pointer normalisation
+// flakes"). Same pairs the k-th guess of each side and decides for both: a pointer only when both read the word as one
+// (then their records compare, as before), otherwise data (then the raw words compare). In the log that means:
+//   - a pair read one-sidedly whose raw words are equal (the same data on both sides): the two logged words are equal, as
+//     the data they are. Only these exact (orig logged, ours logged) pairs are forgiven, wherever such a word pair differs;
+//   - a pair read one-sidedly whose raw words differ but whose logged words are the same (a record on one side equal to the
+//     other side's data, e.g. a fake's id against the number): a difference the guess hid. Reported when both sides kept
+//     the same number of guesses (else the pairing is not one word's).
+// Pairs read the same way on both sides are unchanged: both pointers compare by record (a different block or offset differs),
+// both data by value.
+struct GuessPairs {
+    std::vector<std::pair<uint32_t, uint32_t>> equal; // (orig logged, ours logged): the same data on both sides
+    std::string hidden;                               // the first difference a one-sided guess hid, or ""
+};
+inline GuessPairs PairGuesses(const Log &orig, const Log &ours)
+{
+    GuessPairs out;
+    const size_t n = orig.guesses.size() < ours.guesses.size() ? orig.guesses.size() : ours.guesses.size();
+    const bool aligned = orig.guesses.size() == ours.guesses.size() && !orig.guessesFull && !ours.guessesFull;
+    for (size_t k = 0; k < n; ++k) {
+        const Guessed &a = orig.guesses[k], &b = ours.guesses[k];
+        if (a.pointer == b.pointer) continue;
+        if (a.raw == b.raw) {
+            const std::pair<uint32_t, uint32_t> pair{a.logged, b.logged};
+            bool known = false;
+            for (const auto &p : out.equal) known = known || p == pair;
+            if (!known) out.equal.push_back(pair);
+        } else if (a.logged == b.logged && aligned && out.hidden.empty()) {
+            char text[320];
+            std::snprintf(text, sizeof(text),
+                          "guessed word %u: the original's %08x (%s) and ours %08x (%s) were both logged as %08x: one side's "
+                          "pointer against the other's data, different words (drawfx Same, \"the symmetric rule\")",
+                          unsigned(k), a.raw, a.pointer ? "a pointer" : "data", b.raw, b.pointer ? "a pointer" : "data",
+                          a.logged);
+            out.hidden = text;
+        }
+    }
+    return out;
+}
+inline bool SameCall(const Call &a, const Call &b, const GuessPairs &pairs)
+{
+    if (a == b) return true;
+    if (pairs.equal.empty() || a.iface != b.iface || a.object != b.object || a.slot != b.slot ||
+        std::strcmp(a.note, b.note) != 0 || a.text != b.text || a.words.size() != b.words.size())
+        return false;
+    for (size_t w = 0; w < a.words.size(); ++w) {
+        if (a.words[w] == b.words[w]) continue;
+        bool equal = false;
+        for (const auto &p : pairs.equal) equal = equal || (p.first == a.words[w] && p.second == b.words[w]);
+        if (!equal) return false;
+    }
+    return true;
+}
+
 // Compares the two sides' logs (and reports the errors either side met): false, with the first differing call named,
-// when they differ. `what` and `seed` say which case.
+// when they differ. `what` and `seed` say which case. Guessed words compare by the symmetric rule above.
 inline bool Same(difftest::Context &ctx, const Log &orig, const Log &ours, const char *what, uint32_t seed,
                  const std::vector<std::string> &errors = {})
 {
     ++ctx.cases;
     for (const std::string &e : errors) ctx.Fail("%s seed %u: %s", what, seed, e.c_str());
-    if (orig == ours) return errors.empty();
+    const GuessPairs pairs = PairGuesses(orig, ours);
+    if (!pairs.hidden.empty()) ctx.Fail("%s seed %u: %s", what, seed, pairs.hidden.c_str());
     size_t i = 0;
-    while (i < orig.size() && i < ours.size() && orig[i] == ours[i]) ++i;
+    while (i < orig.size() && i < ours.size() && SameCall(orig[i], ours[i], pairs)) ++i;
+    if (i == orig.size() && i == ours.size()) return errors.empty() && pairs.hidden.empty();
     const std::string a = i < orig.size() ? Describe(orig[i]) : std::string("(no more calls)");
     const std::string b = i < ours.size() ? Describe(ours[i]) : std::string("(no more calls)");
     const std::string before = i ? Describe(orig[i - 1]) : std::string("(start)");

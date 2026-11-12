@@ -24,6 +24,10 @@
 #   DIED report and goes on with the tests after it. -Jobs 1 is a single runner, as before. -Trace runs one.
 # -Shuffle s (s > 0): one runner, the selected tests in an order shuffled with seed s (harness/main.cpp --shuffle), to
 #   find tests that depend on state an earlier test left; the same seed repeats the order (overrides -Jobs).
+# -Repeat n (n > 1): one runner runs the selected tests n times over in one process (harness/main.cpp --repeat; overrides
+#   -Jobs), to measure an intermittent failure's rate; each result line names its iteration, and -Summary prints one
+#   "repeat: <test> failed k of n iterations (...)" line per failing test. With -Shuffle s, iteration k uses seed s + k.
+#   To repeat a full-suite shard as it ran, pass its tests as -Filter @<file of names> (registry order).
 # -StackFill: sets TS2_STACK_FILL=1, so the runner fills 64 KB of stack below each test body with 0xCDCDCDCD first
 #   (harness/main.cpp FillStackBelow; a test may call difftest::FillStackBelow() itself before a side). A read of an
 #   uninitialised local then shows as 0xcdcdcdcd / -431602080.0 in a diff; run a failing test with and without it.
@@ -33,7 +37,7 @@
 #   that process id) are deleted.
 param([string[]]$Filter = @(), [string]$Config = 'Release', [int]$Trace = 0, [switch]$Summary, [switch]$NoBuild,
       [switch]$Force, [switch]$BuildOnly, [string]$Log = '', [double]$MinFreeGB = 5, [int]$Jobs = 0,
-      [int]$Shuffle = 0, [switch]$StackFill)
+      [int]$Shuffle = 0, [switch]$StackFill, [int]$Repeat = 0)
 $ErrorActionPreference = 'Stop'
 # -Filter a,b,c arrives as an array from PowerShell and as one "a,b,c" string from powershell -File: the same list.
 $filterText = (@($Filter) | ForEach-Object { "$_".Trim() } | Where-Object { $_ }) -join ','
@@ -114,6 +118,7 @@ $runArgs = @('--image', $exe, '--json', "$build\difftest.json")
 if ($filterText) { $runArgs += @('--filter', $filterText) }
 if ($Trace) { $runArgs += @('--trace', $Trace) }
 if ($Shuffle -gt 0) { $runArgs += @('--shuffle', $Shuffle); $Jobs = 1 }
+if ($Repeat -gt 1) { $runArgs += @('--repeat', $Repeat); $Jobs = 1 }
 if ($Jobs -le 0) { $Jobs = [Math]::Max(1, [Math]::Floor([Environment]::ProcessorCount / 2)) }
 if ($Jobs -gt 1 -and -not $Trace) { $runArgs += @('--jobs', $Jobs, '--times', "$local\difftest-times.txt") }
 # The function table that names a fault address inside the original (best effort: a failure here only loses the names).
@@ -171,6 +176,7 @@ foreach ($l in $lines) {
     if ($l -match '^\[') { $keep = $false; continue }
     if ($l -match '^\d+ run, \d+ failed$') { $totals = $l; $keep = $false; continue }
     if ($l -match '^NO TESTS MATCHED') { $l; continue }
+    if ($l -match '^repeat: ') { $keep = $false; $l; continue }
     if ($keep -and $l -match '^\s' -and $shown -lt 12) { $l; $shown++ }
     elseif ($keep -and $l -match '^\s' -and $shown -eq 12) { '    ... (more in build\difftest.out.txt)'; $shown++ }
 }

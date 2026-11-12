@@ -121,6 +121,24 @@ def utc(ts):
     return dt.datetime.fromtimestamp(round(ts / 60) * 60, dt.timezone.utc).strftime("%Y-%m-%d %H:%MZ")
 
 
+def scoped(raw):
+    """The model-scoped weekly limits in a raw answer (Fable's since 2026-11-09): [(name, % of its own allowance, % of
+    the weekly quota used, its allowance as % of the weekly quota)]. The first has the finest steps the endpoint gives:
+    1% of a 50% allowance is half a weekly point."""
+    try:
+        d = json.loads(raw) if raw else {}
+    except ValueError:
+        return []
+    limits = d.get("limits") or []
+    out = []
+    for share in d.get("weekly_scoped_shares") or []:
+        i = share.get("limit_index")
+        lim = limits[i] if isinstance(i, int) and i < len(limits) else {}
+        name = (((lim.get("scope") or {}).get("model") or {}).get("display_name")) or "scoped"
+        out.append((name, lim.get("percent"), share.get("used_percent_of_weekly"), share.get("allowance_percent_of_weekly")))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--max-age", type=float, default=180, help="reuse a snapshot (or failure) this recent, seconds")
@@ -139,6 +157,7 @@ def main():
         rows = con.execute(q + " order by ts desc limit ?", args + [a.history or 10 ** 9]).fetchall()
         for r in reversed(rows):
             print(f"{utc(r['ts'])}  week {r['seven_day']!s:>5}%  5h {r['five_hour']!s:>5}%" +
+                  "".join(f"  {n} {own}% of its {cap}% (= {used} weekly)" for n, own, used, cap in scoped(r["raw"])) +
                   (f"  error: {r['error']}" if r["error"] else ""))
         return 0
 
@@ -163,6 +182,8 @@ def main():
     stale = f" (STALE, {out['age_s'] // 60} min old: {err})" if err else (" (cached)" if out["cached"] else "")
     print(f"weekly {out['weekly']:.0f}% (resets {utc(iso(out['weekly_resets']).timestamp())}), "
           f"5-hour {'none (window not started)' if out['five_hour'] is None else format(out['five_hour'], '.0f') + '%'}{stale}")
+    for n, own, used, cap in scoped(snap["raw"]):
+        print(f"{n}: {own}% of its allowance ({cap}% of the weekly quota), {used} of the weekly points")
     print(f"line {out['line']:.1f}% at {out['elapsed_share'] * 100:.1f}% of the week; "
           f"{'over' if out['ahead_by'] >= 0 else 'under'} by {abs(out['ahead_by']):.1f}; "
           f"new lanes: {['none (97% cutoff)', 'one (at or over the line)', 'two (under the line)'][out['lanes']]}")

@@ -5,8 +5,8 @@
 // (slot 140 fills the transform, slot 139 gives the view whose +0x3c is the field of view) and slot 17 the scene; the
 // cinematic actors vector (+0x12c) points into a test array of 12-byte entries (actors null or wide fakes: slot 120 their
 // object, which answers slots 188 and 98; slot 26 their name). Cells: GetCachedSlot23's 0x10cc2a8, the app 0x10cc288.
-// The actor bounds query 0xae7d00, the day/night test 0x7e2180 and the car manager getter 0xb39000 are stood in over the
-// image; the box union 0x19d430, the dot product 0x18fbf0, 0xae7900 and the quaternion rotation 0x1a6c40 run as they are
+// The actor bounds query 0xae7d00 is stood in on both sides (ours: nGZSceneGraph::GrowByShapeBounds); the day/night
+// test 0x7e2180 and the car manager getter 0xb39000 are stood in over the image; the box union 0x19d430, the dot product 0x18fbf0, 0xae7900 and the quaternion rotation 0x1a6c40 run as they are
 // on the original side (ours calls our RotateByQuaternion).
 //
 // Compared after each run: the event log, the object's 0x3b8 bytes (normalised), every fake's reference count and
@@ -18,6 +18,7 @@
 #include "ts_services_fixture.h"
 
 #include "game/game.h"
+#include "sg/SGUtilities.h"
 #include "sg/cTSSGSystem.h"
 
 #include <cfloat>
@@ -122,7 +123,7 @@ void *__cdecl StandCars()
 
 struct Fixture {
     Globals globals;
-    shape::CodePatch bounds{GameAddress<void>(0xae7d00), shape::CodeOf(&StandBounds)};
+    shape::StandIn bounds{0xae7d00, &nGZSceneGraph::GrowByShapeBounds, &StandBounds};
     shape::CodePatch night{GameAddress<void>(0x7e2180), shape::CodeOf(&StandIsNight)};
     shape::CodePatch cars{GameAddress<void>(0xb39000), shape::CodeOf(&StandCars)};
     Fixture()

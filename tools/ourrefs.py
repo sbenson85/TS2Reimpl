@@ -11,7 +11,8 @@ immediate or displacement (a look-alike straddling instructions; about 1 in 5 co
 doesn't cover cleanly (data, jump tables) count. In data every hit counts except unaligned ones inside compiler or
 linker metadata (byte-packed unwind maps, volatile metadata). Hits inside a third-party library we link (THIRD_PARTY,
 by the map's `library:object` name) are dropped: that code knows nothing of the game, so its bytes only look like an
-address (FreeType's af_blue_strings held 20 e0 a4 a0, read as 0xa0a4e020, 2026-10-28). Nothing else is left out by
+address (FreeType's af_blue_strings held 20 e0 a4 a0, read as 0xa0a4e020, 2026-10-28). The toolchain's static
+libraries (libucrt, libcmt, libvcruntime, libcpmt) count as third-party the same way. Nothing else is left out by
 object: the map can't say where a symbol-less object's bytes end. Hook rows and traps hold bare function RVAs and CRCs; callers.py drops hits on their
 CRCs (scan's `ignore`).
 
@@ -32,7 +33,10 @@ import tsdb  # noqa: E402
 DEFAULT_EXE = "build/Release/ts2host.exe"
 METADATA = re.compile(r"(unwindtable|tryblocktable|stateUnwindMap|ipToStateMap|catchsym|volatile_metadata)\b|"
                       r"(__tryblocktable|__unwindtable|__catchsym)\$")
-THIRD_PARTY = ("ts2freetype:",)  # our static libraries built from third-party sources (CMakeLists.txt)
+# Our static libraries built from third-party sources (CMakeLists.txt), and the toolchain's own static libraries (CRT,
+# vcruntime, STL): none of them knows the game (libucrt:input.obj held a look-alike of cGZSndEaRenderer's vtable slot 5
+# as an operand, 2026-11-11). Templates instantiated in our objects stay attributed to our objects.
+THIRD_PARTY = ("ts2freetype:", "libucrt:", "libcmt:", "LIBCMT:", "libvcruntime:", "libcpmt:")
 SYMBOL = re.compile(r"^\s*([0-9a-f]{4}):([0-9a-f]{8})\s+(\S+)\s+([0-9a-f]{8})\s+(?:[fi]\s+)*(\S+)\s*$", re.M)
 
 

@@ -372,6 +372,9 @@ TS2_OWNED_STATIC(const nGZEvent::cEventAttribute, feb1c0) = {0, ts2_rva_d9b9d0, 
 TS2_OWNED_STATIC(nGZGraphic4::cGZMessagePool, feb660) = {0x10, 0x800, nullptr, nullptr};
 TS2_OWNED_STATIC(nGZGraphic4::cGZMessagePool, feb670) = {0x20, 0x1000, nullptr, nullptr};
 TS2_OWNED_STATIC(nGZGraphic4::cGZMessagePool, feb680) = {0x1c, 0xe00, nullptr, nullptr};
+// cTSOverlayManager's: overlays, decals.
+TS2_OWNED_STATIC(nGZGraphic4::cGZMessagePool, 107d9a8) = {0xd4, 0x6a00, nullptr, nullptr};
+TS2_OWNED_STATIC(nGZGraphic4::cGZMessagePool, 107d9b8) = {0x108, 0x8400, nullptr, nullptr};
 TS2_OWNED_STATIC(void *, 10c9570){};
 
 // The behaviour types' connection manager caches (EventManagerCell); cGZCanvas and cGZGraphicSystem share one.

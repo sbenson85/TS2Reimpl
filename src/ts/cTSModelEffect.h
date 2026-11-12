@@ -32,6 +32,8 @@ public:
     explicit cTSModelEffect(const cTSModelDescription *description); // 0xc05970
     ~cTSModelEffect() override;                                      // 0xc05a10; deleting 0xc05ab0, +4 thunk 0xc05a9c
     static cITSComponentEffect *__cdecl Create(const cTSModelDescription *description); // 0xc06c00: null on failure
+    __declspec(noinline) static void **__cdecl MakeAxesPart(void **out, float size); // 0xaef310: with one reference
+    __declspec(noinline) static uint32_t __cdecl GetWhiteMaterial();                 // 0xc05be0: the material's id
 
     void Attach(cIGZUnknown *owner) override;                   // 0: 0xc05cf0
     void Detach() override;                                     // 1: 0xc06b80: the node and the model dropped

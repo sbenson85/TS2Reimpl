@@ -1,4 +1,5 @@
 #include "sg/cTextureManager.h"
+#include "sg/SGUtilities.h" // MakeTextureFromBuffer
 #include "misc/UtilitiesE.h"
 #include "rz/Singleton_20ddfb.h"
 #include "rz/StaticGetters.h"
@@ -77,10 +78,11 @@ inline void ResolveKey(cRZString *out, const char *text, void *id, const char *k
 {
     nGZSceneGraph::ResolveResourceName(out->AsInterface(), text, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(id)), key);
 }
-// 0xaece50 (__cdecl): builds the texture object of `material` named `name` into *result.
+// 0xaece50 (nGZSceneGraph::MakeTextureFromBuffer, ours): the texture of the buffer `material`'s pixels named `name` into
+// *result, added to the texture manager when `flag`.
 inline void MakeTexture(void *material, void **result, const char *name, uint32_t flag)
 {
-    OriginalFunction<void(__cdecl *)(void *, void **, const char *, uint32_t), 0xaece50>()(material, result, name, flag);
+    nGZSceneGraph::MakeTextureFromBuffer(static_cast<cIGZBuffer *>(material), result, name, uint8_t(flag));
 }
 // 0x54a410 (__cdecl, one output slot): finds the one resource of the cached lists and stores it in *result.
 inline void FindResource(void **result)

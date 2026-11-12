@@ -15,6 +15,7 @@
 #include "rz/StaticGetters.h"
 #include "rz/StaticGetters2.h"
 #include "sg/SGLocalString.h"
+#include "sg/SGUtilities.h"
 #include "simantics/SimGeometry.h"
 
 #include <cmath>
@@ -113,8 +114,8 @@ constexpr uint32_t kBottomCut = 0xdadf5c;
 constexpr uint32_t kRadiusShare = 0xdaf06c;
 // An actor whose trimmed bounds' half-diagonal is under this counts only when its slot 120 object's slot 98 is this kind.
 constexpr uint32_t kSmallActorKind = 2;
-// The bounds query's flags (0xae7d00).
-constexpr uint32_t kBoundsFlags = 0xf;
+// The bounds query's skip flag (0xae7d00: children with flag 15 are left out).
+constexpr int32_t kBoundsFlags = 0xf;
 
 struct Box {
     float min[3];
@@ -129,14 +130,19 @@ void Empty(float *box)
 
 void ActorBounds(Box *box, void *scene, void *actor)
 {
-    OriginalFunction<void(__cdecl *)(Box *, uint32_t, void *, void *), 0xae7d00>()(box, kBoundsFlags, scene, actor);
+    nGZSceneGraph::GrowByShapeBounds(reinterpret_cast<float *>(box), kBoundsFlags,
+                                     static_cast<nGZSceneGraph::cICompositionTreeNode *>(scene),
+                                     static_cast<nGZSceneGraph::cICompositionTreeNode *>(actor));
 }
 void Grow(float *bounds, const Box *box)
 {
     reinterpret_cast<nGZCompGeom::BoundBox *>(bounds)->Grow(*reinterpret_cast<const nGZCompGeom::BoundBox *>(box));
 }
 float Dot(const float *a, const float *b) { return static_cast<float>(nGZCompGeom::Dot87(a, b)); } // 0x18fbf0, ours
-const char *ActorName(void *actor) { return OriginalFunction<const char *(__cdecl *)(void *), 0xae7900>()(actor); }
+const char *ActorName(void *actor) // 0xae7900, ours
+{
+    return nGZSceneGraph::GetNodeTag(static_cast<nGZSceneGraph::cICompositionTreeNode *>(actor));
+}
 
 // The length of (x, y, z), squared in float, the root taken in double.
 float Length(float x, float y, float z) { return static_cast<float>(std::sqrt(static_cast<double>(x * x + y * y + z * z))); }

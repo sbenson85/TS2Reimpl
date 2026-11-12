@@ -299,6 +299,10 @@ TS2_OWNED_STATIC(void *, 10f9028){};
 // nothing in the game writes it.
 TS2_OWNED_STATIC(uint32_t, 10f675c)[4]{};
 
+// The floor colour grid's colour off the lit floor (sg/cFloorColorGrid.cpp, GetColor): black in the image's .bss and only
+// read.
+TS2_OWNED_STATIC(const float, 10da6fc)[3]{};
+
 // The display list's log texts (sg/cDisplayListLog.cpp, sg/cDisplayListDraw.cpp): the item lines' labels, the lights'
 // table, the formats and the shader context's description.
 TS2_OWNED_STATIC(const char, e75524)[] = "   -----View (viewer render type = ";

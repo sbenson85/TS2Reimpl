@@ -652,6 +652,14 @@ void Compare(difftest::Context &ctx, const char *name, int trial, const Outcome 
     }
     if (a.log != b.log || a.log != c.log) {
         ctx.Fail("%s #%d: calls differ (%zu / %zu / %zu values)", name, trial, a.log.size(), b.log.size(), c.log.size());
+        // The first value that differs, with the three before it (the kind and its first arguments).
+        const std::vector<int64_t> &other = a.log != b.log ? b.log : c.log;
+        size_t i = 0;
+        while (i < a.log.size() && i < other.size() && a.log[i] == other[i]) ++i;
+        auto at = [](const std::vector<int64_t> &v, size_t k) { return k < v.size() ? static_cast<long long>(v[k]) : -1LL; };
+        ctx.Fail("  first at value %zu (%s): original %llx, %s %llx; before it %llx %llx %llx", i,
+                 a.log != b.log ? "ours" : "via slot", at(a.log, i), a.log != b.log ? "ours" : "via slot", at(other, i),
+                 i >= 3 ? at(a.log, i - 3) : -1LL, i >= 2 ? at(a.log, i - 2) : -1LL, i >= 1 ? at(a.log, i - 1) : -1LL);
     }
     if (a.dump != b.dump || a.dump != c.dump) ctx.Fail("%s #%d: object state differs", name, trial);
 }
@@ -2408,6 +2416,7 @@ enum KindNP4 : int64_t { kSlot36 = 400, kNewRecordOpen, kNewRecordQuery, kNewRec
 uint8_t *gNewRec = nullptr;   // the record the function under test built (the one AddRef'd that isn't a gRecs entry)
 int64_t gNewRefs = 0;         // its AddRefs less its Releases
 bool gRet36 = false, gNewOpenOk = false, gNewQueryOk = false;
+size_t gRecordDumpAt = 0; // where the new record's dwords start in the log (for a failure's detail)
 std::string gName36, gExt36;
 
 bool IsTestRecord(const void *p)
@@ -2464,6 +2473,7 @@ bool __fastcall FakeNewOpen(uint8_t *self, void *, const DirResourceKey *key, co
     PushKey(key);
     PushPath(kNewRecordOpen, path);
     gLog.push_back(access);
+    gRecordDumpAt = gLog.size();
     // The padding after byte fields is left as the heap gave it on both sides (no constructor writes it), so those
     // dwords are compared in their written bytes only: the streams' byte at +8 (+0x2c, +0x3c: `mov byte [ecx+8]` in
     // cRZOStream / cRZIStream's constructors), the serial record's flag (+0x44: 0x99b840's `mov [ebp+0x40], bl`), the
@@ -2472,7 +2482,11 @@ bool __fastcall FakeNewOpen(uint8_t *self, void *, const DirResourceKey *key, co
         uint32_t v = *reinterpret_cast<const uint32_t *>(self + at);
         if (at == 0x2c || at == 0x3c || at == 0x44 || at == 0x48) v &= 0xff;
         if (at == 0x70 || at == 0x10c) v &= 0xffff;
-        gLog.push_back(RecordWord(v));
+        // Each cRZFile's error word (+0x3c: +0x88, +0x124) holds a code, never a pointer: kErrorNone, 0x20000000, read as
+        // into the record when the heap put the record across that address (261111a: #952, ours at 0x1fffff60 logged
+        // it as +0xa0, the original's at 0x1ffffdc8 as the code).
+        const bool errorWord = at == 0x88 || at == 0x124;
+        gLog.push_back(errorWord ? static_cast<int64_t>(v) : RecordWord(v));
     }
     return gNewOpenOk;
 }
@@ -2540,12 +2554,24 @@ DIFF_TEST(cGZDBSegmentDirectoryFiles_OpenRecordFile, 0x9a2110)
             }
             return r;
         };
+        size_t dumpAt[3] = {};
+        const void *recordAt[3] = {};
+        gRecordDumpAt = 0;
         auto a = Run(s, t, [&] { return runOne([&](void **out) { return orig(gObj, &key, out, access); }); });
+        dumpAt[0] = std::exchange(gRecordDumpAt, 0);
+        recordAt[0] = gNewRec;
         auto b = Run(s, t, [&] {
             return runOne([&](void **out) { return static_cast<uint8_t>(Self()->OpenRecordFile(&key, out, access)); });
         });
+        dumpAt[1] = std::exchange(gRecordDumpAt, 0);
+        recordAt[1] = gNewRec;
         auto c = Run(s, routed, [&] { return runOne([&](void **out) { return VirtualSlot<Fn>(gObj, 32)(gObj, &key, out, access); }); });
+        dumpAt[2] = std::exchange(gRecordDumpAt, 0);
+        recordAt[2] = gNewRec;
         Compare(ctx, "OpenRecordFile", i, a, b, c);
+        if (a.log != b.log || a.log != c.log)
+            ctx.Fail("  the new record's dwords start at value %zu / %zu / %zu; the record at %p / %p / %p", dumpAt[0], dumpAt[1],
+                     dumpAt[2], recordAt[0], recordAt[1], recordAt[2]);
     }
 }
 

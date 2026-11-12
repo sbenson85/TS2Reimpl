@@ -106,3 +106,164 @@ DIFF_TEST(WorldTileRects_OffsetRect, 0x7ef060)
         if (std::memcmp(&x, &y, sizeof(x)) != 0) ctx.Fail("case %d: rect %g %g %g %g p %g %g", i, rect[0], rect[1], rect[3], rect[4], p[0], p[1]);
     }
 }
+
+// ---- lane RZ: 0x7eec00, 0x7eec60, 0x7eed90, 0x7eedc0, 0x7eee50, 0x7eef00, 0x7ef0c0, 0x7ef1d0 ----
+
+namespace {
+
+// A rect whose two points are often a unit apart on an axis or diagonal (so every mask and kind of CellBetween turns up), else
+// any pair of triples.
+void Segment(std::mt19937 &r, float *rect)
+{
+    Triple(r, rect);
+    Triple(r, rect + 3);
+    if (r() % 4 != 0) {
+        const float steps[] = {-1.0f, 0.0f, 1.0f};
+        rect[3] = rect[0] + steps[r() % 3];
+        rect[4] = rect[1] + steps[r() % 3];
+        if (r() % 8 == 0) rect[3] = rect[0] + (r() % 2 ? 1.0000001f : 0.9999999f);
+        if (r() % 8 == 0) rect[4] = rect[1] + FromBits(0x3f800000u + (r() % 80) - 40);
+    }
+}
+
+// A cell: every mask (and some that name nothing) with every kind.
+void Cell(std::mt19937 &r, int32_t *cell)
+{
+    const int32_t masks[] = {1, 2, 4, 8, 0x10, 0x20, 0, 3, 0x40, -1};
+    cell[0] = static_cast<int32_t>(r() % 9) - 4;
+    cell[1] = static_cast<int32_t>(r() % 9) - 4;
+    cell[2] = static_cast<int32_t>(Level(r));
+    cell[3] = masks[r() % 10];
+    cell[4] = static_cast<int32_t>(r() % 7) - 1;
+    if (r() % 10 == 0) cell[0] = static_cast<int32_t>(r()), cell[1] = static_cast<int32_t>(r());
+}
+
+} // namespace
+
+DIFF_TEST(WorldTileRects_CellToQuadrants, 0x7eec60)
+{
+    using Q = worldmath::TileQuadrant;
+    auto original = ctx.Original<Q *(__cdecl *)(Q *, const int32_t *)>(0x7eec60);
+    std::mt19937 r(0x7eec60);
+    for (int i = 0; i < 20000; ++i) {
+        int32_t cell[5];
+        Cell(r, cell);
+        Words<4> x, y;
+        Q *rx = original(reinterpret_cast<Q *>(x.w), cell);
+        Q *ry = worldrect::CellToQuadrants(reinterpret_cast<Q *>(y.w), cell);
+        ++ctx.cases;
+        if (rx != reinterpret_cast<Q *>(x.w) || ry != reinterpret_cast<Q *>(y.w)) ctx.Fail("case %d: return value", i);
+        if (std::memcmp(&x, &y, sizeof(x)) != 0) ctx.Fail("case %d: mask %#x kind %d", i, cell[3], cell[4]);
+    }
+}
+
+DIFF_TEST(WorldTileRects_SegmentToQuadrants, 0x7eed90)
+{
+    using Q = worldmath::TileQuadrant;
+    using Fn = Q *(__cdecl *)(Q *, const float *);
+    const struct {
+        uint32_t rva;
+        Fn ours;
+        const char *name;
+    } kFns[] = {{0x7eed90, &worldrect::SegmentToQuadrants, "SegmentToQuadrants"},
+                {0x7eec00, &worldrect::ReversedSegmentToQuadrants, "ReversedSegmentToQuadrants"}};
+    std::mt19937 r(0x7eed90);
+    for (int i = 0; i < 20000; ++i) {
+        float rect[6];
+        Segment(r, rect);
+        for (const auto &f : kFns) {
+            Words<4> x, y;
+            Q *rx = ctx.Original<Fn>(f.rva)(reinterpret_cast<Q *>(x.w), rect);
+            Q *ry = f.ours(reinterpret_cast<Q *>(y.w), rect);
+            ++ctx.cases;
+            if (rx != reinterpret_cast<Q *>(x.w) || ry != reinterpret_cast<Q *>(y.w)) ctx.Fail("case %d: %s return value", i, f.name);
+            if (std::memcmp(&x, &y, sizeof(x)) != 0) ctx.Fail("case %d: %s rect %g %g %g %g", i, f.name, rect[0], rect[1], rect[3], rect[4]);
+        }
+    }
+}
+
+DIFF_TEST(WorldTileRects_IsUnitSegment, 0x7eedc0)
+{
+    auto original = ctx.Original<uint32_t(__cdecl *)(const float *)>(0x7eedc0);
+    std::mt19937 r(0x7eedc0);
+    for (int i = 0; i < 40000; ++i) {
+        float rect[6];
+        Segment(r, rect);
+        if (r() % 3 == 0) {
+            // Distances right at the 32-ulp edge on each side of 1.0 (and of -1.0).
+            const int32_t d = static_cast<int32_t>(r() % 80) - 40;
+            rect[3] = rect[0] - (r() % 2 ? 1.0f : -1.0f) * FromBits(0x3f800000u + d);
+            if (r() % 2) rect[0] = 0.0f, rect[3] = (r() % 2 ? 1.0f : -1.0f) * FromBits(0x3f800000u + d);
+            if (r() % 2) rect[1] = 0.0f, rect[4] = (r() % 2 ? 1.0f : -1.0f) * FromBits(0x3f800000u + static_cast<int32_t>(r() % 80) - 40);
+        }
+        const uint32_t ra = original(rect) & 0xff;
+        const uint32_t rb = worldrect::IsUnitSegment(rect) ? 1u : 0u;
+        ++ctx.cases;
+        if (ra != rb) ctx.Fail("case %d: rect %.9g %.9g %.9g %.9g: %u vs %u", i, rect[0], rect[1], rect[3], rect[4], ra, rb);
+    }
+}
+
+DIFF_TEST(WorldTileRects_RotateRect, 0x7eee50)
+{
+    auto original = ctx.Original<float *(__cdecl *)(float *, const float *, const int32_t *)>(0x7eee50);
+    std::mt19937 r(0x7eee50);
+    for (int i = 0; i < 20000; ++i) {
+        float rect[6];
+        Segment(r, rect);
+        const int32_t facing = r() % 4 ? static_cast<int32_t>(r() % 9) - 1 : static_cast<int32_t>(r());
+        Words<6> x, y;
+        float *rx = original(reinterpret_cast<float *>(x.w), rect, &facing);
+        float *ry = worldrect::RotateRect(reinterpret_cast<float *>(y.w), rect, &facing);
+        ++ctx.cases;
+        if (rx != reinterpret_cast<float *>(x.w) || ry != reinterpret_cast<float *>(y.w)) ctx.Fail("case %d: return value", i);
+        if (std::memcmp(&x, &y, sizeof(x)) != 0) ctx.Fail("case %d: facing %d rect %g %g %g %g", i, facing, rect[0], rect[1], rect[3], rect[4]);
+    }
+}
+
+DIFF_TEST(WorldTileRects_EdgeEndpoints, 0x7ef0c0)
+{
+    auto original = ctx.Original<void(__cdecl *)(const int32_t *, float *, float *)>(0x7ef0c0);
+    std::mt19937 r(0x7ef0c0);
+    for (int i = 0; i < 20000; ++i) {
+        int32_t cell[5];
+        Cell(r, cell);
+        Words<3> xa, xb, ya, yb;
+        original(cell, reinterpret_cast<float *>(xa.w), reinterpret_cast<float *>(xb.w));
+        worldrect::EdgeEndpoints(cell, reinterpret_cast<float *>(ya.w), reinterpret_cast<float *>(yb.w));
+        ++ctx.cases;
+        if (std::memcmp(&xa, &ya, sizeof(xa)) != 0 || std::memcmp(&xb, &yb, sizeof(xb)) != 0)
+            ctx.Fail("case %d: cell %d %d mask %#x kind %d", i, cell[0], cell[1], cell[3], cell[4]);
+    }
+}
+
+DIFF_TEST(WorldTileRects_CellToSegment, 0x7ef1d0)
+{
+    auto original = ctx.Original<float *(__cdecl *)(float *, const int32_t *)>(0x7ef1d0);
+    std::mt19937 r(0x7ef1d0);
+    for (int i = 0; i < 20000; ++i) {
+        int32_t cell[5];
+        Cell(r, cell);
+        Words<6> x, y;
+        float *rx = original(reinterpret_cast<float *>(x.w), cell);
+        float *ry = worldrect::CellToSegment(reinterpret_cast<float *>(y.w), cell);
+        ++ctx.cases;
+        if (rx != reinterpret_cast<float *>(x.w) || ry != reinterpret_cast<float *>(y.w)) ctx.Fail("case %d: return value", i);
+        if (std::memcmp(&x, &y, sizeof(x)) != 0) ctx.Fail("case %d: cell %d %d mask %#x kind %d", i, cell[0], cell[1], cell[3], cell[4]);
+    }
+}
+
+DIFF_TEST(WorldTileRects_CanonicalSegment, 0x7eef00)
+{
+    auto original = ctx.Original<float *(__cdecl *)(float *, const float *)>(0x7eef00);
+    std::mt19937 r(0x7eef00);
+    for (int i = 0; i < 20000; ++i) {
+        float rect[6];
+        Segment(r, rect);
+        Words<6> x, y;
+        float *rx = original(reinterpret_cast<float *>(x.w), rect);
+        float *ry = worldrect::CanonicalSegment(reinterpret_cast<float *>(y.w), rect);
+        ++ctx.cases;
+        if (rx != reinterpret_cast<float *>(x.w) || ry != reinterpret_cast<float *>(y.w)) ctx.Fail("case %d: return value", i);
+        if (std::memcmp(&x, &y, sizeof(x)) != 0) ctx.Fail("case %d: rect %g %g %g %g", i, rect[0], rect[1], rect[3], rect[4]);
+    }
+}

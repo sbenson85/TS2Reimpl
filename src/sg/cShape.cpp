@@ -482,29 +482,6 @@ nGZEvent::cEventAttributeMap *__cdecl cShapeBehaviorTraits::RegistryFor(uint32_t
 
 void cShapeBehaviorTraits::ResetRegistryForTest() { gShapeRegistry.reset(); }
 
-ShapeMaterialHandle::ShapeMaterialHandle(int32_t index) : mIndex(index) { MaterialManager()->AddRefIndex(mIndex); }
-
-ShapeMaterialHandle::ShapeMaterialHandle(const ShapeMaterialHandle &other) : mIndex(other.mIndex)
-{
-    MaterialManager()->AddRefIndex(mIndex);
-}
-
-void ShapeMaterialHandle::Assign(const ShapeMaterialHandle &source)
-{
-    cIMaterialManager *const manager = MaterialManager();
-    manager->AddRefIndex(source.mIndex);
-    manager->ReleaseIndex(mIndex);
-    mIndex = source.mIndex;
-}
-
-ShapeMaterialHandle::~ShapeMaterialHandle()
-{
-    if (mIndex != -1) {
-        MaterialManager()->ReleaseIndex(mIndex);
-        mIndex = -1;
-    }
-}
-
 const char *ShapeObjectName(cIGZUnknown *object)
 {
     if (!object) return nullptr;

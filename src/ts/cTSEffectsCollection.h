@@ -54,6 +54,10 @@ struct EffectComponent {
     uint16_t mHalf7e;     // +0x7e
     uint32_t mWord80;     // +0x80
     int32_t mIndex;       // +0x84 description index in its type's table; negative until resolved
+
+    // 0xbf99f0 (the vector's value construction, count at a time): type 1, the identity placement, the six floats at +0x5c and
+    // the word at +0x80 1.0, the index -1. The bytes at +0x21 and +0x5a are left alone.
+    EffectComponent();
 };
 static_assert(sizeof(EffectComponent) == 0x88 && offsetof(EffectComponent, mType) == 0x18 &&
                   offsetof(EffectComponent, mWords50) == 0x50 && offsetof(EffectComponent, mByte59) == 0x59 &&

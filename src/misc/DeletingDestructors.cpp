@@ -56,13 +56,6 @@ cTSDelauneyMesh *cTSDelauneyMesh::DeletingDestructor(uint32_t flags)
     return this;
 }
 
-nTSSG::cFloorColorGrid *nTSSG::cFloorColorGrid::DeletingDestructor(uint32_t flags)
-{
-    OriginalFunction<void(__thiscall *)(cFloorColorGrid *), 0x4058e0>()(this);
-    if (flags & 1) ::operator delete(this, sizeof(cFloorColorGrid));
-    return this;
-}
-
 cTSSliceImposterCreator *cTSSliceImposterCreator::DeletingDestructor(uint32_t flags)
 {
     OriginalFunction<void(__thiscall *)(cTSSliceImposterCreator *), 0xb51300>()(this);

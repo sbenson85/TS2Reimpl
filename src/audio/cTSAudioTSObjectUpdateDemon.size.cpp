@@ -16,6 +16,7 @@
 #include "rz/MiscHelpersB.h"     // KeyMapWalker
 #include "rz/Singleton_20ddfb.h" // GetServiceObject, GetCachedSingleton
 #include "rz/StaticGetters.h"    // GetDirectorFrameworkObject
+#include "sg/SGUtilities.h"      // FindNodeByName
 #include "simantics/SimGeometry.h" // simgeom::RotateByQuaternion
 
 #include <cfloat>
@@ -41,16 +42,18 @@ cIGZUnknown *StateService() { return OriginalFunction<cIGZUnknown *(__cdecl *)()
 void *SoundProbe() { return OriginalFunction<void *(__cdecl *)(), 0x9c5b7e>()(); }
 void Restart(cRZStopwatch *watch) { OriginalFunction<void(__thiscall *)(cRZStopwatch *), 0x1c95ec>()(watch); }
 
-// The scene graph's: the named node under a node (0xae7490, __cdecl; 0xf the search flags), a node's bounding box (0xae7d00,
-// __cdecl: min then max, grown; -1 and the node twice as the original passes them), a point through a transform (0x19c900,
-// __thiscall, ret 4: rotated by the quaternion, then moved), and the ray's constructor / assignment / destructor.
+// The scene graph's: the named node under a node (0xae7490, ours; 0xf the search flags), a node's bounding box (0xae7d00,
+// ours: min then max, grown; no skip flag and the node as its own frame, as the original passes them), a point through
+// a transform (0x19c900, __thiscall, ret 4: rotated by the quaternion, then moved), and the ray's constructor /
+// assignment / destructor.
 void *FindNode(const char *name, void *node)
 {
-    return OriginalFunction<void *(__cdecl *)(const char *, void *, uint32_t), 0xae7490>()(name, node, 0xf);
+    return nGZSceneGraph::FindNodeByName(name, static_cast<nGZSceneGraph::cICompositionTreeNode *>(node), 0xf);
 }
 void GrowBounds(float *box, void *node)
 {
-    OriginalFunction<void(__cdecl *)(float *, int32_t, void *, void *), 0xae7d00>()(box, -1, node, node);
+    auto *tree = static_cast<nGZSceneGraph::cICompositionTreeNode *>(node);
+    nGZSceneGraph::GrowByShapeBounds(box, -1, tree, tree);
 }
 void TransformPoint(const AudioTransform *transform, AudioPoint *point)
 {

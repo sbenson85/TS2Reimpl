@@ -500,9 +500,13 @@ struct LightPointers {
         // A small value (no block's) the call moved with the bytes reads as Norm's 0x0c/0x0d without a stale block's
         // address in the way: the new block's address plus the value can fall inside an old block on one side only
         // (VH: grow light bytes seeds 1432 and 772, 0x0c00400e against 0x0b000006 and 0x0b00002b against 0x0c004003).
+        // The value was noted small whatever block the bytes had then: as itself with no block, as Norm's 0x0d with one
+        // (Before() is that block, so 0x0d keeps the value; 261111a: seed 3649 noted 0x4024 as 0x0d004024 beside block 0d1907e8; the original's new block 0d18c7e8 put
+        // the moved 0d19080c inside it, 0x0b000024 against ours 0x0c004024).
         const uint32_t now = svcfx::P(self->mBytesA4.data());
         for (const auto &[at, word, record] : items) {
-            const bool smallNoted = at == &item && record == word && word - 0x4000u < 0x40u && self->mBytesA4.capacity();
+            const bool notedSmall = record == word || record == (0x0d000000u | word);
+            const bool smallNoted = at == &item && notedSmall && word - 0x4000u < 0x40u && self->mBytesA4.capacity();
             if (smallNoted && item.mWord3c - now == word) return 0x0c000000u | word;
             if (smallNoted && item.mWord3c - now + Before() == word) return 0x0d000000u | word;
         }

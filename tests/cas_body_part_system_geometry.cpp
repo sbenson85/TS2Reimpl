@@ -4,6 +4,7 @@
 // Release / slot 3 copies are recorded by object number), the entry (0xcf04b0) and the element lookup (0xaeda40).
 #include "cas_body_part_system.h"
 #include "code_patch.h"
+#include "sg/SGUtilities.h"
 
 #include <array>
 #include <cstring>
@@ -288,7 +289,7 @@ DIFF_TEST(cTSCASBodyPartSystem_RefreshGeometry, 0xce7ee0)
     vt.slots[52] = reinterpret_cast<const void *>(&Slot52);
     Env env(ctx);
     Redirect r1(ctx, 0xcf04b0, reinterpret_cast<const void *>(&F_cf04b0));
-    Redirect r2(ctx, 0xaeda40, reinterpret_cast<const void *>(&F_aeda40));
+    shape::StandIn r2(0xaeda40, &nGZSceneGraph::FindLinkedElement, &F_aeda40); // the image's and ours
     for (Vt *v : {&gPartVt, &gGeoVt, &gMeshVt, &gIndexVt, &gPointVt, &gMapVt, &gAuxVt}) {
         *v = {};
         (*v)[1] = reinterpret_cast<const void *>(&AddRef);

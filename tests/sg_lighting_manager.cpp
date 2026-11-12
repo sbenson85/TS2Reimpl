@@ -6,8 +6,8 @@
 // the current index is drawn in and out of range (out of range: the built-in set at +0x2d0). mName (+0xb4) is a short
 // (in place) or long (test buffer) std::string; +0x2c points at a test block; mRef24 is a fake whose slot 16 writes a
 // colour. mSamples (+0x2b0) holds a buffer from operator new (the game's operator new 0x824632 and sized delete 0x824624
-// are patched to ours so that both sides grow it on one heap). The class's own 0x2d4010 and 0x2dfc80 (not replaced) are
-// logging stand-ins over the image; the switch byte 0xffde64 is drawn and restored.
+// are patched to ours so that both sides grow it on one heap). The class's own 0x2d4010 (RebuildAll, lane 261110a) is a
+// logging stand-in over the image's and ours, 0x2dfc80 (EvaluateLerpLights, lane 261109j) one over the image's and ours; the switch byte 0xffde64 is drawn and restored.
 //
 // Compared: results (float bits), out values, the event log, the object's bytes (normalised; the samples vector's
 // pointers by size, capacity, contents and buffer reuse, its addresses being operator new's choice), every fake's
@@ -79,8 +79,8 @@ uint32_t Colour(Obj *, uint32_t *args) // slot 16 (&colour, key)
 struct Fixture {
     AllocatorScope allocator;
     Globals globals;
-    shape::CodePatch a{GameAddress<void>(0x2d4010), shape::CodeOf(&Stand2d4010)};
-    shape::CodePatch b{GameAddress<void>(0x2dfc80), shape::CodeOf(&Stand2dfc80)};
+    shape::StandIn a{0x2d4010, &cLightingManager::RebuildAll, &Stand2d4010};
+    shape::StandIn b{0x2dfc80, &cLightingManager::EvaluateLerpLights, &Stand2dfc80};
     shape::CodePatch gameNew{GameAddress<void>(0x824632), shape::CodeOf(&GameNew)};
     shape::CodePatch gameDelete{GameAddress<void>(0x824624), shape::CodeOf(&GameDelete)};
     uint8_t savedSwitch = *GameAddress<uint8_t>(kSwitch);
@@ -311,10 +311,12 @@ DIFF_TEST(sg_lighting_manager_add_sample, 0x2cbd40)
     }
 }
 
-// 0x2cbc40 the deleting destructor: the destructor 0x2cb800 stood in; flags 0..3 and random; 0x548 bytes freed on bit 0.
+// 0x2cbc40 the deleting destructor: the destructor stood in on both sides (the image's 0x2cb800 and ours, Destruct,
+// lane 261110t); flags 0..3 and random; 0x548 bytes freed on bit 0.
 DIFF_TEST(sg_lighting_manager_deleting_destructor, 0x2cbc40)
 {
     Fixture fixture;
+    shape::CodePatch oursDestructor{shape::CodeOf(&cLightingManager::Destruct), shape::CodeOf(&sgdel::StandDestructor)};
     auto original = ctx.Original<void *(__thiscall *)(void *, uint32_t)>(0x2cbc40);
     sgdel::Run(
         ctx, 0x2cb800, kObjectSize, [&](void *p, uint32_t flags) { return original(p, flags); },

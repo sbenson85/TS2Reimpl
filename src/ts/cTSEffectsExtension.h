@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <utility>
 
 namespace nGZSceneGraph {
 
@@ -56,19 +57,26 @@ static_assert(sizeof(TSEffectFindKey) == 0x44 && offsetof(TSEffectFindKey, first
               offsetof(TSEffectFindKey, secondText) == 0x24 && offsetof(TSEffectFindKey, discriminator) == 0x40);
 static_assert(sizeof(TSEffectFindResult) == 8);
 
-// What the registry's insert takes (0x50 bytes, built on the caller's stack): the two key strings as cRZStrings, the
-// discriminator, the instance (counted by the record the insert makes), the kind and the flag byte.
-struct TSEffectInsertValue {
+// A record's payload as the registry's element type (0x50 bytes): TSEffectsRegistry is a std::unordered_map of these, and
+// TSEffectRecord is its list node. A record holds a reference on its instance.
+struct TSEffectRecordKey {
+    explicit TSEffectRecordKey(const TSEffectFindKey &key);
+    TSEffectRecordKey(const std::string &firstText, const std::string &secondText, uint32_t value);
+    TSEffectRecordKey(const TSEffectRecordKey &other);
     cRZString first;
     cRZString second;
     uint32_t discriminator;
+};
+struct TSEffectRecordValue {
+    TSEffectRecordValue(void *object, uint32_t kindValue, uint8_t flagValue);
+    TSEffectRecordValue(const TSEffectRecordValue &other);
+    ~TSEffectRecordValue();
     void *instance;
     uint32_t kind;
     uint8_t flag;
 };
-static_assert(sizeof(TSEffectInsertValue) == 0x50 && offsetof(TSEffectInsertValue, discriminator) == 0x40 &&
-              offsetof(TSEffectInsertValue, instance) == 0x44 && offsetof(TSEffectInsertValue, kind) == 0x48 &&
-              offsetof(TSEffectInsertValue, flag) == 0x4c);
+using TSEffectInsertValue = std::pair<const TSEffectRecordKey, TSEffectRecordValue>;
+static_assert(sizeof(TSEffectInsertValue) == 0x50 && offsetof(TSEffectInsertValue, second) == 0x44);
 
 #pragma warning(push)
 #pragma warning(disable : 4250)
@@ -85,6 +93,8 @@ public:
     ~cTSEffectsExtension() override;
     cTSEffectsExtension *Construct(uint32_t mostDerived);
     void Destruct();
+    void InsertRecord(const TSEffectFindKey &key, void *instance, uint32_t kind, uint8_t flag);
+    void DestroyRegistry();
     cTSEffectsExtension *DeletingDestructor(uint32_t flags);
     TSEffectFindResult *FindRecord(TSEffectFindResult *result, const TSEffectFindKey *key, uint32_t hash);
     TSEffectRecord **RemoveRecord(TSEffectRecord **result, TSEffectRecord *record);
@@ -130,7 +140,6 @@ public:
 private:
     void ApplyStateBytes(void *instance);                      // the state bytes (+0x42, +0x41) to the instance's slots 7 and 8
     void ConfigureInstance(void *instance, void *node);        // slot 14 (2, node), then ApplyStateBytes
-    void InsertRecord(const TSEffectFindKey &key, void *instance, uint32_t kind, uint8_t flag);
 };
 #pragma warning(pop)
 static_assert(sizeof(cTSEffectsExtension) == cTSEffectsExtension::kSize, "cTSEffectsExtension size");

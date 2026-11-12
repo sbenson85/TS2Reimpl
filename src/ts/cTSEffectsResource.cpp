@@ -5,9 +5,11 @@
 #include "game/vtable.h"
 #include "rz/cRZString.h"
 #include "rz/cRZVariant.h"
+#include "ts/EffectsTransform.h"
 #include "ts/cTSCompDescription.h"
 #include "ts/cTSParticlesDescription.h"
 
+#include <bit>
 #include <cstring>
 #include <new>
 
@@ -147,6 +149,116 @@ void cTSEffectsResource::MergeInto(cTSEffectsCollection *target)
     cTSEffectsCollection::MergeInto(target);
 }
 
+namespace {
+
+fx::EffectsTransform &Placement(EffectComponent &component) { return *reinterpret_cast<fx::EffectsTransform *>(&component.mFlags20); }
+const fx::EffectsTransform &Placement(const EffectComponent &component)
+{
+    return *reinterpret_cast<const fx::EffectsTransform *>(&component.mFlags20);
+}
+
+// 0xbf9b00 (cdecl): a component; before version 3 (the stream's metadata, slot 20, its slot 74) the debug value and mask are
+// 16-bit. The rotation goes column by column (0x1a5910).
+void ReadComponent(void *stream, EffectComponent &component)
+{
+    // The metadata is a cRZVariant; its slot 74 (0x18ea60, pops nothing) returns the address of its value.
+    void *const metadata = VirtualSlot<void *(__thiscall *)(void *)>(stream, 20)(stream);
+    const uint16_t version = *VirtualSlot<const uint16_t *(__thiscall *)(void *)>(metadata, 74)(metadata);
+    ReadParticleText(stream, &component.mName);
+    uint8_t type = 0;
+    fxdesc::GetUint8(stream, &type);
+    component.mType = type;
+    uint32_t word = 0;
+    fxdesc::GetUint32(stream, &word);
+    component.mWord1c = word & 0x3f;
+    fxdesc::GetUint8(stream, &component.mFlags20.mByte);
+    fx::EffectsTransform &placement = Placement(component);
+    fxdesc::GetFloat(stream, &placement.scale);
+    for (int column = 0; column < 3; ++column)
+        for (int row = 0; row < 3; ++row) fxdesc::GetFloat(stream, &placement.m[row][column]);
+    fxdesc::GetVector3(stream, reinterpret_cast<fxdesc::Vector3 *>(&placement.translation));
+    fxdesc::GetUint8(stream, &component.mByte58);
+    fxdesc::GetUint8(stream, &component.mByte59);
+    for (int i = 0; i < 6; ++i) fxdesc::GetFloat(stream, reinterpret_cast<float *>(&component.mWords5c[i]));
+    if (version < 3) {
+        uint16_t half = 0;
+        fxdesc::GetUint16(stream, &half);
+        component.mWords5c[6] = half;
+        fxdesc::GetUint16(stream, &half);
+        component.mWords5c[7] = half;
+    } else {
+        fxdesc::GetUint32(stream, &component.mWords5c[6]);
+        fxdesc::GetUint32(stream, &component.mWords5c[7]);
+    }
+    fxdesc::GetUint16(stream, &component.mHalf7c);
+    fxdesc::GetUint16(stream, &component.mHalf7e);
+    fxdesc::GetFloat(stream, reinterpret_cast<float *>(&component.mWord80));
+    VirtualSlot<bool(__thiscall *)(void *, int32_t *)>(stream, 8)(stream, &component.mIndex);
+}
+
+// 0xbf9c60 (cdecl): the reverse, the two words always 32-bit (0x1a5950 the rotation).
+void WriteComponent(void *stream, const EffectComponent &component)
+{
+    PutText(stream, component.mName.c_str());
+    fxdesc::PutUint8(stream, static_cast<uint8_t>(component.mType));
+    PutUint32(stream, component.mWord1c);
+    fxdesc::PutUint8(stream, component.mFlags20.mByte);
+    const fx::EffectsTransform &placement = Placement(component);
+    fxdesc::PutFloat(stream, placement.scale);
+    for (int column = 0; column < 3; ++column)
+        for (int row = 0; row < 3; ++row) fxdesc::PutFloat(stream, placement.m[row][column]);
+    fxdesc::PutVector3(stream, reinterpret_cast<const fxdesc::Vector3 &>(placement.translation));
+    fxdesc::PutUint8(stream, component.mByte58);
+    fxdesc::PutUint8(stream, component.mByte59);
+    for (int i = 0; i < 6; ++i) fxdesc::PutFloat(stream, std::bit_cast<float>(component.mWords5c[i]));
+    PutUint32(stream, component.mWords5c[6]);
+    PutUint32(stream, component.mWords5c[7]);
+    PutUint16(stream, component.mHalf7c);
+    PutUint16(stream, component.mHalf7e);
+    fxdesc::PutFloat(stream, std::bit_cast<float>(component.mWord80));
+    VirtualSlot<bool(__thiscall *)(void *, int32_t)>(stream, 8)(stream, component.mIndex);
+}
+
+} // namespace
+
+// 0xbf9da0: the flags (17 bits), the variant, the first parameter (16-bit before version 3), two more, a vector pair, the
+// components, resized to their count.
+__declspec(noinline) void cTSEffectsResource::ReadEffect(void *stream, uint32_t version, EffectEntry *entry)
+{
+    uint32_t word = 0;
+    GetUint32(stream, &word);
+    entry->mFlags = word & 0x1ffff;
+    GetUint16(stream, &entry->mVariant);
+    if (static_cast<int32_t>(version) < 3) {
+        uint16_t half = 0;
+        GetUint16(stream, &half);
+        entry->mParams[0] = half;
+    } else {
+        GetUint32(stream, &entry->mParams[0]);
+    }
+    GetUint32(stream, &entry->mParams[1]);
+    GetUint32(stream, &entry->mParams[2]);
+    fxdesc::GetVector2(stream, reinterpret_cast<fxdesc::Vector2 *>(&entry->mParams[3]));
+    uint32_t count = 0;
+    GetUint32(stream, &count);
+    entry->mComponents.resize(count);
+    for (uint32_t i = 0; i < count; ++i) ReadComponent(stream, entry->mComponents[i]);
+}
+
+// 0xbf9ee0: the reverse (the first parameter always 32-bit).
+__declspec(noinline) void cTSEffectsResource::WriteEffect(void *stream, const EffectEntry *entry)
+{
+    PutUint32(stream, entry->mFlags);
+    PutUint16(stream, entry->mVariant);
+    PutUint32(stream, entry->mParams[0]);
+    PutUint32(stream, entry->mParams[1]);
+    PutUint32(stream, entry->mParams[2]);
+    fxdesc::PutVector2(stream, reinterpret_cast<const fxdesc::Vector2 &>(entry->mParams[3]));
+    const uint32_t count = static_cast<uint32_t>(entry->mComponents.size());
+    PutUint32(stream, count);
+    for (uint32_t i = 0; i < count; ++i) WriteComponent(stream, entry->mComponents[i]);
+}
+
 // 0xbd41c0 (ret 4): version 0, the 13 description tables (count, then each description's slot 5); version 3, the effects
 // (0xbf9ee0 each); the name index in list order ending with "end" and -1; the aliases; version 0, the triggers.
 bool cTSEffectsResource::Write(void *stream)
@@ -163,7 +275,7 @@ bool cTSEffectsResource::Write(void *stream)
     PutUint16(stream, 3);
     PutUint32(stream, static_cast<uint32_t>(mEffects.size()));
     for (uint32_t i = 0; i < mEffects.size(); ++i)
-        OriginalFunction<void(__cdecl *)(void *, const EffectEntry *), 0xbf9ee0>()(stream, &mEffects[i]);
+        WriteEffect(stream, &mEffects[i]);
     for (auto it = mEffectsByName.begin(); it != mEffectsByName.end(); ++it) {
         PutText(stream, it->first.c_str());
         PutUint32(stream, it->second);
@@ -212,7 +324,7 @@ bool cTSEffectsResource::Read(void *stream)
     GetUint32(stream, &count);
     mEffects.resize(count);
     for (uint32_t i = 0; i < mEffects.size(); ++i)
-        OriginalFunction<void(__cdecl *)(void *, uint32_t, EffectEntry *), 0xbf9da0>()(stream, version, &mEffects[i]);
+        ReadEffect(stream, version, &mEffects[i]);
     for (;;) {
         cRZString &text = ReadBuffer();
         GetText(stream, &text);

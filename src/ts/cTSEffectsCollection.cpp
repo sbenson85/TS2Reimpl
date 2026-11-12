@@ -1,10 +1,24 @@
 #include "ts/cTSEffectsCollection.h"
 
 #include <cctype>
+#include <cstring>
 #include <new>
 
 // cTSEffectsCollection (lane IT). The bodies follow the originals' order of container operations: the containers are the
 // game's own standard-library types, so the same operations leave the same nodes, buckets and capacities.
+
+EffectComponent::EffectComponent()
+    : mType(1), mWord1c(0), mWords50{0, 0}, mByte58(0), mByte59(0), mHalf7c(0), mHalf7e(0), mWord80(0x3f800000), mIndex(-1)
+{
+    mFlags20.mByte = 0;
+    mFlags20.mCounter = 0;
+    static constexpr uint32_t kOne = 0x3f800000;
+    const uint32_t placement[11] = {kOne, 0, 0, 0, kOne, 0, 0, 0, kOne, kOne, 0};
+    std::memcpy(mWords24, placement, sizeof(mWords24));
+    for (uint32_t i = 0; i < 6; ++i) mWords5c[i] = kOne;
+    mWords5c[6] = 0;
+    mWords5c[7] = 0;
+}
 
 namespace {
 

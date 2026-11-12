@@ -24,20 +24,100 @@ const char *Text(uint32_t rva) { return GameAddress<char>(rva); }
 
 // ---- the lighting state ----------------------------------------------------------------------------------------------
 
+namespace {
+constexpr uint32_t kOnes = 0x1079104;  // the game's (1, 1, 1)
+constexpr uint32_t kWhite = 0x10fb040; // the lighting script's default light colour
+
+void CopyVector(float *to, uint32_t rva)
+{
+    const float *const from = GameAddress<const float>(rva);
+    to[0] = from[0];
+    to[1] = from[1];
+    to[2] = from[2];
+}
+} // namespace
+
+LightingValues::Light *LightingValues::Light::Construct()
+{
+    CopyVector(color, kWhite);
+    intensity = 1.0f;
+    direction[0] = 0.0f;
+    direction[1] = 0.0f;
+    direction[2] = 0.0f;
+    return this;
+}
+
+LightingValues::Modifier *LightingValues::Modifier::Construct()
+{
+    a = 1.0f;
+    b = 1.0f;
+    c = 1.0f;
+    d = 1.0f;
+    return this;
+}
+
+LightingValues::Diffusion *LightingValues::Diffusion::Construct()
+{
+    constexpr uint32_t kThreshold = 0x3e0c49ba;
+    insideFloorAmbient = 0.0f;
+    insideWallAmbient = 0.0f;
+    CopyVector(insideAmbientColor, kOnes);
+    outsideFloorAmbient = 0.0f;
+    outsideWallAmbient = 0.0f;
+    CopyVector(outsideAmbientColor, kWhite);
+    std::memcpy(&wallThreshold, &kThreshold, 4);
+    std::memcpy(&floorThreshold, &kThreshold, 4);
+    return this;
+}
+
+LightingState *LightingState::Construct()
+{
+    mName.Construct();
+    LightingValues &v = mValues;
+    new (&v.mEnabled) std::bitset<14>();
+    for (LightingValues::Light &light : v.mLights) light.Construct();
+    v.mLightMap = 0;
+    CopyVector(v.mLightMapTint, kOnes);
+    for (LightingValues::Modifier &modifier : v.mModifiers) modifier.Construct();
+    CopyVector(v.mUnlitRoomColor, kWhite);
+    v.mUnlitRoomThreshold = 0.0f;
+    CopyVector(v.mSkylight, kWhite);
+    CopyVector(v.mEnvironment, kOnes);
+    CopyVector(v.mParticles, kOnes);
+    CopyVector(v.mUIShade, kOnes);
+    v.mProjectiveShadowStrength = 1.0f;
+    CopyVector(v.mFlatShade, kOnes);
+    v.mFlatShadeSims = 1.0f;
+    v.mFlatShadeObjects = 1.0f;
+    v.mFlatShadeIndoors = 1.0f;
+    v.mPortalSaturation = 1.0f;
+    v.mObjectLightThreshold = 1000.0f;
+    CopyVector(v.mFogColor, kWhite);
+    v.mFogA = 0.0f;
+    v.mFogB = 0.0f;
+    v.mDiffusion.Construct();
+    v.mTransitionA = 2.0f;
+    v.mTransitionB = 2.0f;
+    v.m208[0] = 0;
+    v.m208[1] = 0;
+    v.m208[2] = 0;
+    return this;
+}
+
 LightingState::LightingState(const LightingState &other)
 {
     mName.mVTable = GameAddress(cRZString::kVTable);
-    new (&mName.mString) std::string(other.mName.mString);
+    // From the characters and length (0x2cb200 copies size + 1 characters of a short name, not its whole buffer).
+    new (&mName.mString) std::string(other.mName.mString.data(), other.mName.mString.size());
     mName.mRefCount = 0;
     mValues = other.mValues;
 }
 
 LightingState &LightingState::operator=(const LightingState &other)
 {
-    if (this != &other) {
-        mName.mString.assign(other.mName.mString.data(), other.mName.mString.size());
-        mValues = other.mValues;
-    }
+    // 0xb3d510 (lane 261110y): the name unless it is the same string, then the values.
+    if (&mName.mString != &other.mName.mString) mName.mString.assign(other.mName.mString.data(), other.mName.mString.size());
+    mValues = other.mValues;
     return *this;
 }
 
@@ -76,9 +156,9 @@ void cLightingStateCommand::Execute(cp::cIArguments *args)
     ParserFace(State()).PushOpenBlock(this);
     ParserFace(State()).PushNamespace(argv[0]);
     if (!State()->FindState(argv[0], &State()->mCurrent, &mIndex)) {
-        // A new state: the defaults (0xb3cfb0, not ours), and the block's end adds it.
+        // A new state: the defaults (0xb3cfb0), and the block's end adds it.
         alignas(4) uint8_t raw[sizeof(LightingState)];
-        LightingState *defaults = OriginalFunction<LightingState *(__thiscall *)(void *), 0xb3cfb0>()(raw);
+        LightingState *defaults = reinterpret_cast<LightingState *>(raw)->Construct();
         State()->mCurrent = *defaults;
         defaults->~LightingState();
         mReplacing = 0;
@@ -319,3 +399,20 @@ const char *cSkylightShadeCommand::GetName() const { return Text(0xe84774); }
 const char *cTransitionTimesCommand::GetName() const { return Text(0xe848f0); }
 const char *cUIShadeCommand::GetName() const { return Text(0xe84634); }
 const char *cUnlitRoomColorCommand::GetName() const { return Text(0xe8455c); }
+
+// The help lines (slot 6) of the five commands that have them (lane 261110y); the others keep cCommand's.
+const char *cControlCommand::GetHelp(uint32_t index) const
+{
+    if (index == 0) return Text(0xe84440);
+    if (index == 1) return Text(0xe84460);
+    return nullptr;
+}
+const char *cFogCommand::GetHelp(uint32_t) const { return Text(0xe8481c); }
+const char *cLightMapCommand::GetHelp(uint32_t) const { return Text(0xe8487c); }
+const char *cTransitionTimesCommand::GetHelp(uint32_t) const { return Text(0xe84900); }
+const char *cUnlitRoomColorCommand::GetHelp(uint32_t index) const
+{
+    if (index == 0) return Text(0xe8456c);
+    if (index == 1) return Text(0xe84598);
+    return nullptr;
+}

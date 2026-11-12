@@ -15,8 +15,9 @@
 // constructor overwrites them). C++ cannot name a constructor's address: a C name stands for it (/alternatename in
 // cLightLevels.cpp, a wrong decoration fails the link).
 //
-// The destructors 0xa463d0 (standard) and 0x3c81c0 (shade) stay the game's: they store the game's vtables and tidy the
-// same fields. (Both instantiations' constructors build the node the way tests/sg_lights_standard.cpp already checks.)
+// The destructor 0xa463d0 (standard) stays the game's: it stores the game's vtables and tidies the same fields. The shade
+// one 0x3c81c0 is ours since lane 261108n (sg/nTSSGLights.h, cShadeLightBase's), in effect through its callers: the two
+// shade lights' constructors are hooked, so only our destructors run on them. (Both instantiations' constructors build the node the way tests/sg_lights_standard.cpp already checks.)
 #include "game/owned.h"
 #include "sg/SGLightTemplates.h"
 #include "sg/cLinearFogLight.h" // SimpleLightEventRegistry

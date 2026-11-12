@@ -3,6 +3,7 @@
 
 #include "game/vtable.h"
 #include "rz/Singleton_20ddfb.h"
+#include "world/WorldService.h"
 
 namespace worldcatalog {
 
@@ -68,6 +69,73 @@ int32_t __cdecl Kind(const uint32_t *id)
 {
     void *const entry = Entry(id);
     return entry ? RawSlot<24, int32_t>(entry) : -1; // slot 24 = +0x60, no stack arguments
+}
+
+namespace {
+
+constexpr uint32_t kDefaultWallId = 0x2d0ea907; // 0x7ef470's stand-in for an id without an entry
+
+void *Catalog() { return RawSlot<16, void *>(GetCachedSingleton()); } // cITSGlobals::GetCatalog
+void *ProductByKey(void *catalog, uint32_t id) { return RawSlot<26, void *>(catalog, id, 0u); }
+
+// The partition record slot 56 copies (24 bytes; slot 50 reads its id).
+struct PartitionRecord {
+    uint32_t words[6];
+};
+
+} // namespace
+
+uint8_t __cdecl ProductFlag10(const uint32_t *id)
+{
+    if (!IsKind1Or3(id)) return 0;
+    void *const product = ProductByKey(Catalog(), *id);
+    return product ? RawSlot<10, uint8_t>(product) : 0;
+}
+
+uint8_t __cdecl ProductFlag11(const uint32_t *id)
+{
+    if (!IsKind1Or3(id)) return 0;
+    void *const product = ProductByKey(Catalog(), *id);
+    return product ? RawSlot<11, uint8_t>(product) : 0;
+}
+
+float __cdecl PartitionValue(const uint32_t *id)
+{
+    uint32_t key = Kind(id) == -1 ? kDefaultWallId : *id;
+    if (!IsKind1Or3(&key)) return 0.0f;
+    void *const partitions = worldsvc::CachedWorldDB()->GetPartitions();
+    return RawSlot<84, float>(partitions, key);
+}
+
+uint32_t __cdecl ProductResource(const uint32_t *id)
+{
+    if (!IsKind1Or3(id)) return 0;
+    void *const catalog = Catalog();
+    void *product = ProductByKey(catalog, *id);
+    if (!product) {
+        if (auto *const holder = RawSlot<31, uint8_t *>(catalog, *id)) {
+            const int32_t *const vbtable = *reinterpret_cast<int32_t *const *>(holder + 4);
+            product = holder + 4 + vbtable[6];
+        }
+        if (!product) product = RawSlot<27, void *>(catalog);
+        if (!product) return 0;
+    }
+    const char *const name = RawSlot<8, const char *>(product);
+    const uint32_t resource = RawSlot<9, uint32_t>(product);
+    return (name && *name && resource) ? resource : 0;
+}
+
+bool __cdecl AnyPartitionHas(const uint32_t *id)
+{
+    void *const partitions = worldsvc::CachedWorldDB()->GetPartitions();
+    if (!partitions) return false;
+    const uint32_t count = RawSlot<55, uint32_t>(partitions);
+    for (uint32_t i = 0; i < count; ++i) {
+        PartitionRecord record;
+        RawSlot<56, uint32_t>(partitions, &record, i);
+        if (RawSlot<50, uint32_t>(partitions, &record) == *id) return true;
+    }
+    return false;
 }
 
 } // namespace worldcatalog

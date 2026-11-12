@@ -18,6 +18,7 @@
 
 #include "game/game.h"
 #include "gz/cIGZPropertySet.h"
+#include "sg/SGUtilities.h"
 #include "sg/cTSSGSystem.h"
 
 #include <cstdint>
@@ -210,7 +211,7 @@ struct Fixture {
     shape::CodePatch firstLoad{GameAddress<void>(0x252490), shape::CodeOf(&StandFirstLoad)};
     shape::CodePatch overlays{GameAddress<void>(0x248cd0), shape::CodeOf(&StandOverlays)};
     shape::CodePatch lotSetting{GameAddress<void>(0x254bd0), shape::CodeOf(&StandLotSetting)};
-    shape::CodePatch sceneObject{GameAddress<void>(0xae39c0), shape::CodeOf(&StandSceneObject)};
+    shape::StandIn sceneObject{0xae39c0, &nGZSceneGraph::AttachChoreoQueue, &StandSceneObject};
     shape::CodePatch cheat{GameAddress<void>(0x24a1e0), shape::CodeOf(&StandCheat)};
     Fixture()
     {

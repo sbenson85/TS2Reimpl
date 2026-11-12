@@ -106,6 +106,21 @@ inline uint32_t BlockWord(uint32_t value)
     return value;
 }
 
+// Word `w` of a directory entry as the snapshots log it: the pointer fields (shape, palette, pairs, text, marker, user
+// data, name) through BlockWord, the counts and info words as they are. A count or info word holds the input's random
+// bytes on both sides, and through BlockWord it read as a block on the side whose heap happened to put one at that
+// address (261111a: BuildDirectory round 3817, entry 7's kind 0x1bfff200, block 25's address on ours in one run).
+inline uint32_t EntryWord(const uint32_t *words, size_t w)
+{
+    static_assert(sizeof(gimex::fsh::Entry) == 0x4c, "the fields below are the entry's");
+    const size_t at = w * 4;
+    const bool pointer = at == offsetof(gimex::fsh::Entry, shape) || at == offsetof(gimex::fsh::Entry, palette) ||
+                         at == offsetof(gimex::fsh::Entry, pairs) || at == offsetof(gimex::fsh::Entry, text) ||
+                         at == offsetof(gimex::fsh::Entry, marker) || at == offsetof(gimex::fsh::Entry, userData) ||
+                         at == offsetof(gimex::fsh::Entry, name);
+    return pointer ? BlockWord(words[w]) : words[w];
+}
+
 struct HeapFakes {
     shape::CodePatch allocate{kAllocate, reinterpret_cast<const void *>(&FakeAllocate)};
     shape::CodePatch release{kFreeMemory, reinterpret_cast<const void *>(&FakeRelease)};
@@ -214,7 +229,7 @@ inline std::vector<uint32_t> Snapshot(const gimex::fsh::Directory *directory, bo
         for (int32_t i = 0; i < directory->count; ++i) {
             const uint32_t *words = reinterpret_cast<const uint32_t *>(&directory->entries[i]);
             for (size_t w = 0; w < sizeof(gimex::fsh::Entry) / 4; ++w) {
-                out.push_back(BlockWord(words[w]));
+                out.push_back(EntryWord(words, w));
             }
         }
     }

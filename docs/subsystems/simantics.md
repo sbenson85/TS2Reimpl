@@ -767,3 +767,12 @@ The 10 difftested slots (Read, SetUpBetween, SetUp, CopyFrom, GetActor, GetTable
 deleting destructor) have no adapter and no hook: `"in_effect": "callers"`, trapped under `Hooks.cTSInteraction_Create=1`. The 17
 folded slots (shared_vf_*) are ours in our vtable and tested against the game's slot, never hooked. No original calls.
 
+## Simulation lanes
+
+(Moved from `docs/lane/brief.md`, 2026-11-09.) The default route is `trace-verified` (docs/verification.md), not a per-function difftest: port the function, hook it, check
+it builds and the full difftest still passes, and mark it `reimplemented` with a note naming what the
+trace suite must exercise (opcodes, internal cases, owners/scopes). The main session deploys, runs
+the seeded trace scenarios and promotes it. Write a difftest only where it is cheap (small pure
+helpers, value conversions) or where a case is unlikely to be reached by the scenarios; say which.
+Spend the time saved on understanding the code: the trace check only catches what the scenarios
+reach, so a careful port matters more here.

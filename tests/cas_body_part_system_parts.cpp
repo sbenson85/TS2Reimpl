@@ -3,6 +3,8 @@
 // whose answers come from a script: a hash of the scenario's seed and the number of calls recorded so far, so both
 // sides get the same answers as long as they make the same calls. See cas_body_part_system.h for the fixture.
 #include "cas_body_part_system.h"
+#include "code_patch.h"
+#include "sg/SGUtilities.h"
 #include "simantics/ServiceRefVector.h"
 
 #include <cstdio>
@@ -649,7 +651,7 @@ DIFF_TEST(cTSCASBodyPartSystem_GetNodeTransform, 0xce3180)
     InitFakes();
     const VTable vt = PartsVTable(ctx);
     Env env(ctx);
-    Redirect fake(ctx, 0xae7490, reinterpret_cast<const void *>(&FindNodeByName));
+    shape::StandIn fake(0xae7490, &nGZSceneGraph::FindNodeByName, &FindNodeByName);
     static const char *const kNames[] = {"", "head", "neck_joint"};
     for (int i = 0; i < 2000; ++i) {
         Scenario sc = RandomScenario(rng);

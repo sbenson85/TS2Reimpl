@@ -1,6 +1,7 @@
 // nTSSG::cNHoodOccupantManager (lane GO): building the scene: the layers, the merged layers and the flora node.
 // Split from one file along these concerns; the shared helpers are in nTSSGNHoodOccupantManagerInternal.h.
 #include "sg/DetailObject.h"
+#include "sg/SGUtilities.h"
 #include "std/StdInstances.h"
 #include "ts/nTSSGNHoodOccupantManager.h"
 #include "ts/nTSSGNHoodOccupantManagerInternal.h"
@@ -175,7 +176,7 @@ void cNHoodOccupantManager::BuildScene(uint32_t all)
         held.ReleaseObject();
     }
     VirtualCall<uint32_t(__thiscall *)(void *, cIGZUnknown *), kSceneAddSlot>(*sceneCache, mRoot.mObject);
-    OriginalFunction<void(__cdecl *)(cIGZUnknown *), 0xae7e60>()(mRoot.mObject);
+    nGZSceneGraph::ResetShapesInTree(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(mRoot.mObject));
     mDirty = 1;
     others.ReleaseAndFree();
     // then, leaving the scope, dontMerge, properties and the flora list (the original's order)
@@ -284,8 +285,8 @@ void cNHoodOccupantManager::RebuildMergedLayers()
     using Child = uint32_t(__thiscall *)(void *, cIGZUnknown *);
     VirtualCall<Child, kAddChildSlot>(mLayerNodes[1].mObject, merged1.mObject);
     VirtualCall<Child, kAddChildSlot>(mLayerNodes[2].mObject, merged2.mObject);
-    OriginalFunction<void(__cdecl *)(cIGZUnknown *, uint32_t), 0xaeb070>()(mLayerNodes[1].mObject, kMergedLayerPriority);
-    OriginalFunction<void(__cdecl *)(cIGZUnknown *, uint32_t), 0xaeb070>()(mLayerNodes[2].mObject, kMergedLayerPriority);
+    nGZSceneGraph::SetLayerTagInTree(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(mLayerNodes[1].mObject), kMergedLayerPriority);
+    nGZSceneGraph::SetLayerTagInTree(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(mLayerNodes[2].mObject), kMergedLayerPriority);
 }
 
 // 0x2a5a40 (EH): the merged flora node built: a group node (framework slot 3) with four children of class 0xfc6eb1f7 (slot
@@ -338,9 +339,9 @@ void cNHoodOccupantManager::BuildFloraNode()
     using Group = uint32_t(__thiscall *)(void *, const char *);
     VirtualCall<Group, kNodeGroupSlot>(flora.mObject, GameAddress<const char>(kPropsText));
     VirtualCall<Group, kNodeGroupSlot>(flora.mObject, GameAddress<const char>(kShadeText));
-    using Setting = void(__cdecl *)(cIGZUnknown *, uint32_t, uint32_t);
-    OriginalFunction<Setting, 0xaeac50>()(flora.mObject, kFloraSettingA, 1);
-    if (!mBuildAll) OriginalFunction<Setting, 0xaeac50>()(flora.mObject, kFloraSettingB, 1);
+    auto *floraNode = reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(flora.mObject);
+    nGZSceneGraph::SetFlagInTree(floraNode, kFloraSettingA, 1);
+    if (!mBuildAll) nGZSceneGraph::SetFlagInTree(floraNode, kFloraSettingB, 1);
     AssignCounted(mFloraNode, flora.mObject);
     uint32_t targets[3]; // slot 93's out: the first word is the per-layer targets' table
     VirtualCall<void ***(__thiscall *)(void *, uint32_t *), kFloraTargetsSlot>(flora.mObject, targets);

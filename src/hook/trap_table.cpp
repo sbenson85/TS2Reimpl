@@ -38,6 +38,18 @@ static const TrapTerm kAlso_21002f[] = {{"Hooks", "cTSAudioEvent_ConstructDefaul
 static const TrapTerm kAlso_22e7d4[] = {{"Hooks", "cTSAudioResourceManager_Create", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_237015[] = {{"Hooks", "cGZPropertySetSerializerBinaryUint32_Destruct", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_241fc9[] = {{"Hooks", "cGZPropertySetSerializerUint32_Destruct", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_2cb200[] = {{"Hooks", "cLightingStateCommand_vf9", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_362470[] = {{"Hooks", "nTSSG_cLotImposterManager_DeletingDestructor", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_36d2c0[] = {{"Hooks", "COMDirectors_TSSG_Construct", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_36eb60[] = {{"Hooks", "nTSSG_cTSRenderTargetSurface_Construct", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_378140[] = {{"Hooks", "nTSSG_cDisplayListCensorRenderStrategy_RenderTexture", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_3ad230[] = {{"Hooks", "cShadow_Create", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_3b6450[] = {{"Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_3b71a0[] = {{"Hooks", "nTSSG_cWaterGeometryBuilder_Setup", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_3b8d80[] = {{"Hooks", "nTSSG_cWaterGeometryBuilder_SetTriangleSubset", 0x2}, {"Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_3c81c0[] = {{"Hooks", "nTSSG_cTerrainShadeLight_Construct", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_3c8202[] = {{"Hooks", "nTSSG_cShadeLight_Construct", 0x2}, {"Hooks", "nTSSG_cTerrainShadeLight_Construct", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_401a90[] = {{"Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_416120[] = {{"Hooks", "COMDirectors_TSSim_Get", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_4cfb60[] = {{"Hooks", "cTSObjectFolder_Create", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_4df2a0[] = {{"Hooks", "cTSFloatConstants_Create", 0x2}, {"Hooks", "cTSFloatConstants_Destruct", 0x2}, {nullptr, nullptr, 0}};
@@ -70,7 +82,7 @@ static const TrapTerm kAlso_a3e86a[] = {{"Hooks", "cGeometryNode_Destruct", 0x2}
 static const TrapTerm kAlso_a46832[] = {{"Hooks", "nGZSceneGraph_cStandardLightBase_Destruct", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_a46842[] = {{"Hooks", "nGZSceneGraph_cAmbientLight_Destruct", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_a4684a[] = {{"Hooks", "nGZSceneGraph_cDirectionalLight_Destruct", 0x2}, {nullptr, nullptr, 0}};
-static const TrapTerm kAlso_a47eb0[] = {{"Hooks", "nGZSceneGraph_cDirectionalLight_Clone", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_a47eb0[] = {{"Hooks", "nGZSceneGraph_cAmbientLight_Destruct", 0x2}, {"Hooks", "nGZSceneGraph_cDirectionalLight_Construct", 0x2}, {"Hooks", "nGZSceneGraph_cDirectionalLight_Destruct", 0x2}, {"Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, {"Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, {"Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_a49520[] = {{"Hooks", "nGZSceneGraph_cAmbientLight_Destruct", 0x2}, {"Hooks", "nGZSceneGraph_cDirectionalLight_Construct", 0x2}, {"Hooks", "nGZSceneGraph_cDirectionalLight_Destruct", 0x2}, {"Hooks", "nGZSceneGraph_cSpotLight_Create", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_a49530[] = {{"Hooks", "nGZSceneGraph_cAmbientLight_Destruct", 0x2}, {"Hooks", "nGZSceneGraph_cDirectionalLight_Construct", 0x2}, {"Hooks", "nGZSceneGraph_cDirectionalLight_Destruct", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_a4ac70[] = {{"Hooks", "nGZSceneGraph_cStandardLightBase_Destruct", 0x2}, {"Hooks", "nGZSceneGraph_cStandardLightBase_Write", 0x2}, {nullptr, nullptr, 0}};
@@ -106,8 +118,11 @@ static const TrapTerm kAlso_abf490[] = {{"Hooks", "nGZSceneGraph_cResourceNode_C
 static const TrapTerm kAlso_ac6060[] = {{"Hooks", "nGZSceneGraph_cValidateRenderShaderContext_Create", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_aed5e0[] = {{"Hooks", "nGZSceneGraph_LinkedVectors2", 0x2}, {"Hooks", "nGZSceneGraph_LinkedVectors3", 0x2}, {"Hooks", "nGZSceneGraph_LinkedVectors4", 0x2}, {"Hooks", "nGZSceneGraph_LinkedWords", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_aed950[] = {{"Hooks", "nGZSceneGraph_LinkedVectors3", 0x2}, {"Hooks", "nGZSceneGraph_LinkedVectors4", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_af3220[] = {{"Hooks", "nGZSceneGraph_MakeBillboardTextOutput", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_b647d0[] = {{"Hooks", "nTSCASCore_cTSMeshOverlayFragmentFilter_Accept", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_bb4810[] = {{"Hooks", "COMDirectors_TSEffects_DestructorBody", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_bd9e70[] = {{"Hooks", "cTSEffectsManager_Destruct", 0x2}, {"Hooks", "cTSOverlayManager_Create", 0x2}, {nullptr, nullptr, 0}};
+static const TrapTerm kAlso_bdc6f0[] = {{"Hooks", "cTSEffectCurve_Divide", 0x2}, {"Hooks", "cTSEffectCurve_Scale", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_be9590[] = {{"Hooks", "cTSVisualEffect_cTSVisualEffect", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_bead40[] = {{"Hooks", "cTSEffectsManager_Destruct", 0x2}, {"Hooks", "cTSVisualEffect_cTSVisualEffect", 0x2}, {nullptr, nullptr, 0}};
 static const TrapTerm kAlso_c2bd0f[] = {{"Hooks", "COMDirectors_TSAppFW_DestructorBody", 0x2}, {nullptr, nullptr, 0}};
@@ -1850,6 +1865,8 @@ extern const TrapSpec kTrapTable[] = {
     {"sphere_pair_test_first_hit_instantiation", 0x19f720, 32, 0xb16b8e4c, "Hooks", "TranslatedSphere_FirstHitRayIn", 0x2}, // Hooks.TranslatedSphere_FirstHitRayIn=1
     {"sphere_pair_test_first_hit_instantiation", 0x19f790, 32, 0x5ea3f870, "Hooks", "TranslatedSphere_FirstHitSegmentIn", 0x2}, // Hooks.TranslatedSphere_FirstHitSegmentIn=1
     {"nGZCompGeom_TriangleBounds", 0x1a26d0, 32, 0x87c5cec6, "Hooks", "TriangleSet_Build", 0x2, kAlso_1a26d0}, // Hooks.TriangleSet_Build=1 & Hooks.TriangleSet_Refit=1
+    {"read_a_rotation_column_by_column", 0x1a5910, 32, 0x9db2c1da, "Hooks", "FUN_a0bf9da0", 0x2}, // Hooks.FUN_a0bf9da0=1
+    {"write_a_rotation_column_by_column", 0x1a5950, 32, 0x140b413f, "Hooks", "FUN_a0bf9ee0", 0x2}, // Hooks.FUN_a0bf9ee0=1
     {"nGZSceneGraph_recursive_view_Transpose4", 0x1a65e0, 32, 0xfc30d8cb, "Hooks", "FUN_a0a69f50", 0x2}, // Hooks.FUN_a0a69f50=1
     {"nGZSceneGraph_recursive_view_MultiplyBy4", 0x1a6690, 32, 0xd067595d, "Hooks", "FUN_a0a69f50", 0x2}, // Hooks.FUN_a0a69f50=1
     {"nGZSceneGraph_cTangentSpaceBuilder_AddFrame", 0x1a66d0, 32, 0xd03f1809, "Hooks", "nGZSceneGraph_cTangentSpaceBuilder_Create", 0x2}, // Hooks.nGZSceneGraph_cTangentSpaceBuilder_Create=1
@@ -2443,6 +2460,351 @@ extern const TrapSpec kTrapTable[] = {
     {"nGZSceneGraph_cCompositionTreeNodeBehaviorTraits_registry_h", 0x255860, 32, 0x0339558d, "Hooks", "nGZSceneGraph_cCompositionTreeNode_EventRegistry", 0x2}, // Hooks.nGZSceneGraph_cCompositionTreeNode_EventRegistry=1
     {"nGZSceneGraph_cObjectGraphBehaviorTraits_registry_holder", 0x255910, 32, 0x39107790, "Hooks", "nGZSceneGraph_cObjectGraphNode_EventRegistry", 0x2}, // Hooks.nGZSceneGraph_cObjectGraphNode_EventRegistry=1
     {"nGZSceneGraph_cTransformNodeBehaviorTraits_registry_holder", 0x2559c0, 32, 0x4ed4e1eb, "Hooks", "nGZSceneGraph_cTransformNode_EventRegistry", 0x2}, // Hooks.nGZSceneGraph_cTransformNode_EventRegistry=1
+    {"nTSSG_cLightRigManager_cLightRigManager", 0x2c1ab0, 32, 0x636cc44a, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"std_pair_const_std_string_nTSSG_LightRig_destructor", 0x2c1c10, 32, 0xe9303120, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_LightRig_LightRig", 0x2c1ed0, 32, 0xd0dc0559, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_cLightRigManager", 0x2c2060, 32, 0x95dcf39b, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_scalar_deleting_destructor", 0x2c2180, 32, 0x64d9b51f, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_AddRigToScene", 0x2c23c0, 32, 0x440819ed, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_GetAnimation", 0x2c2520, 32, 0x9ae25ce1, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_GetCurrentRigName", 0x2c2670, 21, 0xfdd87ffb, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_SetDirty", 0x2c2ae0, 15, 0x5276c40d, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_Init", 0x2c2d30, 32, 0xa2ff846b, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_GetAutoRig", 0x2c2e00, 32, 0x1711f297, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_IsRootMissing", 0x2c2ec0, 32, 0x3a9a48fd, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_HasRig", 0x2c2f60, 32, 0xe6c153cc, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_GetRigRoot", 0x2c3060, 32, 0xad94ee0b, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_GetNamedNode", 0x2c30f0, 32, 0xa52865e7, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_Load", 0x2c3340, 32, 0x48183e96, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_Update", 0x2c3c70, 32, 0xf361f269, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_QueryInterface", 0x2c4020, 32, 0xadfff3d0, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_RemoveRigFromScene", 0x2c40a0, 32, 0x440819ed, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_AddRigFile", 0x2c41f0, 32, 0x0ce4d748, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_SetCurrentRig", 0x2c4230, 32, 0x942bebd8, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightRigManager_Shutdown", 0x2c42d0, 32, 0xa0c899df, "Hooks", "nTSSG_cLightRigManager_Create", 0x2}, // Hooks.nTSSG_cLightRigManager_Create=1
+    {"nTSSG_cLightMapManager_cLightMapManager", 0x2c4950, 32, 0xa75546c5, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_cLightMapManager", 0x2c4f50, 32, 0x6ee7775b, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_WallKeyEqual_operator", 0x2c5100, 32, 0x4e7b3519, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_FloorKeyHash_operator", 0x2c5270, 21, 0xc55d3dca, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_WallKeyHash_operator", 0x2c5290, 32, 0x81a587d4, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_scalar_deleting_destructor_8_adjus", 0x2c5305, 8, 0xf58c36b9, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_scalar_deleting_destructor", 0x2c5310, 32, 0x2fa5d2af, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_MakeFloorImage", 0x2c5340, 32, 0xb3852956, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_AcquireFloor", 0x2c5990, 32, 0x5cbb58a4, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_MakeWallAtlas", 0x2c5a60, 32, 0x6c6894aa, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_AcquireWall", 0x2c6080, 32, 0xb8e12793, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_DrawFloorTile", 0x2c6200, 32, 0x4e4d984f, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_SetColor", 0x2c6460, 32, 0xdf135e98, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_DrawWallRegion", 0x2c6630, 32, 0x7a53d615, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_Incidence", 0x2c6860, 32, 0xa969bc9a, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_IncidenceKernel", 0x2c6890, 32, 0x1881c80b, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_MakeIncidenceTable", 0x2c6950, 32, 0x7d458e8e, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_UpdateIncidence", 0x2c6ad0, 32, 0x8aa1d6d0, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_FreeIncidenceTable", 0x2c6d80, 14, 0x8d5bf363, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_DoMessage", 0x2c6d90, 32, 0x867d5439, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_SetTransition", 0x2c6eb0, 32, 0x21bb204e, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_WallFaceHeight", 0x2c6f20, 32, 0xcda84775, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_FindFloor", 0x2c7110, 32, 0xe46228c3, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_GetFloorUV", 0x2c71a0, 32, 0x8000ea8e, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_GetFloorRect", 0x2c72d0, 32, 0xa3437009, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_ClassId", 0x2c7450, 6, 0x1c36837a, "Hooks", "COMDirectors_TSSG_Construct", 0x2}, // Hooks.COMDirectors_TSSG_Construct=1
+    {"nTSSG_cLightMapManager_Init", 0x2c7460, 32, 0x5ab3eb41, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_Advance", 0x2c7540, 32, 0x20f77a44, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_BlendImage", 0x2c7570, 32, 0x6116860e, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_GetScale", 0x2c7640, 31, 0x749d5294, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_GetImage", 0x2c7660, 32, 0x672197d1, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_GetFloorLight", 0x2c76a0, 32, 0xd043410f, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_GetWallLight", 0x2c78e0, 32, 0x0664b5e4, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_TakeFreeTile", 0x2c7a20, 32, 0xc9acd77a, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_AllocateRegion", 0x2c7aa0, 32, 0xa23f7813, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_Start", 0x2c7bb0, 32, 0x05b2e3a8, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_Stop", 0x2c7bf0, 32, 0x77b86d7c, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_Update", 0x2c7cd0, 32, 0xfa90b054, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_ReturnTile", 0x2c7e00, 32, 0x18d31fee, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_FreeRegion", 0x2c7e40, 32, 0xdbb0c3a2, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_ClearImages", 0x2c7ea0, 32, 0xcde2c2e9, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_ReleaseFloor", 0x2c7ed0, 32, 0x813114ae, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_ReleaseWall", 0x2c7fa0, 32, 0xd3eed6b3, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_ReadWorldSize", 0x2c8070, 32, 0xf5bdd6a4, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_ComputeInsets", 0x2c80f0, 32, 0x2649686e, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_Shutdown", 0x2c8140, 32, 0xeb4cff76, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_Blend", 0x2c8280, 32, 0xa3f448c7, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_ReadSettings", 0x2c83e0, 32, 0xb489f84d, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_Upload", 0x2c85c0, 32, 0xa9e669b3, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_FindWall", 0x2c8820, 32, 0xfbdc42e1, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_FindWallRegion", 0x2c8890, 32, 0x10c0726f, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_GetWallUV", 0x2c88f0, 32, 0xd0ddee1c, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightMapManager_GetWallRect", 0x2c8aa0, 32, 0x340a0a92, "Hooks", "cLightMapManager_Create", 0x2}, // Hooks.cLightMapManager_Create=1
+    {"nTSSG_cLightingManager_CopyLightSet", 0x2cb200, 32, 0x518a48bb, "Hooks", "nTSSG_cLightingManager_ctor", 0x2, kAlso_2cb200}, // Hooks.nTSSG_cLightingManager_ctor=1 & Hooks.cLightingStateCommand_vf9=1
+    {"nTSSG_cShadowManager_cShadowManager", 0x2e63a0, 32, 0xacc6c971, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowEntry_copy_constructor", 0x2e6830, 32, 0x8b00adec, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowEntry_cShadowEntry", 0x2e6940, 32, 0x1befb65b, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_cShadowManager", 0x2e6c70, 32, 0x4b67b493, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowEntry_cShadowEntry", 0x2e6db0, 32, 0xbe948bda, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_DeletingDestructor", 0x2e6e10, 32, 0x15d8ead0, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_QueueAll", 0x2e6e40, 32, 0xc6397d01, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_Queue", 0x2e6f40, 32, 0x1a18cc9f, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_PrepareNode", 0x2e7020, 32, 0xa075d70e, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_MakeStaticShadow", 0x2e7380, 32, 0x0e26a637, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_DoMessage", 0x2e77c0, 32, 0xf055fe81, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_GetOptionBits", 0x2e7b90, 12, 0x3f168b5d, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_Init", 0x2e7c10, 32, 0x5d2a774f, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_CreateResources", 0x2e7d10, 32, 0x44cfde43, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_Update", 0x2e80d0, 32, 0x71c48cbf, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_RenderStatic", 0x2e8650, 32, 0x5cfcf645, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_RenderTarget", 0x2e87c0, 32, 0xa0a0838c, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_DrainQueue", 0x2e8920, 32, 0xfe9492b0, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_QueryInterface", 0x2e89a0, 32, 0x4e8709b5, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_QueryInterface_adjustor_thunk", 0x2e89ed, 8, 0x0a2fe13a, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_ResetResources", 0x2e8a00, 16, 0xc1fa9de4, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_Release", 0x2e8a10, 21, 0x287544db, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_Release_adjustor_thunk", 0x2e8a25, 8, 0x548f91e8, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_ReleaseShadow", 0x2e8a30, 32, 0x5444406f, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_Unqueue", 0x2e8bf0, 32, 0xcbfbfbb9, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_Lookup", 0x2e8d00, 32, 0xbdddffcb, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_SetOption", 0x2e8d80, 32, 0x93025ebb, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_Shutdown", 0x2e8de0, 32, 0x63290b6f, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_ReleaseResources", 0x2e8e30, 32, 0x679e7225, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_AcquireShadow", 0x2e8e90, 32, 0x8dee2c77, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_GetShadowMatrix", 0x2e9480, 32, 0x4f89193b, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_GetShadowBox", 0x2e9500, 32, 0x014155f8, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_GetShadowScale", 0x2e95a0, 32, 0x0f968863, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_ShadowTexture", 0x2e9620, 32, 0x04e496ed, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_SegmentChanged", 0x2e9690, 32, 0x36de7447, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_TrackCamera", 0x2e9700, 32, 0xf915510a, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_Invalidate", 0x2e97d0, 32, 0x57677edc, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cShadowManager_DrawShadow", 0x2e9920, 32, 0xd9e5a6b9, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cDiffusionLightExtension_cDiffusionLightExtension", 0x2e9eb0, 32, 0x6e6def7c, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_cDiffusionLightExtension", 0x2ea080, 32, 0x9ed8f5f2, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_cDiffusionLightExtension", 0x2ea1d0, 32, 0xac0b0a6c, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_scalar_deleting_destructor", 0x2ea220, 32, 0x21864bd8, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_1", 0x2ea243, 14, 0xc1e88f60, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_16", 0x2ea251, 14, 0xce880ae3, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_13", 0x2ea25f, 14, 0xdf875a76, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_14", 0x2ea26d, 14, 0x706345af, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_ResetFlags", 0x2ea27b, 32, 0x660684c7, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_15", 0x2ea2b9, 8, 0x0f5afd59, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_Clone", 0x2ea2d0, 32, 0x2c8c446e, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_8", 0x2ea344, 14, 0x57493a0f, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_9", 0x2ea352, 14, 0x91c2f4a5, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_26", 0x2ea360, 14, 0xf0f7319e, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_25", 0x2ea36e, 8, 0x38840d6b, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_6", 0x2ea394, 14, 0xac3e8593, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetSourceColor", 0x2ea436, 25, 0xfb6fe7fe, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetSourceDirectionalFalloff", 0x2ea451, 22, 0x0292929f, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetSourceFalloff", 0x2ea46e, 32, 0xb379fc4a, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetSourceFloorIntensityScal", 0x2ea48e, 32, 0xacd466b6, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetSourceIntensity", 0x2ea4ae, 25, 0xf0556a81, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetSourceInterFloorFalloff", 0x2ea4d1, 22, 0xf323f65a, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetSourceIsDirectional", 0x2ea4ee, 32, 0xab3f7301, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetSourceMax", 0x2ea50e, 32, 0xdd74047e, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetSourceMin", 0x2ea531, 25, 0x40899c0f, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetSourceWallIntensityScale", 0x2ea551, 22, 0x93c361d8, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_3", 0x2ea56e, 14, 0x258694f1, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_4", 0x2ea57c, 14, 0xb4a9ab79, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_24", 0x2ea598, 14, 0x3b1f352a, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_19", 0x2ea5a6, 14, 0xb7cc3c91, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_12", 0x2ea5b4, 14, 0xb5eb8925, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_0", 0x2ea5c2, 14, 0x9480e982, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_QueryInterface", 0x2ea5d0, 32, 0xdcff1516, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_7", 0x2ea61f, 14, 0x175f8ba1, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_Read", 0x2ea630, 32, 0xcd063853, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_2", 0x2ea70c, 14, 0x01bd3184, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_5", 0x2ea71a, 14, 0x34153beb, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetDefaultSourceColor", 0x2ea728, 32, 0xbb0bd49d, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetSourceColor", 0x2ea749, 32, 0xab7815bc, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetSourceDirectionalFalloff", 0x2ea79e, 26, 0x89cfc922, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetSourceFalloff", 0x2ea7de, 26, 0x89cfc922, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetSourceFloorIntensityScal", 0x2ea81e, 26, 0x89cfc922, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetSourceIntensity", 0x2ea842, 26, 0xf7739d53, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetSourceInterFloorFalloff", 0x2ea87e, 26, 0x89cfc922, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetDefaultSourceIsDirection", 0x2ea8a2, 24, 0x1acd7bfe, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetSourceIsDirectional", 0x2ea8ba, 22, 0x3f756140, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetDefaultSourceMax", 0x2ea8de, 32, 0x24853d9f, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetSourceMax", 0x2ea908, 30, 0x4e50adfc, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetDefaultSourceMin", 0x2ea926, 32, 0x0fb5d9c3, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetSourceMin", 0x2ea948, 30, 0x142cb16f, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_SetSourceWallIntensityScale", 0x2ea966, 26, 0xfa5b620d, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_21", 0x2ea982, 14, 0x6a84492b, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_vf172_22", 0x2ea990, 14, 0x9094d63f, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_IsKindOf", 0x2ea99e, 32, 0x5d5de344, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_GetTypeInfo", 0x2ea9e0, 32, 0xd1d127d2, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cDiffusionLightExtension_Write", 0x2eaab0, 32, 0x045a834f, "Hooks", "nTSSG_cDiffusionLightExtension_Create", 0x2}, // Hooks.nTSSG_cDiffusionLightExtension_Create=1
+    {"nTSSG_cShadow_cShadow", 0x354320, 32, 0x31d75543, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_cShadow", 0x354480, 32, 0x23db5a30, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"cObjectShadowFilter_scalar_deleting_destructor", 0x354580, 32, 0x52fb1e53, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"cObjectShadowFilter_scalar_deleting_destructor", 0x3545a3, 8, 0x81cf3695, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_DeletingDestructor", 0x3545b0, 32, 0x5541ca23, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_Show", 0x3545e0, 32, 0x4a4c7247, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_SwapLayerBitsDeep", 0x354630, 32, 0x7d40bcf1, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_AddShadowMaterial", 0x3546b0, 32, 0xe024e091, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_CreateResources", 0x354790, 32, 0xd00d91d7, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_ReleaseResources", 0x355290, 32, 0xe87e17b3, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_Hide", 0x3553b0, 32, 0x24942382, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_BindSubset", 0x355410, 32, 0x80bcbb60, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_SubsetMaterial", 0x355470, 32, 0x4b561239, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_FloorTest", 0x3554b0, 32, 0x0e4ec3ae, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_TileSpan", 0x355770, 32, 0x4057cc97, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_ObjectBounds", 0x3558d0, 32, 0x79d54d20, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_SubsetWorldBounds", 0x355990, 32, 0x4c4adc2b, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_FollowsCamera", 0x355a70, 19, 0x5394b056, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_HasMaterial", 0x355a90, 18, 0x94c55610, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_Init", 0x355ab0, 32, 0xd55c71a7, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_BindMaterials", 0x355b50, 32, 0xff3b703c, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_ObjectVisible", 0x355bd0, 13, 0xf3fe6345, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_Refresh", 0x355be0, 32, 0x3dbf6fa1, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_ApplyMaterialsAgain", 0x355ce0, 5, 0x4ca23236, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_RestoreMaterials", 0x355cf0, 32, 0xac84ba3a, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_Update", 0x355d20, 32, 0x729cc814, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_QueryInterface", 0x356880, 32, 0xd102e6d1, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_Resume", 0x3568b0, 23, 0x881cd2e1, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_ModeChanged", 0x3568d0, 32, 0x22ab0cb4, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_SetEnabled", 0x356930, 31, 0x667d8ae7, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_SetObject", 0x356950, 32, 0xb190d660, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_SetMode", 0x3569c0, 28, 0x01fb495c, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_Shutdown", 0x3569e0, 32, 0x7fea7279, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_UnbindMaterials", 0x356a20, 32, 0xeccade81, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"cObjectShadowFilter_Accept", 0x356a70, 32, 0xee5ca0ce, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_Suspend", 0x356b10, 32, 0xb6e193be, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_SelectMode", 0x356b40, 32, 0x139e6614, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_ApplyMaterials", 0x356cc0, 32, 0xccb853df, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_UpdateSettings", 0x356e40, 32, 0x26617bce, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_UpdateLevel", 0x357750, 32, 0xf1bf74ab, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_PlaceProjectors", 0x357810, 32, 0x7e744e66, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cShadow_UpdateVisibility", 0x357d70, 32, 0x9c5a6c14, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_cImposterDefinitions_map_erase", 0x362470, 32, 0x7cd645f3, "Hooks", "nTSSG_cImposterDefinitions_Clear", 0x2, kAlso_362470}, // Hooks.nTSSG_cImposterDefinitions_Clear=1 & Hooks.nTSSG_cLotImposterManager_DeletingDestructor=1
+    {"nTSSG_cLotImposterManager_cLotImposterManager", 0x362a10, 32, 0xfc94adf8, "Hooks", "nTSSG_cLotImposterManager_Create", 0x2}, // Hooks.nTSSG_cLotImposterManager_Create=1
+    {"nTSSG_cLotImposterManager_cLotImposterManager", 0x362de0, 32, 0x1bea851b, "Hooks", "nTSSG_cLotImposterManager_DeletingDestructor", 0x2}, // Hooks.nTSSG_cLotImposterManager_DeletingDestructor=1
+    {"nTSSG_cLotImposter_cLotImposter", 0x36c9d0, 32, 0x4b4e63d9, "Hooks", "nTSSG_cLotImposter_Create", 0x2}, // Hooks.nTSSG_cLotImposter_Create=1
+    {"nTSSG_cLotImposter_cLotImposter", 0x36ca30, 32, 0xda893e8a, "Hooks", "nTSSG_cLotImposter_Create", 0x2}, // Hooks.nTSSG_cLotImposter_Create=1
+    {"nTSSG_cLotImposter_vf3", 0x36caa0, 32, 0xee5ef04b, "Hooks", "nTSSG_cLotImposter_Create", 0x2}, // Hooks.nTSSG_cLotImposter_Create=1
+    {"nTSSG_cLotImposter_vf8_8", 0x36cac0, 22, 0x46cd3265, "Hooks", "nTSSG_cLotImposter_Create", 0x2}, // Hooks.nTSSG_cLotImposter_Create=1
+    {"nTSSG_cLotImposter_vf8_9", 0x36cae0, 32, 0x18e0d05d, "Hooks", "nTSSG_cLotImposter_Create", 0x2}, // Hooks.nTSSG_cLotImposter_Create=1
+    {"nTSSG_cLotImposter_vf8_3", 0x36cb20, 32, 0x9b3b323d, "Hooks", "nTSSG_cLotImposter_Create", 0x2}, // Hooks.nTSSG_cLotImposter_Create=1
+    {"nTSSG_cLotImposter_vf8_4", 0x36d090, 11, 0x65308f7c, "Hooks", "nTSSG_cLotImposter_Create", 0x2}, // Hooks.nTSSG_cLotImposter_Create=1
+    {"nTSSG_cLotImposter_QueryInterface", 0x36d110, 32, 0x18865203, "Hooks", "nTSSG_cLotImposter_Create", 0x2}, // Hooks.nTSSG_cLotImposter_Create=1
+    {"nTSSG_cLotImposter_QueryInterface", 0x36d14f, 8, 0x87fdbe55, "Hooks", "nTSSG_cLotImposter_Create", 0x2}, // Hooks.nTSSG_cLotImposter_Create=1
+    {"nTSSG_cLotImposterDesc_cLotImposterDesc", 0x36d160, 32, 0x9119ba39, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_cLotImposterDesc", 0x36d1f0, 27, 0xbd60e7ac, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_vf8_12", 0x36d20b, 8, 0x1553418a, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_scalar_deleting_destructor", 0x36d220, 32, 0x737d72c9, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_AddRef", 0x36d240, 8, 0x2ee54e7e, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_AddRef", 0x36d248, 8, 0x16236999, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_AddRef", 0x36d250, 8, 0xf44cd692, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_GetGZCLSID", 0x36d2c0, 6, 0x8330f256, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2, kAlso_36d2c0}, // Hooks.nTSSG_cLotImposterDesc_Create=1 & Hooks.COMDirectors_TSSG_Construct=1
+    {"nTSSG_cLotImposterDesc_QueryInterface", 0x36d2d0, 32, 0x604952bf, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_QueryInterface", 0x36d326, 8, 0x7727aeb0, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_QueryInterface", 0x36d32e, 8, 0x357abe85, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_Read", 0x36d340, 32, 0x1cb8eb65, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_Release", 0x36d370, 8, 0xe29a1f52, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_Release", 0x36d378, 8, 0x16236999, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_Release", 0x36d380, 8, 0xf44cd692, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_cLotImposterDesc_Write", 0x36d390, 32, 0x491998b9, "Hooks", "nTSSG_cLotImposterDesc_Create", 0x2}, // Hooks.nTSSG_cLotImposterDesc_Create=1
+    {"nTSSG_MatricesDiffer", 0x36d3c0, 32, 0xc6ecdb41, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyState_DynamicStrategyState", 0x36e790, 32, 0x579e24b8, "Hooks", "nTSSG_DynamicStrategyState_Create", 0x2}, // Hooks.nTSSG_DynamicStrategyState_Create=1
+    {"nTSSG_DynamicStrategyTable_DynamicStrategyTable", 0x36e8b0, 32, 0xa7639be0, "Hooks", "nTSSG_DynamicStrategyState_Create", 0x2}, // Hooks.nTSSG_DynamicStrategyState_Create=1
+    {"nTSSG_DynamicStrategyTable_ConstructRecords", 0x36e960, 32, 0x462b9886, "Hooks", "nTSSG_DynamicStrategyState_Create", 0x2}, // Hooks.nTSSG_DynamicStrategyState_Create=1
+    {"nTSSG_DynamicStrategyTrees_DynamicStrategyTrees", 0x36e9c0, 32, 0xc8b413dd, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderSurfaceImpl_cTSRenderSurfaceImpl", 0x36eb60, 32, 0x3d0c8f8d, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_36eb60}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cTSRenderTargetSurface_Construct=1
+    {"nTSSG_DynamicStrategyHelper_DynamicStrategyHelper", 0x36ed40, 32, 0xb6091e33, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_cDisplayListDynam", 0x36f220, 32, 0x048a72cb, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyTable_DynamicStrategyTable", 0x36f640, 32, 0xa72fa18a, "Hooks", "nTSSG_DynamicStrategyState_Destruct", 0x2}, // Hooks.nTSSG_DynamicStrategyState_Destruct=1
+    {"nTSSG_cTSRenderBackbufferSurface_cTSRenderBackbufferSurfa", 0x36f7f0, 32, 0x8bdb947c, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderTargetSurface_cTSRenderTargetSurface", 0x36f870, 32, 0x3c79d705, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_36eb60}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cTSRenderTargetSurface_Construct=1
+    {"nTSSG_cTSRenderTextureSurface_cTSRenderTextureSurface", 0x36f930, 32, 0x7e334733, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyHelper_DynamicStrategyHelper", 0x36fa10, 32, 0x9b7eabd8, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_deleting_destructor", 0x36fb80, 32, 0x9593d2e7, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderBackbufferSurface_scalar_deleting_destruct", 0x36fbd0, 32, 0xf71d0ec2, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderTextureSurface_scalar_deleting_destructor", 0x36fc10, 32, 0x801d0dff, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyTable_Collect", 0x36fc40, 32, 0xf1d52c0f, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyHelper_CollectWindows", 0x3702c0, 32, 0x299d0b24, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_Register", 0x370380, 32, 0x6c9b1bb5, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_AddBox", 0x3703d0, 12, 0x01ab8ec3, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_BeginPass", 0x3703e0, 12, 0x1c1c9ea7, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyTable_Push", 0x3703f0, 32, 0x63f66df5, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyHelper_Add", 0x370430, 32, 0x5c387653, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_AddRect", 0x370470, 32, 0xd74db814, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyTable_PushVanished", 0x370980, 32, 0x1d2a3507, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyTrees_Build", 0x370b70, 32, 0xdf285c6c, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_DynamicStrategyHelper_Window", 0x370cd0, 32, 0xc0eb4b21, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyHelper_WindowCallback", 0x370e40, 32, 0xaeaecad9, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderSurfaceImpl_Clear", 0x370f50, 32, 0xca54e73e, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_36eb60}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cTSRenderTargetSurface_Construct=1
+    {"nTSSG_DynamicStrategyTable_Reset_the_three_vectors_emptie", 0x370f90, 32, 0x5e49b5b3, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyHelper_Reset_both_maps_emptied", 0x370fc0, 25, 0x2772bace, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderSurfaceImpl_ClearRect", 0x370fe0, 32, 0x8b3efe1c, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_36eb60}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cTSRenderTargetSurface_Construct=1
+    {"nTSSG_cTSRenderSurfaceImpl_CopyRect", 0x371010, 32, 0x1e00fab7, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_36eb60}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cTSRenderTargetSurface_Construct=1
+    {"nTSSG_cTSRenderSurfaceImpl_CopyColor", 0x3710a0, 32, 0x276818e9, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_36eb60}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cTSRenderTargetSurface_Construct=1
+    {"nTSSG_cTSRenderSurfaceImpl_CopyDepth", 0x371120, 32, 0x873e1d58, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_36eb60}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cTSRenderTargetSurface_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_PresentRegistered", 0x371150, 32, 0xcf564a20, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderSurfaceImpl_CopyFrom", 0x371210, 32, 0x84277310, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_36eb60}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cTSRenderTargetSurface_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_CopyToSecond_mTar", 0x371240, 32, 0xcfff8fc8, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderTextureSurface_ReparseShaders", 0x3713b0, 32, 0xbc497efe, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_OutlineDrawer_Records", 0x3714e0, 32, 0xc554d3d0, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_OutlineDrawer_Record", 0x371520, 32, 0xb37a37e8, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_OutlineDrawer_MapValue", 0x3715b0, 32, 0x22568eed, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_OutlineDrawer_Rect", 0x371600, 32, 0x680c726f, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_DrawOutlines", 0x371670, 32, 0x7037a7b2, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_OutlineDrawer_Draw", 0x3717e0, 32, 0x854a2434, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_OutlineDrawer_Kind", 0x3718f0, 32, 0x917a770f, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_OutlineDrawer_Map", 0x371930, 32, 0x4609b6ad, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_Prepare", 0x371b10, 32, 0xd34c812a, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyTable_Record", 0x372150, 32, 0x1bbb7186, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DrawItemPixelRect", 0x372270, 32, 0x4a8ba5c6, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyTable_Update", 0x372430, 32, 0x85dc9191, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyHelper_Collect", 0x372480, 26, 0xeedd277b, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_WindowScreenRect", 0x372600, 32, 0xae8bc51a, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderTextureSurface_GetAspect", 0x372660, 7, 0x9da32544, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_WindowId", 0x3726f0, 12, 0x0b9be067, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderBackbufferSurface_Create", 0x372700, 32, 0x0524a99d, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderTextureSurface_Create", 0x372870, 32, 0x870abd63, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_UpdateSurfaces", 0x372a50, 32, 0xa01f7e7a, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_HitsShareRectangle", 0x3735b0, 32, 0x3ccfe8ed, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_Invalidate", 0x373690, 19, 0x9c20b8cc, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderTextureSurface_IsValid", 0x373720, 32, 0x45156566, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyTrees_Overlaps", 0x373750, 32, 0x0dd273c3, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_TurboRectSupported", 0x3737f0, 32, 0xb1a79547, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_WindowOpaque", 0x3738b0, 32, 0x80dbd5c9, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_Clear", 0x373920, 32, 0x363a09cf, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_ListItems", 0x373a70, 32, 0xccb73ff5, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_ReleaseSurfaceReso", 0x373d70, 32, 0x69ceb1fd, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_Unregister", 0x373de0, 32, 0xf284e5cb, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_Draw", 0x373e20, 32, 0x450f7e61, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_Present", 0x373f00, 32, 0x9be7ef1e, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_DrawOwnPath", 0x3743e0, 32, 0x62a97b71, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_DrawPath", 0x374670, 32, 0xa48161ef, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_Render", 0x374930, 32, 0x3553948c, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_DrawSide", 0x374bb0, 32, 0x6c716d02, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_RestoreOverlayStates", 0x374ce0, 32, 0x85007007, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_SetUpTarget", 0x374dd0, 32, 0x27dbb1df, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderSurfaceImpl_Apply", 0x3751f0, 32, 0x717000d0, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_36eb60}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cTSRenderTargetSurface_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_MarkOpaqueUI", 0x375240, 32, 0x075c3531, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_OpaqueUICallback", 0x3752d0, 32, 0x09aa31fa, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_OutlineDrawer_Colour", 0x3753c0, 32, 0xca65aed5, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_OutlineDrawer_SetRects", 0x375550, 32, 0x7a4e480e, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyTable_FrameStep", 0x375590, 32, 0x89e3378c, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyHelper_FrameStep", 0x3755e0, 32, 0xe096ac16, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_OutlineDrawer_SetDraw", 0x375620, 32, 0x24daf3bd, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_SetWindowPropertyUint32", 0x375660, 32, 0x12dcdfd5, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderBackbufferSurface_Destroy", 0x375740, 32, 0x847d903f, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cTSRenderTextureSurface_Destroy", 0x3757d0, 32, 0x870abd63, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_DynamicStrategyHelper_Record", 0x375a20, 32, 0x86e2ccf6, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_Slot8", 0x375b00, 32, 0x2e7e9c36, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_Finish", 0x376460, 32, 0x7f174ca9, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListDynamicRenderStrategy_DrawDebugOverlay", 0x376840, 32, 0x28614ac7, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"std_vector_nTSSG_CensorBox_Insert_n", 0x377190, 32, 0xe5efd578, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_Construct=1
+    {"std_uninitialized_copy_for_nTSSG_CensorBox", 0x377520, 32, 0x00d82a8f, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListCensorRenderStrategy_cDisplayListCensor", 0x377790, 32, 0x757c2690, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListCensorRenderStrategy_deleting_destructor", 0x377860, 32, 0xf5b8e2a6, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListCensorRenderStrategy_AddBox", 0x377880, 32, 0x55905b69, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListCensorRenderStrategy_BeginPass", 0x377920, 32, 0xdfbae145, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListCensorRenderStrategy_Clear", 0x377ec0, 20, 0x90b2fcc5, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListCensorRenderStrategy_CopyBoxRects_out", 0x378140, 32, 0x5bb77781, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_CollectDirtyRects", 0x2, kAlso_378140}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_CollectDirtyRects=1 & Hooks.nTSSG_cDisplayListCensorRenderStrategy_RenderTexture=1
+    {"nTSSG_GetViewerFrameState_the_viewer_s_slot_116_state", 0x378200, 32, 0xc3b17fd1, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_CollectDirtyRects", 0x2, kAlso_378140}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_CollectDirtyRects=1 & Hooks.nTSSG_cDisplayListCensorRenderStrategy_RenderTexture=1
+    {"nTSSG_cDisplayListCensorRenderStrategy_Clear_8_adjustor", 0x3782b0, 8, 0xc9b54711, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_Construct=1
+    {"nTSSG_cDisplayListCensorRenderStrategy_DrawItems_each_ite", 0x3782c0, 32, 0x8916d526, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_RenderTexture", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_RenderTexture=1
+    {"nTSSG_cDisplayListCensorRenderStrategy_DrawOne_the_item_s", 0x378350, 29, 0x76f75fc9, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_RenderTexture", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_RenderTexture=1
+    {"nTSSG_cDisplayListCensorRenderStrategy_SetUpTexture_the_t", 0x378400, 32, 0xc28434bb, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_RenderTexture", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_RenderTexture=1
+    {"std_vector_nTSSG_CensorBox_clear", 0x378560, 32, 0xe502d645, "Hooks", "nTSSG_cDisplayListCensorRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListCensorRenderStrategy_Construct=1
     {"cTSCustomContentSupport_cTSCustomContentSupport", 0x38f420, 32, 0x3350d0f4, "Hooks", "cTSCustomContentSupport_Construct", 0x2}, // Hooks.cTSCustomContentSupport_Construct=1
     {"cTSCustomContentSupport_deleting_destructor", 0x38f970, 32, 0x0f906e84, "Hooks", "cTSCustomContentSupport_Construct", 0x2}, // Hooks.cTSCustomContentSupport_Construct=1
     {"cTSCustomContentSupport_LotObjectsAllowed", 0x390be0, 32, 0xcc2ebe8d, "Hooks", "cTSCustomContentSupport_Construct", 0x2}, // Hooks.cTSCustomContentSupport_Construct=1
@@ -2467,6 +2829,273 @@ extern const TrapSpec kTrapTable[] = {
     {"cTSCustomContentSupport_Cleanup", 0x39fd30, 32, 0x8dbc175d, "Hooks", "cTSCustomContentSupport_Construct", 0x2}, // Hooks.cTSCustomContentSupport_Construct=1
     {"nGZSceneGraph_cSimpleLightBehaviorTraits_registry_holder", 0x3a3e60, 32, 0x9f6d70ec, "Hooks", "nGZSceneGraph_cSimpleLight_EventRegistry", 0x2}, // Hooks.nGZSceneGraph_cSimpleLight_EventRegistry=1
     {"nGZSceneGraph_cSimpleLightBehaviorTraits_registry_holder_bo", 0x3a4090, 32, 0x12fef8ef, "Hooks", "nGZSceneGraph_cSimpleLight_EventRegistry", 0x2}, // Hooks.nGZSceneGraph_cSimpleLight_EventRegistry=1
+    {"nTSSG_ShadowBounds", 0x3ad230, 32, 0xce53fdf1, "Hooks", "cShadowManager_Create", 0x2, kAlso_3ad230}, // Hooks.cShadowManager_Create=1 & Hooks.cShadow_Create=1
+    {"nTSSG_ClipPlanesMeet", 0x3ad380, 32, 0xc096552b, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_PointInView", 0x3ad430, 32, 0xbe501c26, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
+    {"nTSSG_ShadowDirection", 0x3ad6b0, 32, 0x50cfef61, "Hooks", "cShadowManager_Create", 0x2}, // Hooks.cShadowManager_Create=1
+    {"nTSSG_cOverlayNode_vf91", 0x3aeb80, 32, 0xad58be8f, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_Slot83", 0x3aec90, 32, 0x529cf0d2, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_Draw", 0x3aed00, 32, 0x3b6c143a, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_Init", 0x3af1b0, 32, 0xdd06bfe8, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_GetBoundBoxIn", 0x3af3a0, 31, 0x464a12ac, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_GetBoundBox", 0x3af3c0, 32, 0x2596b7cc, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_GetEntryCount", 0x3af420, 28, 0x17aaa316, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_GetEntry", 0x3af440, 32, 0x324c77c2, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_SetMaterial", 0x3afd50, 32, 0xf88c0cb2, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_SetGeometry", 0x3afdb0, 32, 0x157e2d9d, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_SetGenerator", 0x3afdf0, 32, 0x89fc0310, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_Shutdown", 0x3b16f0, 32, 0x1d405377, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cOverlayNode_Update", 0x3b1820, 32, 0xccde65a3, "Hooks", "cOverlayNode_Construct", 0x2}, // Hooks.cOverlayNode_Construct=1
+    {"nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x3b5b80, 32, 0x09deeb58, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_cSubset_cSubset", 0x3b5e60, 32, 0x0fa9101b, "Hooks", "nTSSG_cWaterGeometryBuilder_SetTriangleSubset", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_SetTriangleSubset=1
+    {"nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x3b5f70, 32, 0x5321dff7, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_1", 0x3b5f93, 14, 0x89e774f3, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_AddSubset", 0x3b5fb0, 32, 0x30826d78, "Hooks", "nTSSG_cWaterGeometryBuilder_SetTriangleSubset", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_SetTriangleSubset=1
+    {"nTSSG_cWaterGeometryBuilder_AddTriangleToSubset", 0x3b6240, 32, 0x7463ff2a, "Hooks", "nTSSG_cWaterGeometryBuilder_SetTriangleSubset", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_SetTriangleSubset=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_13", 0x3b639a, 14, 0xa6985ef4, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_14", 0x3b63a8, 14, 0xb397c982, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_17", 0x3b63b6, 14, 0x8b4320ad, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_UpdateCentreVertex", 0x3b63d0, 32, 0x2ed8eeb2, "Hooks", "nTSSG_cWaterGeometryBuilder_SetVertexHeight", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_SetVertexHeight=1
+    {"nTSSG_cWaterGeometryBuilder_CentreIndex", 0x3b6450, 27, 0xede7ef47, "Hooks", "nTSSG_cWaterGeometryBuilder_SetVertexHeight", 0x2, kAlso_3b6450}, // Hooks.nTSSG_cWaterGeometryBuilder_SetVertexHeight=1 & Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_FillCornerTables", 0x3b6470, 32, 0xf9e39aba, "Hooks", "nTSSG_cWaterGeometryBuilder_Setup", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Setup=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_8", 0x3b6502, 14, 0x0b9702e9, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_9", 0x3b6542, 14, 0xb715897a, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_GrowClampRect", 0x3b6550, 32, 0x12f0bd75, "Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_GrowClampRectToSize", 0x3b65b0, 32, 0x12f0bd75, "Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_ResetCollision", 0x3b6610, 32, 0xb3747032, "Hooks", "nTSSG_cWaterGeometryBuilder_Setup", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Setup=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_6", 0x3b663e, 14, 0xbfd362bd, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_NearestDistance", 0x3b6650, 32, 0x49724970, "Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_TileDepths", 0x3b66f0, 32, 0x463b4a68, "Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_Bilerp", 0x3b67e0, 32, 0x60ee1364, "Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_CollectWetCorners", 0x3b6840, 32, 0xf83e049c, "Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_3", 0x3b6920, 14, 0x858ccda2, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_4", 0x3b692e, 14, 0xa66cf09f, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_TileDepthChanged", 0x3b6940, 32, 0xbf1c4271, "Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_BuildCollision", 0x3b6a00, 32, 0xbebb96cb, "Hooks", "nTSSG_cWaterGeometryBuilder_Setup", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Setup=1
+    {"nTSSG_cWaterGeometryBuilder_InitVertex", 0x3b6bd0, 32, 0x294f3d06, "Hooks", "nTSSG_cWaterGeometryBuilder_Setup", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Setup=1
+    {"nTSSG_cWaterGeometryBuilder_CornerIndex", 0x3b71a0, 32, 0x29aedc3f, "Hooks", "nTSSG_cWaterGeometryBuilder_SetTriangleSubset", 0x2, kAlso_3b71a0}, // Hooks.nTSSG_cWaterGeometryBuilder_SetTriangleSubset=1 & Hooks.nTSSG_cWaterGeometryBuilder_Setup=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_12", 0x3b71d0, 14, 0x0c3be08a, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_PaintTile", 0x3b71e0, 32, 0x01852303, "Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_Build", 0x3b75b4, 32, 0x55de6cce, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_0", 0x3b7ba5, 14, 0x7e997d92, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_7", 0x3b7bb3, 14, 0x69963b4f, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_2", 0x3b8d63, 14, 0x1ec95751, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_RemoveTriangleFromSubset", 0x3b8d80, 32, 0x1cb2386a, "Hooks", "nTSSG_cWaterGeometryBuilder_RemoveTriangle", 0x2, kAlso_3b8d80}, // Hooks.nTSSG_cWaterGeometryBuilder_RemoveTriangle=1 & Hooks.nTSSG_cWaterGeometryBuilder_SetTriangleSubset=1 & Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_Clear", 0x3b8e30, 32, 0x4d2e17fe, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2, kAlso_3b71a0}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1 & Hooks.nTSSG_cWaterGeometryBuilder_Setup=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_5", 0x3b8fc8, 14, 0x75b1a72c, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_SetVertexZ", 0x3b8fe0, 32, 0xc9b12ce2, "Hooks", "nTSSG_cWaterGeometryBuilder_SetVertexHeight", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_SetVertexHeight=1
+    {"nTSSG_cWaterGeometryBuilder_vf332_15", 0x3b904d, 14, 0xfbadf642, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_SetDepth", 0x3b90f0, 32, 0x54ee1034, "Hooks", "nTSSG_cWaterGeometryBuilder_Update", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_SubsetOfTriangle", 0x3b93a0, 32, 0x8d608601, "Hooks", "nTSSG_cWaterGeometryBuilder_RemoveTriangle", 0x2, kAlso_3b8d80}, // Hooks.nTSSG_cWaterGeometryBuilder_RemoveTriangle=1 & Hooks.nTSSG_cWaterGeometryBuilder_SetTriangleSubset=1 & Hooks.nTSSG_cWaterGeometryBuilder_Update=1
+    {"nTSSG_cWaterGeometryBuilder_FindOrAddSubset", 0x3b93d0, 32, 0x9571cae6, "Hooks", "nTSSG_cWaterGeometryBuilder_SetTriangleSubset", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_SetTriangleSubset=1
+    {"nTSSG_cWaterGeometryBuilder_GetTypeInfo", 0x3b94e0, 32, 0xd1d127d2, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cWaterGeometryBuilder_Write", 0x3b95c0, 32, 0x045a834f, "Hooks", "nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder", 0x2}, // Hooks.nTSSG_cWaterGeometryBuilder_cWaterGeometryBuilder=1
+    {"nTSSG_cDiffusionManager_cDiffusionManager", 0x3c4730, 32, 0xfcb9a6b4, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_DeletingDestructor_unknownThunk", 0x3c482c, 8, 0xadef26ef, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_DeletingDestructor", 0x3c4840, 32, 0x09405273, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_Mark", 0x3c4ab0, 32, 0x82b93c57, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_ReadLightMaps", 0x3c51b0, 32, 0x9c3a3344, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_ReadLightMapsAndCollect", 0x3c52a0, 32, 0xb6510583, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_Reset", 0x3c5410, 32, 0xeb20f010, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_Diffuse", 0x3c5470, 32, 0x0cf71b3d, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_DiffuseUnlit", 0x3c5710, 32, 0xbfec384b, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_DoMessage", 0x3c5920, 32, 0x867d5439, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_CollectTiles2", 0x3c5b10, 32, 0x5104e3ba, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_CollectWalls2", 0x3c5b80, 26, 0x00184f64, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_CollectTiles", 0x3c5ba0, 32, 0x5104e3ba, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_CollectWalls", 0x3c5c10, 26, 0x4d735661, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_Init", 0x3c5c90, 32, 0xa5571f67, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_PassChanges", 0x3c5d20, 32, 0x99455eba, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_GetFloorColor", 0x3c5d60, 32, 0xaabcd818, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_GetWallColor", 0x3c5da0, 23, 0x132cc7b0, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_Start", 0x3c5dc0, 32, 0x6229c41a, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_Stop", 0x3c5e60, 32, 0xc86cd42d, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_ResizeGrids", 0x3c5eb0, 32, 0x6bd9b60c, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_SetSettings", 0x3c6010, 32, 0xc1734c1e, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_Shutdown", 0x3c6050, 32, 0x0d3eb55a, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_ApplySettings", 0x3c60f0, 32, 0x9be0556f, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cDiffusionManager_ReadSettings", 0x3c6220, 32, 0xb489f84d, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_cLightSettings_cLightSettings", 0x3c6b40, 32, 0x3ff5cf79, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_scalar_deleting_destructor_4_adjusto", 0x3c6dd0, 8, 0x554f71c3, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_scalar_deleting_destructor", 0x3c6de0, 32, 0x10701930, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_AddDiffusionValue", 0x3c6e00, 32, 0x2c104b14, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_ParseAttribute", 0x3c6ec0, 32, 0xeddc1a0a, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_AddLightValue", 0x3c70c0, 32, 0x2c104b14, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_Apply", 0x3c7180, 32, 0x9c47f19c, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_Clear", 0x3c7540, 32, 0xad4706ec, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_GetName", 0x3c7590, 12, 0x493aabe5, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_CopySettings", 0x3c75a0, 32, 0xa56d7cae, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_FindDiffusionValues", 0x3c7710, 32, 0x278f1d94, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_FindLightValues", 0x3c79c0, 32, 0xe3557ab7, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_QueryInterface", 0x3c7c70, 32, 0x0394eadc, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nTSSG_cLightSettings_QueryInterface_4_adjustor_thunk", 0x3c7c97, 8, 0x0eada1c2, "Hooks", "nTSSG_cLightSettings_Construct", 0x2}, // Hooks.nTSSG_cLightSettings_Construct=1
+    {"nGZSceneGraph_cLightT_cILight_4000_cLightT", 0x3c81c0, 32, 0x423cf851, "Hooks", "nTSSG_cShadeLight_Construct", 0x2, kAlso_3c81c0}, // Hooks.nTSSG_cShadeLight_Construct=1 & Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nGZSceneGraph_cLightT_cILight_4000_deleting_destructor_t", 0x3c8202, 8, 0xae44790a, "Hooks", "cLightT_ShadeLight_Construct", 0x2, kAlso_3c8202}, // Hooks.cLightT_ShadeLight_Construct=1 & Hooks.nTSSG_cShadeLight_Construct=1 & Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_deleting_destructor_thunk", 0x3c820a, 8, 0x00cff179, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_deleting_destructor_thunk", 0x3c8212, 8, 0x130498ae, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_deleting_destructor_thun", 0x3c821a, 8, 0xed964742, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_deleting_destructor_thunk", 0x3c8222, 8, 0xaf86133d, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cShadeLight_deleting_destructor_thunk", 0x3c822a, 8, 0x275922d7, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cTerrainShadeLight_deleting_destructor_thunk", 0x3c8232, 8, 0x42dfa506, "Hooks", "nTSSG_cTerrainShadeLight_Construct", 0x2}, // Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nGZSceneGraph_cLightT_cILight_4000_deleting_destructor", 0x3c8240, 32, 0x69c1d7ff, "Hooks", "cLightT_ShadeLight_Construct", 0x2, kAlso_3c8202}, // Hooks.cLightT_ShadeLight_Construct=1 & Hooks.nTSSG_cShadeLight_Construct=1 & Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_deleting_destructor", 0x3c8260, 32, 0xbdc15970, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_deleting_destructor", 0x3c82c0, 32, 0x1d0b4f7f, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_deleting_destructor", 0x3c82f0, 32, 0xbdc15970, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_deleting_destructor", 0x3c8360, 32, 0xbdc15970, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cShadeLight_deleting_destructor", 0x3c83d0, 32, 0x055bee32, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cTerrainShadeLight_deleting_destructor", 0x3c83f0, 32, 0x8285b74c, "Hooks", "nTSSG_cTerrainShadeLight_Construct", 0x2}, // Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cShadeLight_AddRef", 0x3c8459, 11, 0x250becdb, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_AddRef", 0x3c8464, 11, 0x38e4b4f0, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_AddRef", 0x3c846f, 11, 0x6ebb99c0, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_AddRef", 0x3c847a, 14, 0x77213859, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_AddRef", 0x3c8488, 14, 0xa300679f, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_GetPersistResourceConst", 0x3c84a1, 11, 0x6c95f960, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_GetPersistResourceConst", 0x3c84ac, 11, 0x2997f98e, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_GetPersistResourceConst", 0x3c84c2, 11, 0x5db3225a, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_GetPersistResourceConst", 0x3c84cd, 11, 0xd97df05f, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_Clone", 0x3c84e0, 32, 0x6c6bc174, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cTerrainShadeLight_Clone", 0x3c8560, 32, 0x057cceeb, "Hooks", "nTSSG_cTerrainShadeLight_Construct", 0x2}, // Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cShadeLight_HasKey", 0x3c8830, 11, 0x05aea743, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_HasKey", 0x3c883b, 11, 0xeaa56f26, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_HasKey", 0x3c8851, 11, 0x666ca794, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_HasKey", 0x3c885c, 11, 0xc7c92a4d, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_CompareIdentity", 0x3c8872, 11, 0x6d5f3138, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_CompareIdentity", 0x3c887d, 11, 0x0d366e0a, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_CompareIdentity", 0x3c8893, 11, 0x958969d2, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_CompareIdentity", 0x3c889e, 11, 0xf198cce4, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_GetFlag", 0x3c88b4, 11, 0xda24b729, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_GetFlag", 0x3c88bf, 11, 0x50a9f89d, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_GetFlag", 0x3c88d5, 11, 0xb9e6b7fe, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_GetFlag", 0x3c88e0, 11, 0xe6d1e5cb, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_GetName", 0x3c88f6, 11, 0xa1ef9827, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_GetName", 0x3c8901, 11, 0x919f908a, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_GetName", 0x3c8917, 11, 0xc22d98f0, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_GetName", 0x3c8922, 11, 0x339142b6, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_GetRecord19", 0x3c892d, 11, 0x91025654, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_GetRecord19", 0x3c8938, 11, 0xd2c86486, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_GetRecord19", 0x3c8943, 11, 0x86257c27, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_GetRecord19", 0x3c894e, 11, 0x4d5e7c43, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cShadeLight_GetRecord18", 0x3c8964, 11, 0xc3e14ed9, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_GetRecord18", 0x3c896f, 11, 0xe606a43f, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_GetRecord18", 0x3c897a, 11, 0xe4c29e68, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_GetRecord18", 0x3c8985, 11, 0x3b371633, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_GetRecord18", 0x3c8990, 11, 0x5f26b305, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cTerrainShadeLight_QueryInterface", 0x3c899b, 11, 0x5656c09a, "Hooks", "nTSSG_cTerrainShadeLight_Construct", 0x2}, // Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cShadeLight_QueryInterface", 0x3c89a6, 11, 0xae7a228c, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_QueryInterface", 0x3c89b1, 11, 0x6a5ad606, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_QueryInterface", 0x3c89bc, 11, 0x53b81b52, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_QueryInterface", 0x3c89c7, 14, 0x9be05d4e, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_QueryInterface", 0x3c89d5, 14, 0xc0a395df, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_GetParams", 0x3c8a00, 32, 0x03a60718, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_GetParams", 0x3c8cc0, 32, 0x8ded285d, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cTerrainShadeLight_GetOwnerInfo", 0x3c8f09, 11, 0xba1bf9b7, "Hooks", "nTSSG_cTerrainShadeLight_Construct", 0x2}, // Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cShadeLight_GetOwnerInfo", 0x3c8f14, 11, 0x3fb3e111, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_GetOwnerInfo", 0x3c8f1f, 11, 0x896f2517, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_GetOwnerInfo", 0x3c8f2a, 11, 0x5cde6a2e, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_GetOwnerInfo", 0x3c8f35, 11, 0x8fa5ea82, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_GetOwnerInfo", 0x3c8f40, 11, 0x233d9478, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cShadeLight_ForwardKey", 0x3c8f56, 11, 0xdeb88f45, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_ForwardKey", 0x3c8f61, 11, 0xeec887e8, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_ForwardKey", 0x3c8f77, 11, 0xbd7a8f92, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_ForwardKey", 0x3c8f82, 11, 0x4cc655d4, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cTerrainShadeLight_Release", 0x3c8fdc, 11, 0x4eebc5a3, "Hooks", "nTSSG_cTerrainShadeLight_Construct", 0x2}, // Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cShadeLight_Release", 0x3c8fe7, 11, 0xcb73c431, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_Release", 0x3c8ff2, 11, 0xb7f0b92b, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_Release", 0x3c8ffd, 11, 0xab792ba3, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_Release", 0x3c9008, 14, 0x63216dbf, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_Release", 0x3c9016, 14, 0x3862a52e, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nGZSceneGraph_cLightT_cILight_4000_StrengthOverBox", 0x3c9060, 9, 0x28c73e4b, "Hooks", "cLightT_ShadeLight_Construct", 0x2, kAlso_3c8202}, // Hooks.cLightT_ShadeLight_Construct=1 & Hooks.nTSSG_cShadeLight_Construct=1 & Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nGZSceneGraph_cLightT_cILight_4000_StrengthAt", 0x3c9070, 9, 0x84727147, "Hooks", "cLightT_ShadeLight_Construct", 0x2, kAlso_3c8202}, // Hooks.cLightT_ShadeLight_Construct=1 & Hooks.nTSSG_cShadeLight_Construct=1 & Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_StrengthAt", 0x3c9360, 32, 0x7b7ee3b3, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_StrengthOverBox", 0x3c93b0, 32, 0x004a63de, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_StrengthAt", 0x3c9570, 32, 0x608d3c91, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_StrengthOverBox", 0x3c9630, 32, 0xeac3101b, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_StrengthAt", 0x3c96b0, 32, 0xeac3101b, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cShadeLight_GetSubResource", 0x3c9738, 11, 0x7bf6fb9c, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_GetSubResource", 0x3c9743, 11, 0xc4e46466, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_GetSubResource", 0x3c9759, 11, 0x8320a376, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_GetSubResource", 0x3c9764, 11, 0x729c7930, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_Read", 0x3c977a, 11, 0xa6ee3b3f, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_Read", 0x3c9785, 11, 0x95483109, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_Read", 0x3c9790, 11, 0x257ff9e1, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_Read", 0x3c979b, 11, 0x2aa9bb1e, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_Read", 0x3c97a6, 11, 0x939b182d, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_CopyKeyTo", 0x3c97bc, 11, 0x9fabcc57, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_CopyKeyTo", 0x3c97c7, 11, 0x152683e3, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_CopyKeyTo", 0x3c97dd, 11, 0xfc69cc80, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_CopyKeyTo", 0x3c97e8, 11, 0x4e07288e, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_GetSegment", 0x3c97fe, 11, 0x79842fd7, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_GetSegment", 0x3c981f, 11, 0x8152773d, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_GetSegment", 0x3c982a, 11, 0x80c555da, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_SubmitKeyToService", 0x3c996a, 11, 0x29122071, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_SubmitKeyToService", 0x3c9975, 11, 0x196228dc, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_SubmitKeyToService", 0x3c998b, 11, 0x3edb70f9, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_SubmitKeyToService", 0x3c9996, 11, 0x5acad5cf, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_SetFlag", 0x3c99ac, 11, 0xce70f1ff, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_SetFlag", 0x3c99b7, 11, 0xe4cf1175, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_SetFlag", 0x3c99cd, 11, 0xadb2f128, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_SetFlag", 0x3c99d8, 11, 0xc9a3541e, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_ResetAndSubmit", 0x3c99ee, 11, 0x8e9d29f2, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_ResetAndSubmit", 0x3c99f9, 11, 0xeef476c0, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_ResetAndSubmit", 0x3c9a0f, 11, 0x9b12c723, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_ResetAndSubmit", 0x3c9a1a, 11, 0x3ab74afa, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_OpenAssignAndSubmit", 0x3c9a30, 11, 0xee5b84ec, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_OpenAssignAndSubmit", 0x3c9a3b, 11, 0x3a76bb8a, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_OpenAssignAndSubmit", 0x3c9a51, 11, 0x168ddc06, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_OpenAssignAndSubmit", 0x3c9a5c, 11, 0x171afee1, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_AssignAndSubmit", 0x3c9a72, 11, 0xc0fa1bd0, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_AssignAndSubmit", 0x3c9a7d, 11, 0xa09344e2, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_AssignAndSubmit", 0x3c9a93, 11, 0xa3381b07, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_AssignAndSubmit", 0x3c9a9e, 11, 0xc729be31, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cShadeLight_SetSegment", 0x3c9ab4, 11, 0x5251f036, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_SetSegment", 0x3c9abf, 11, 0x78ee10bc, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_SetSegment", 0x3c9ad5, 11, 0x461c74d0, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_SetSegment", 0x3c9ae0, 11, 0x220dd1e6, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nGZSceneGraph_cLightT_cILight_4000_GetTypeInfo", 0x3c9af6, 11, 0xce71e4e1, "Hooks", "cLightT_ShadeLight_Construct", 0x2, kAlso_3c8202}, // Hooks.cLightT_ShadeLight_Construct=1 & Hooks.nTSSG_cShadeLight_Construct=1 & Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cTerrainShadeLight_GetTypeInfo", 0x3c9b01, 11, 0x6ac8a436, "Hooks", "nTSSG_cTerrainShadeLight_Construct", 0x2}, // Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cShadeLight_GetTypeInfo", 0x3c9b0c, 11, 0xbf79eb0f, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nGZSceneGraph_cLightT_cILight_4000_GetTypeInfo", 0x3c9b20, 32, 0xb8b3c03d, "Hooks", "cLightT_ShadeLight_Construct", 0x2, kAlso_3c8202}, // Hooks.cLightT_ShadeLight_Construct=1 & Hooks.nTSSG_cShadeLight_Construct=1 & Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_GetTypeInfo", 0x3c9b9c, 11, 0x5a9dc748, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_GetTypeInfo", 0x3c9ba7, 11, 0x36ee292d, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_GetTypeInfo", 0x3c9bb2, 11, 0xc0fef65d, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_GetTypeInfo", 0x3c9bbd, 11, 0x9546cdbc, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_TileUnder", 0x3c9bd0, 32, 0x4d5ed3a3, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nGZSceneGraph_cLightT_cILight_4000_Write", 0x3c9d73, 11, 0xcc30c49d, "Hooks", "cLightT_ShadeLight_Construct", 0x2, kAlso_3c8202}, // Hooks.cLightT_ShadeLight_Construct=1 & Hooks.nTSSG_cShadeLight_Construct=1 & Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cTerrainShadeLight_Write", 0x3c9d7e, 11, 0x787d0bd8, "Hooks", "nTSSG_cTerrainShadeLight_Construct", 0x2}, // Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cShadeLight_Write", 0x3c9d89, 11, 0x88a71b3d, "Hooks", "nTSSG_cShadeLight_Construct", 0x2}, // Hooks.nTSSG_cShadeLight_Construct=1
+    {"nGZSceneGraph_cLightT_cILight_4000_Write", 0x3c9da0, 32, 0x045a834f, "Hooks", "cLightT_ShadeLight_Construct", 0x2, kAlso_3c8202}, // Hooks.cLightT_ShadeLight_Construct=1 & Hooks.nTSSG_cShadeLight_Construct=1 & Hooks.nTSSG_cTerrainShadeLight_Construct=1
+    {"nTSSG_cAmbientFromLightMapLight_Write", 0x3c9e17, 11, 0x7d03b689, "Hooks", "nTSSG_cAmbientFromLightMapLight_Construct", 0x2}, // Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1
+    {"nTSSG_cHeightMapShadowLight_Write", 0x3c9e22, 11, 0x0288fc59, "Hooks", "nTSSG_cHeightMapShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapShadowLight_Construct=1
+    {"nTSSG_cHeightMapBinaryShadowLight_Write", 0x3c9e2d, 11, 0x81ea2b6a, "Hooks", "nTSSG_cHeightMapBinaryShadowLight_Construct", 0x2}, // Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1
+    {"nTSSG_cHalfspacePointLight_Write", 0x3c9e38, 11, 0xab144337, "Hooks", "nTSSG_cHalfspacePointLight_Construct", 0x2}, // Hooks.nTSSG_cHalfspacePointLight_Construct=1
+    {"nTSSG_cBlurBrush_vf5", 0x3c9ff0, 32, 0xf14580a7, "Hooks", "cBlurBrush_Construct", 0x2}, // Hooks.cBlurBrush_Construct=1
+    {"nTSSG_cBlurBrush_Draw", 0x3ca2a0, 32, 0xd39a88ea, "Hooks", "cBlurBrush_Construct", 0x2}, // Hooks.cBlurBrush_Construct=1
+    {"nTSSG_cBlurBrush_GetStateBlock", 0x3ca920, 32, 0xcd2822f2, "Hooks", "cBlurBrush_Construct", 0x2}, // Hooks.cBlurBrush_Construct=1
+    {"nTSSG_cBlurBrush_QueryInterface", 0x3cab10, 32, 0x838395cb, "Hooks", "cBlurBrush_Construct", 0x2}, // Hooks.cBlurBrush_Construct=1
+    {"nTSSG_cBlurBrush_SetOffset", 0x3cacf0, 25, 0x7ed6788a, "Hooks", "cBlurBrush_Construct", 0x2}, // Hooks.cBlurBrush_Construct=1
+    {"nTSSG_cBlurBrush_SetOrigin", 0x3cad10, 25, 0x74eb9ce2, "Hooks", "cBlurBrush_Construct", 0x2}, // Hooks.cBlurBrush_Construct=1
+    {"nTSSG_cBlurBrush_SetTexture", 0x3cad50, 32, 0x916c0134, "Hooks", "cBlurBrush_Construct", 0x2}, // Hooks.cBlurBrush_Construct=1
+    {"nTSSG_cIntervalTree_cIntervalTree", 0x401910, 32, 0x5a3a9291, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cIntervalTree_Node_Node", 0x401980, 32, 0xec1e8e34, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_cIntervalTree_Node_Node", 0x4019d0, 32, 0x025389c3, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_cIntervalTree_cIntervalTree", 0x401a10, 32, 0xbec975c1, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cIntervalTree_DeletingDestructor", 0x401a70, 32, 0x7c985006, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1
+    {"nTSSG_cIntervalTree_Clear", 0x401a90, 28, 0x729cc83c, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_401a90}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_cIntervalTree_DeleteSubtree", 0x401ab0, 32, 0x917bd9bb, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_Construct", 0x2, kAlso_401a90}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_Construct=1 & Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_cIntervalTree_Insert", 0x401af0, 32, 0x42c8fa76, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_cIntervalTree_RotateLeft", 0x401bf0, 32, 0xb9c951cb, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_cIntervalTree_RotateRight", 0x401c90, 32, 0x0af95a27, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_cIntervalTree_Query", 0x401d40, 32, 0x5ed0bbe2, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"nTSSG_cIntervalTree_InsertUnbalanced", 0x401e90, 32, 0xc6970fe1, "Hooks", "nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords", 0x2}, // Hooks.nTSSG_cDisplayListDynamicRenderStrategy_MarkRecords=1
+    {"std_vector_nTSSG_FloorColorLink_Resize_reallocate", 0x405210, 32, 0x2ea7ca90, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"std_vector_nTSSG_FloorColorCell_Resize_reallocate", 0x405370, 32, 0x1b35ba45, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"std_vector_nTSSG_FloorLightCell_Resize_reallocate", 0x4054c0, 32, 0x854d0c3b, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"std_Uninitialized_value_construct_n_nTSSG_FloorColorLink", 0x405610, 32, 0x2d351ca9, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"std_Uninitialized_value_construct_n_nTSSG_FloorColorCell", 0x405640, 32, 0xd3d0bc4c, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"std_Uninitialized_value_construct_n_nTSSG_FloorLightCell", 0x405680, 32, 0xacd7dc25, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_FloorColorSample_FloorColorSample", 0x405810, 32, 0x72b1c10e, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_FloorLightHalf_FloorLightHalf", 0x405850, 32, 0xeeed515d, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
+    {"nTSSG_FloorColorLink_FloorColorLink", 0x4058b0, 32, 0xc7f5c60c, "Hooks", "nTSSG_cDiffusionManager_cDiffusionManager", 0x2}, // Hooks.nTSSG_cDiffusionManager_cDiffusionManager=1
     {"cTSSimCOMDirector_vf16", 0x416120, 32, 0x317d2cf6, "Hooks", "COMDirectors_TSSim_Construct", 0x2, kAlso_416120}, // Hooks.COMDirectors_TSSim_Construct=1 & Hooks.COMDirectors_TSSim_Get=1
     {"cTSSimSystem_cTSSimSystem", 0x416ce0, 32, 0x0b72858c, "Hooks", "cTSSimSystem_Construct", 0x2}, // Hooks.cTSSimSystem_Construct=1
     {"cTSSimSystem_deleting_destructor", 0x417090, 32, 0xcf501b2b, "Hooks", "cTSSimSystem_Construct", 0x2}, // Hooks.cTSSimSystem_Construct=1
@@ -5196,7 +5825,7 @@ extern const TrapSpec kTrapTable[] = {
     {"AV_cReferentNodeT_VcILinearFogLight_nGZSceneGraph_VcRefe", 0xa47a30, 32, 0x5c8891fb, "Hooks", "nGZSceneGraph_cLinearFogLight_Create", 0x2}, // Hooks.nGZSceneGraph_cLinearFogLight_Create=1
     {"AV_cReferentNodeT_VcITextureLight_nGZSceneGraph_VcRefere", 0xa47a70, 32, 0xe1050050, "Hooks", "nGZSceneGraph_cEnvironmentCubeLight_Create", 0x2}, // Hooks.nGZSceneGraph_cEnvironmentCubeLight_Create=1
     {"nGZSceneGraph_cSpotLight_vf160_21", 0xa47e96, 11, 0x67c4f8e2, "Hooks", "nGZSceneGraph_cSpotLight_Create", 0x2}, // Hooks.nGZSceneGraph_cSpotLight_Create=1
-    {"nGZSceneGraph_cStandardLightBase_copy", 0xa47eb0, 29, 0x06018777, "Hooks", "nGZSceneGraph_cAmbientLight_Clone", 0x2, kAlso_a47eb0}, // Hooks.nGZSceneGraph_cAmbientLight_Clone=1 & Hooks.nGZSceneGraph_cDirectionalLight_Clone=1
+    {"nGZSceneGraph_cStandardLightBase_copy", 0xa47eb0, 29, 0x06018777, "Hooks", "nGZSceneGraph_cAmbientLight_Construct", 0x2, kAlso_a47eb0}, // Hooks.nGZSceneGraph_cAmbientLight_Construct=1 & Hooks.nGZSceneGraph_cAmbientLight_Destruct=1 & Hooks.nGZSceneGraph_cDirectionalLight_Construct=1 & Hooks.nGZSceneGraph_cDirectionalLight_Destruct=1 & Hooks.nTSSG_cAmbientFromLightMapLight_Construct=1 & Hooks.nTSSG_cHeightMapBinaryShadowLight_Construct=1 & Hooks.nTSSG_cHeightMapShadowLight_Construct=1
     {"nGZSceneGraph_cEnvironmentCubeLight_vf148_11", 0xa48050, 11, 0xb1615d4c, "Hooks", "nGZSceneGraph_cEnvironmentCubeLight_Create", 0x2}, // Hooks.nGZSceneGraph_cEnvironmentCubeLight_Create=1
     {"nGZSceneGraph_cSpotLight_vf160_11", 0xa4805b, 11, 0x215c5a08, "Hooks", "nGZSceneGraph_cSpotLight_Create", 0x2}, // Hooks.nGZSceneGraph_cSpotLight_Create=1
     {"nGZSceneGraph_cEnvironmentCubeLight_vf148_23", 0xa48087, 11, 0x08106c54, "Hooks", "nGZSceneGraph_cEnvironmentCubeLight_Create", 0x2}, // Hooks.nGZSceneGraph_cEnvironmentCubeLight_Create=1
@@ -6847,6 +7476,7 @@ extern const TrapSpec kTrapTable[] = {
     {"nGZSceneGraph_cRenderGroupNameIterator_Clone", 0xae0050, 32, 0xe8f1e23e, "Hooks", "nGZSceneGraph_cRenderableNodeImpl_MakeLayerNames", 0x2}, // Hooks.nGZSceneGraph_cRenderableNodeImpl_MakeLayerNames=1
     {"nGZSceneGraph_cRenderGroupNameIterator_Get", 0xae0080, 20, 0x9d23d981, "Hooks", "nGZSceneGraph_cRenderableNodeImpl_MakeLayerNames", 0x2}, // Hooks.nGZSceneGraph_cRenderableNodeImpl_MakeLayerNames=1
     {"nGZSceneGraph_cRenderGroupNameIterator_Next", 0xae0680, 32, 0xc444d311, "Hooks", "nGZSceneGraph_cRenderableNodeImpl_MakeLayerNames", 0x2}, // Hooks.nGZSceneGraph_cRenderableNodeImpl_MakeLayerNames=1
+    {"nTSSG_SubsetBounds", 0xae7f00, 32, 0xee0b66c4, "Hooks", "cShadow_Create", 0x2}, // Hooks.cShadow_Create=1
     {"nGZSceneGraph_BuildDrawItem", 0xaeae00, 32, 0x9634565d, "Hooks", "cDisplayList_Create", 0x2}, // Hooks.cDisplayList_Create=1
     {"nGZSceneGraph_RequestDrawVariants", 0xaeaf30, 32, 0x25ae685a, "Hooks", "nGZSceneGraph_cShape_Create", 0x2}, // Hooks.nGZSceneGraph_cShape_Create=1
     {"nGZSceneGraph_FUN_a0aed160", 0xaed160, 32, 0x780c170f, "Hooks", "nGZSceneGraph_cShape_Create", 0x2}, // Hooks.nGZSceneGraph_cShape_Create=1
@@ -6866,8 +7496,18 @@ extern const TrapSpec kTrapTable[] = {
     {"nGZSceneGraph_cIndexedIterator_Next", 0xaedaf0, 8, 0x7ba197ce, "Hooks", "nGZSceneGraph_LinkedFloats", 0x2, kAlso_aed5e0}, // Hooks.nGZSceneGraph_LinkedFloats=1 & Hooks.nGZSceneGraph_LinkedVectors2=1 & Hooks.nGZSceneGraph_LinkedVectors3=1 & Hooks.nGZSceneGraph_LinkedVectors4=1 & Hooks.nGZSceneGraph_LinkedWords=1
     {"nGZSceneGraph_cIndexedIterator_Previous", 0xaedb00, 8, 0x7ccc53d7, "Hooks", "nGZSceneGraph_LinkedFloats", 0x2, kAlso_aed5e0}, // Hooks.nGZSceneGraph_LinkedFloats=1 & Hooks.nGZSceneGraph_LinkedVectors2=1 & Hooks.nGZSceneGraph_LinkedVectors3=1 & Hooks.nGZSceneGraph_LinkedVectors4=1 & Hooks.nGZSceneGraph_LinkedWords=1
     {"nGZSceneGraph_cIndexedIterator_Release", 0xaedb40, 32, 0x858fd02a, "Hooks", "nGZSceneGraph_LinkedFloats", 0x2, kAlso_aed5e0}, // Hooks.nGZSceneGraph_LinkedFloats=1 & Hooks.nGZSceneGraph_LinkedVectors2=1 & Hooks.nGZSceneGraph_LinkedVectors3=1 & Hooks.nGZSceneGraph_LinkedVectors4=1 & Hooks.nGZSceneGraph_LinkedWords=1
+    {"cTSModelEffect_MakeAxesPart", 0xaef310, 32, 0xf1f85e1b, "Hooks", "cTSModelEffect_Create", 0x2}, // Hooks.cTSModelEffect_Create=1
     {"nGZSceneGraph_cDisplayList_CentreDepth", 0xaf2200, 32, 0x06325640, "Hooks", "cDisplayList_Create", 0x2}, // Hooks.cDisplayList_Create=1
     {"nGZSceneGraph_cDisplayList_NearestCornerDepth", 0xaf2340, 32, 0x443ae901, "Hooks", "cDisplayList_Create", 0x2}, // Hooks.cDisplayList_Create=1
+    {"std_Destroy_range_nGZSceneGraph_cTextureTextUpdateStrateg", 0xaf3220, 32, 0xd412307b, "Hooks", "nGZSceneGraph_ClearNodeTextLabels", 0x2, kAlso_af3220}, // Hooks.nGZSceneGraph_ClearNodeTextLabels=1 & Hooks.nGZSceneGraph_MakeBillboardTextOutput=1
+    {"std_vector_nGZSceneGraph_cTextureTextUpdateStrategy_Line", 0xaf3290, 32, 0x77ba2425, "Hooks", "nGZSceneGraph_ClearNodeTextLabels", 0x2, kAlso_af3220}, // Hooks.nGZSceneGraph_ClearNodeTextLabels=1 & Hooks.nGZSceneGraph_MakeBillboardTextOutput=1
+    {"std_Uninitialized_value_construct_n_nGZSceneGraph_cTextur", 0xaf34f0, 32, 0x514d1169, "Hooks", "nGZSceneGraph_ClearNodeTextLabels", 0x2, kAlso_af3220}, // Hooks.nGZSceneGraph_ClearNodeTextLabels=1 & Hooks.nGZSceneGraph_MakeBillboardTextOutput=1
+    {"nGZSceneGraph_cTextureTextUpdateStrategy_cTextureTextUpdat", 0xaf3560, 32, 0x12a5ec8a, "Hooks", "nGZSceneGraph_MakeBillboardTextOutput", 0x2}, // Hooks.nGZSceneGraph_MakeBillboardTextOutput=1
+    {"nGZSceneGraph_cTextureTextUpdateStrategy_vf6", 0xaf3780, 32, 0x69133503, "Hooks", "nGZSceneGraph_MakeBillboardTextOutput", 0x2}, // Hooks.nGZSceneGraph_MakeBillboardTextOutput=1
+    {"nGZSceneGraph_cTextureTextUpdateStrategy_Push", 0xaf37f0, 32, 0xc5d176b9, "Hooks", "nGZSceneGraph_AddNodeTextLabel", 0x2}, // Hooks.nGZSceneGraph_AddNodeTextLabel=1
+    {"nGZSceneGraph_cTextureTextUpdateStrategy_Clear", 0xaf40b0, 32, 0x0462180d, "Hooks", "nGZSceneGraph_ClearNodeTextLabels", 0x2}, // Hooks.nGZSceneGraph_ClearNodeTextLabels=1
+    {"nGZSceneGraph_cTextureTextUpdateStrategy_QueryInterface", 0xaf4100, 25, 0xb44344ab, "Hooks", "nGZSceneGraph_MakeBillboardTextOutput", 0x2}, // Hooks.nGZSceneGraph_MakeBillboardTextOutput=1
+    {"nGZSceneGraph_cTextureTextUpdateStrategy_Update", 0xaf44b0, 32, 0xb45563da, "Hooks", "nGZSceneGraph_MakeBillboardTextOutput", 0x2}, // Hooks.nGZSceneGraph_MakeBillboardTextOutput=1
     {"nGZSceneGraph_DescribeShaderContext", 0xaf4c90, 32, 0xb97d0e8e, "Hooks", "cDisplayList_Create", 0x2}, // Hooks.cDisplayList_Create=1
     {"nGZCommandParser_cDllCOMDirector_vf16", 0xb0a8c0, 32, 0xbe0ea992, "Hooks", "COMDirectors_CommandParser_Get", 0x2}, // Hooks.COMDirectors_CommandParser_Get=1
     {"cGZSndEaCOMDirector_OnStart", 0xb12c5f, 32, 0x9a4ec904, "Hooks", "COMDirectors_SndEa_Construct", 0x2}, // Hooks.COMDirectors_SndEa_Construct=1
@@ -7254,6 +7894,82 @@ extern const TrapSpec kTrapTable[] = {
     {"cTSParticlesEffect_MarkFollowerSet", 0xbc0c10, 8, 0x7a6f03d9, "Hooks", "cTSParticlesEffect_Create", 0x2}, // Hooks.cTSParticlesEffect_Create=1
     {"cTSParticlesEffect_Slot11", 0xbc0c20, 32, 0xb14b4bc0, "Hooks", "cTSParticlesEffect_Create", 0x2}, // Hooks.cTSParticlesEffect_Create=1
     {"cTSParticlesGeometry_SetBounds", 0xbc10f0, 32, 0x78660a2c, "Hooks", "cTSParticlesEffect_Create", 0x2}, // Hooks.cTSParticlesEffect_Create=1
+    {"std_vector_cTSVisualChild_Emplace_reallocate", 0xbc30e0, 32, 0x82165410, "Hooks", "FUN_a0bcb4c0", 0x2}, // Hooks.FUN_a0bcb4c0=1
+    {"cTSVisualChild_move_constructor", 0xbc41e0, 32, 0x19f30e53, "Hooks", "FUN_a0bcb4c0", 0x2}, // Hooks.FUN_a0bcb4c0=1
+    {"cTSVisualChild_copy_constructor", 0xbc4540, 32, 0x181a9d40, "Hooks", "FUN_a0bcb4c0", 0x2}, // Hooks.FUN_a0bcb4c0=1
+    {"cTSVisualChild_operator", 0xbc57a0, 32, 0xa451f4cb, "Hooks", "FUN_a0bcb4c0", 0x2}, // Hooks.FUN_a0bcb4c0=1
+    {"cTSEffectCheat_deleting_destructor", 0xbc5930, 32, 0x09422638, "Hooks", "cTSEffectCheat_ctor", 0x2}, // Hooks.cTSEffectCheat_ctor=1
+    {"cTSEffectsManagerCheat_deleting_destructor", 0xbc59a0, 32, 0x24b5bf82, "Hooks", "cTSEffectsManagerCheat_ctor", 0x2}, // Hooks.cTSEffectsManagerCheat_ctor=1
+    {"cTSEffectCheat_GetHelp", 0xbc6630, 25, 0x50ae7ec8, "Hooks", "cTSEffectCheat_ctor", 0x2}, // Hooks.cTSEffectCheat_ctor=1
+    {"cTSEffectCheat_Execute", 0xbc7590, 32, 0x2be9fb0d, "Hooks", "cTSEffectCheat_ctor", 0x2}, // Hooks.cTSEffectCheat_ctor=1
+    {"cTSEffectsManagerCheat_Execute", 0xbc7e30, 32, 0xb6688437, "Hooks", "cTSEffectsManagerCheat_ctor", 0x2}, // Hooks.cTSEffectsManagerCheat_ctor=1
+    {"cTSEffectCheat_GetName", 0xbc9a90, 6, 0xcbac5c9c, "Hooks", "cTSEffectCheat_ctor", 0x2}, // Hooks.cTSEffectCheat_ctor=1
+    {"cTSEffectsManagerCheat_GetName", 0xbc9aa0, 6, 0x8516270c, "Hooks", "cTSEffectsManagerCheat_ctor", 0x2}, // Hooks.cTSEffectsManagerCheat_ctor=1
+    {"cTSTestMap_GetBounds", 0xbd97a0, 32, 0xd61555fc, "Hooks", "cTSTestMap_Create", 0x2}, // Hooks.cTSTestMap_Create=1
+    {"cTSTestMap_GetHeight", 0xbd97d0, 32, 0xc08e3941, "Hooks", "cTSTestMap_Create", 0x2}, // Hooks.cTSTestMap_Create=1
+    {"cTSTestMap_GetNormal", 0xbd9860, 32, 0x4fe7d1c0, "Hooks", "cTSTestMap_Create", 0x2}, // Hooks.cTSTestMap_Create=1
+    {"cTSTestMap_Contains", 0xbd9960, 32, 0x0b5f81e0, "Hooks", "cTSTestMap_Create", 0x2}, // Hooks.cTSTestMap_Create=1
+    {"cTSTestMap_QueryInterface", 0xbd99d0, 32, 0xd1c35410, "Hooks", "cTSTestMap_Create", 0x2}, // Hooks.cTSTestMap_Create=1
+    {"cTSTestMap_QueryInterface", 0xbd99f7, 8, 0x0eada1c2, "Hooks", "cTSTestMap_Create", 0x2}, // Hooks.cTSTestMap_Create=1
+    {"cTSTestMap_GetScale", 0xbd9b70, 7, 0x953f27ea, "Hooks", "cTSTestMap_Create", 0x2}, // Hooks.cTSTestMap_Create=1
+    {"cTSOverlay_constructor", 0xbd9e70, 32, 0x1f75e3f9, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_constructor", 0xbd9fd0, 32, 0x33a15f5a, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_destructor", 0xbda200, 32, 0x6e142925, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSDecal_deleting_destructor", 0xbda336, 8, 0xd62409e1, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_deleting_destructor", 0xbda33e, 8, 0x121f0f73, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_deleting_destructor", 0xbda346, 8, 0x6b64e845, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cOverlayCheat_deleting_destructor", 0xbda350, 32, 0x919a94ae, "Hooks", "cOverlayCheat_ctor", 0x2}, // Hooks.cOverlayCheat_ctor=1
+    {"cTSDecal_deleting_destructor", 0xbda380, 32, 0x68534d06, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_deleting_destructor", 0xbda3d0, 32, 0xfce4c393, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_deleting_destructor", 0xbda420, 32, 0xc8bae0c1, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_CreateDecal", 0xbda440, 32, 0xf3e61b34, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_CreateOverlay", 0xbda610, 32, 0x2cd8b273, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_CreateWindowedOverlay", 0xbda710, 32, 0x2cd8b273, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_AddOverlay", 0xbda820, 5, 0x34e7d5b2, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_AddOverlay", 0xbda830, 32, 0x30486181, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"MapToQuarterTexture", 0xbda920, 32, 0x2b802b60, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"MapToTexture", 0xbda960, 32, 0x1f7db98b, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"MapToWindow", 0xbda990, 32, 0xb48c36ad, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"MapRows", 0xbdaa10, 32, 0x1cdaf554, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"ScaleToQuarter", 0xbdaaf0, 32, 0x2860603a, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_GetAlpha", 0xbdabc0, 7, 0x34e119c8, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_ComputeCells", 0xbdabd0, 32, 0x9b5deced, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_GetColor", 0xbdad70, 28, 0x8dc6ca9e, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSDecal_GetParams", 0xbdad90, 32, 0x7e64d113, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_GetDraw", 0xbdadd0, 5, 0x21f0d222, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cOverlayCheat_Execute", 0xbdade0, 32, 0x997f2921, "Hooks", "cOverlayCheat_ctor", 0x2}, // Hooks.cOverlayCheat_ctor=1
+    {"cTSOverlayTable_Acquire", 0xbdafc0, 32, 0x72f64b70, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_GetStatus", 0xbdb170, 27, 0x6b285cb4, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_Init", 0xbdb190, 32, 0x018b6134, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_IsVisible", 0xbdb1d0, 6, 0x1f51fc0c, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSDecal_SetPosition", 0xbdb1e0, 32, 0x27b8bb34, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cOverlayCheat_GetName", 0xbdb320, 6, 0xceca4ccf, "Hooks", "cOverlayCheat_ctor", 0x2}, // Hooks.cOverlayCheat_ctor=1
+    {"cTSDecal_QueryInterface", 0xbdb330, 8, 0xbe0ca0c6, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSDecal_QueryInterface", 0xbdb338, 8, 0x16236999, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSDecal_QueryInterface", 0xbdb340, 8, 0xf44cd692, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_QueryInterface", 0xbdb350, 32, 0xc81b7387, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_QueryInterface", 0xbdb377, 8, 0x0eada1c2, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_QueryInterface", 0xbdb37f, 8, 0xecc21ec9, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_RemoveOverlay", 0xbdb390, 32, 0x18efb2f3, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_SetAlpha", 0xbdb420, 32, 0x97a02921, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_SetColor", 0xbdb490, 32, 0x42a4a85a, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_SetGridSize", 0xbdb4d0, 32, 0x087b0448, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_SetGrid", 0xbdb500, 32, 0x3866f8ab, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_SetDraw", 0xbdb570, 32, 0xe115fbe4, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_SetVisible", 0xbdb5a0, 32, 0x4dd3ef1b, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"EnsureDrawId", 0xbdb5d0, 32, 0xd02b41cc, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_SetTexture", 0xbdb650, 32, 0x916c0134, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_SetLayer", 0xbdb6c0, 15, 0xc1c5ef4b, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_Shutdown", 0xbdb6d0, 32, 0xfd41822a, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_UpdateProjection", 0xbdb750, 32, 0x0f24a77b, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSDecal_SetParams", 0xbdbea0, 32, 0x1053a5de, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_ComputeCells", 0xbdbef0, 32, 0xa7676eec, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_SetWindowedPlacement", 0xbdbf60, 32, 0xd0502233, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_SetPlacement", 0xbdc010, 32, 0xde1a8094, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlayManager_Update", 0xbdc0b0, 32, 0x430bdc97, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSOverlay_GetLayer", 0xbdc470, 8, 0x0e81dfff, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bd9e70}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSOverlayManager_Create=1
+    {"cTSCurveError_cTSCurveError", 0xbdc6f0, 32, 0x4a8dd4da, "Hooks", "cTSEffectCurve_CheckSinCoefficients", 0x2, kAlso_bdc6f0}, // Hooks.cTSEffectCurve_CheckSinCoefficients=1 & Hooks.cTSEffectCurve_Divide=1 & Hooks.cTSEffectCurve_Scale=1
+    {"cTSCurveError_copy_constructor", 0xbdc760, 32, 0x4a82bf71, "Startup", "OwnStart", 0x6}, // Startup.OwnStart=1,2
     {"cTSVisualEffect_cTSVisualEffect", 0xbe8a40, 32, 0x9ef2675d, "Hooks", "cTSVisualEffect_cTSVisualEffect", 0x2}, // Hooks.cTSVisualEffect_cTSVisualEffect=1
     {"cTSVisualEffect_vf8_0", 0xbe8bcf, 8, 0x9a31d6dd, "Hooks", "cTSVisualEffect_cTSVisualEffect", 0x2}, // Hooks.cTSVisualEffect_cTSVisualEffect=1
     {"cTSVisualEffect_DeletingDestructor", 0xbe8be0, 32, 0x19e79c3e, "Hooks", "cTSVisualEffect_cTSVisualEffect", 0x2}, // Hooks.cTSVisualEffect_cTSVisualEffect=1
@@ -7291,6 +8007,9 @@ extern const TrapSpec kTrapTable[] = {
     {"cTSVisualEffect_vf4", 0xbeacd0, 32, 0x6b01d8e2, "Hooks", "cTSVisualEffect_cTSVisualEffect", 0x2}, // Hooks.cTSVisualEffect_cTSVisualEffect=1
     {"cTSVisualEffect_vf4_3", 0xbead2d, 8, 0xfa04199b, "Hooks", "cTSVisualEffect_cTSVisualEffect", 0x2}, // Hooks.cTSVisualEffect_cTSVisualEffect=1
     {"cTSVisualEffect_Follow", 0xbead40, 32, 0x5d1ae4ef, "Hooks", "cTSEffectsManager_Construct", 0x2, kAlso_bead40}, // Hooks.cTSEffectsManager_Construct=1 & Hooks.cTSEffectsManager_Destruct=1 & Hooks.cTSVisualEffect_cTSVisualEffect=1
+    {"EffectComponent_EffectComponent", 0xbf99f0, 32, 0x49458c6a, "Hooks", "FUN_a0bf9da0", 0x2}, // Hooks.FUN_a0bf9da0=1
+    {"ReadComponent", 0xbf9b00, 32, 0x18643ec2, "Hooks", "FUN_a0bf9da0", 0x2}, // Hooks.FUN_a0bf9da0=1
+    {"WriteComponent", 0xbf9c60, 32, 0x803cb9e5, "Hooks", "FUN_a0bf9ee0", 0x2}, // Hooks.FUN_a0bf9ee0=1
     {"cTSDecalEffect_cTSDecalEffect", 0xbfc3f0, 32, 0xe953d361, "Hooks", "cTSDecalEffect_Create", 0x2}, // Hooks.cTSDecalEffect_Create=1
     {"cTSDecalEffect_cTSDecalEffect", 0xbfc700, 32, 0xd7b10698, "Hooks", "cTSDecalEffect_Create", 0x2}, // Hooks.cTSDecalEffect_Create=1
     {"cTSDecalEffect_scalar_deleting_destructor_thunk_4", 0xbfc7ed, 8, 0x47fade2d, "Hooks", "cTSDecalEffect_Create", 0x2}, // Hooks.cTSDecalEffect_Create=1
@@ -7324,6 +8043,7 @@ extern const TrapSpec kTrapTable[] = {
     {"cTSModelEffect_vftable_thunk_4_deleting", 0xc05a9c, 8, 0xda2de694, "Hooks", "cTSModelEffect_Create", 0x2}, // Hooks.cTSModelEffect_Create=1
     {"cTSModelEffect_scalar_deleting_destructor", 0xc05ab0, 32, 0x9e210a9d, "Hooks", "cTSModelEffect_Create", 0x2}, // Hooks.cTSModelEffect_Create=1
     {"cTSModelEffect_SetColour", 0xc05b10, 32, 0xb7ba4d2e, "Hooks", "cTSModelEffect_Create", 0x2}, // Hooks.cTSModelEffect_Create=1
+    {"cTSModelEffect_GetWhiteMaterial", 0xc05be0, 32, 0x25a192cf, "Hooks", "cTSModelEffect_Create", 0x2}, // Hooks.cTSModelEffect_Create=1
     {"cTSModelEffect_Attach", 0xc05cf0, 32, 0xc28bfcb4, "Hooks", "cTSModelEffect_Create", 0x2}, // Hooks.cTSModelEffect_Create=1
     {"cTSModelEffect_SetModel", 0xc06550, 32, 0x3a283525, "Hooks", "cTSModelEffect_Create", 0x2}, // Hooks.cTSModelEffect_Create=1
     {"cTSModelEffect_ClearColour", 0xc06630, 32, 0x6fea0500, "Hooks", "cTSModelEffect_Create", 0x2}, // Hooks.cTSModelEffect_Create=1

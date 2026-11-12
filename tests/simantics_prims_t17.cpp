@@ -4,7 +4,7 @@
 // Everything is a recording fake except the director singleton (set up as in the Prim10 test; its framework field is
 // a fake) and the pure math the handler calls (the integer-to-vector conversion 0x7dcc00, sine and cosine 0x5a9de0 /
 // 0x5a9a90 and the quaternion rotation 0x1a6c40: original code on both sides). The sound system probe 0x9c5b7e and the
-// skeleton node lookup 0xae7490 are logging stand-ins. The cached message server is a fake.
+// skeleton node lookup 0xae7490 (ours, on both sides) are logging stand-ins. The cached message server is a fake.
 //
 // Fakes: fk0 context, fk1 frame (also this's owner), fk2 object table, fk3 person-like owner object, fk4 sound
 // lookup object, fk5 the message, fk6 the message's relay, fk7 the object the sound belongs to, fk8 its interface,
@@ -14,6 +14,7 @@
 #include "simantics_prims_t.h"
 
 #include "rz/cRZString.h"
+#include "sg/SGUtilities.h"
 #include "world/WorldTileMath.h"
 
 #include <cmath>
@@ -300,7 +301,7 @@ void Build17(World &w, uint32_t seed)
 DIFF_TEST(PrimT_Prim17, 0x59f370)
 {
     CodePatch p1(ctx, 0x9c5b7e, reinterpret_cast<void *>(&StubSoundProbe));
-    CodePatch p2(ctx, 0xae7490, reinterpret_cast<void *>(&StubFindNode));
+    shape::StandIn p2(0xae7490, &nGZSceneGraph::FindNodeByName, &StubFindNode);
     shape::StandIn p3(0x7dcc00, &worldmath::FixedToPosition, &StubCellToWorld);
 
     // The director singleton in the image (as in the Prim10 test): the framework field answers with a fake.

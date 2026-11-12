@@ -13,7 +13,9 @@
 #include "rz/cRZCmdLine.h"
 #include "rz/cRZFile.h"
 #include "rz/cRZString.h"
+#include "sg/SGUtilities.h"
 #include "ts/cTSCatalog.h" // GZStringList
+#include "world/WorldColliders.h"
 
 #include <new>
 
@@ -166,10 +168,9 @@ void cTSSGSystem::CreateOverlay(uint32_t index)
 
 void cTSSGSystem::ReadLotTunables(void *properties)
 {
-    using ReadFloat = uint32_t(__cdecl *)(void *, const char *, float *, void *);
-    OriginalFunction<ReadFloat, 0xaf7190>()(properties, GameAddress<const char>(0xdaf038), &mLotTunables[0], nullptr);
-    OriginalFunction<ReadFloat, 0xaf7190>()(properties, GameAddress<const char>(0xdaf048), &mLotTunables[1], nullptr);
-    OriginalFunction<ReadFloat, 0xaf7190>()(properties, GameAddress<const char>(0xdaf058), &mLotTunables[2], nullptr);
+    nGZSceneGraph::ReadFloatProperty(properties, GameAddress<const char>(0xdaf038), &mLotTunables[0], nullptr);
+    nGZSceneGraph::ReadFloatProperty(properties, GameAddress<const char>(0xdaf048), &mLotTunables[1], nullptr);
+    nGZSceneGraph::ReadFloatProperty(properties, GameAddress<const char>(0xdaf058), &mLotTunables[2], nullptr);
 }
 
 void cTSSGSystem::AddProceduralAnimation(void *animation, const char *name)
@@ -219,7 +220,7 @@ void cTSSGSystem::CreateManagers()
     // The system service face to the framework, then the cheat and effects-constraint registrations.
     Call<kFrameworkAddSystemService>(GetServiceObject(), &mServiceVTable);
     OriginalFunction<void(__cdecl *)(), 0x3a18b0>()();
-    OriginalFunction<void(__cdecl *)(void *), 0x3a3c30>()(OriginalFunction<void *(__cdecl *)(), 0xb39000>()());
+    world_colliders::RegisterWorldObjects(static_cast<cITSEffectsManager *>(OriginalFunction<void *(__cdecl *)(), 0xb39000>()()));
     mStartupWatch.Start();
     CreateOverlay(0);
     CreateOverlay(1);

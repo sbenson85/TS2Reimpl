@@ -3,11 +3,11 @@
 #include "game/game.h"
 #include "game/original.h"
 #include "game/vtable.h"
-#include "gz/CommandParser.h" // cIGZExceptionBase
-#include "rz/cRZString.h"
 
 #include <cfloat>
 #include <cmath>
+#include <cstdarg>
+#include <cstdio>
 #include <new>
 #include <utility>
 
@@ -90,7 +90,7 @@ void cTSEffectCurve::Simplify()
 // 0xbdcbd0
 void cTSEffectCurve::SetValues(const std::vector<float> &values)
 {
-    OriginalFunction<void(__thiscall *)(cTSEffectCurve *, const std::vector<float> *), 0xbdcdb0>()(this, &values);
+    CheckSinCoefficients(values);
     Reset();
     if (mKind == kWave) {
         size_t count = values.size();
@@ -149,35 +149,42 @@ void cTSEffectCurve::Write(void *stream) const
 
 // ---- lane IX ----
 
-namespace {
-
-// What the curve throws (0x24 bytes): the game's cTSCurveError (base cIGZExceptionBase; vtable 0xe8e88c, its one slot the
-// message) with the message in a cRZString at +4. Named and laid out as the game's, so the game's handlers that catch it by
-// type (the match is by decorated name) catch ours; the vtable is a plain field (src/gz/CommandParser.h, cError).
-class cTSCurveError : public cIGZExceptionBase {
-public:
-    cRZString mMessage; // +4
-};
-static_assert(sizeof(cTSCurveError) == 0x24);
-
-// The game's constructor (0xbdc6f0, cdecl: the object, a format and its arguments) builds it from the message (one of the
-// game's texts); it is then moved into the type the compiler throws.
-[[noreturn]] void ThrowCurveError(uint32_t messageRva)
+// 0xbdc6f0. The original formats into a static 2 KB buffer (0x10fc930) nothing else reads; here it is the stack's, a byte
+// longer, so that a text that fills it (no terminator from the legacy formatter) ends as it does over the image's zeros.
+cTSCurveError::cTSCurveError(const char *format, ...)
 {
-    alignas(cTSCurveError) unsigned char raw[sizeof(cTSCurveError)];
-    OriginalFunction<void *(__cdecl *)(void *, const char *, ...), 0xbdc6f0>()(raw, GameAddress<char>(messageRva));
-    cTSCurveError error(std::move(*reinterpret_cast<cTSCurveError *>(raw)));
-    reinterpret_cast<cTSCurveError *>(raw)->mMessage.mString.~basic_string();
-    throw error;
+    mVTable = GameAddress<void>(kVTable);
+    mMessage.mVTable = cRZString::VTable();
+    mMessage.mRefCount = 0;
+    char buffer[kFormatBufferSize + 1];
+    buffer[kFormatBufferSize] = 0;
+    va_list args;
+    va_start(args, format);
+    _vsnprintf_l(buffer, kFormatBufferSize, format, nullptr, args);
+    va_end(args);
+    mMessage.mString.assign(buffer);
 }
 
-} // namespace
+// 0xbdc760: the handlers' copy; a new string with no references.
+cTSCurveError::cTSCurveError(const cTSCurveError &other) : mMessage{cRZString::VTable(), other.mMessage.mString, 0}
+{
+    mVTable = GameAddress<void>(kVTable);
+}
+
+// 0xbdcdb0
+void cTSEffectCurve::CheckSinCoefficients(const std::vector<float> &values) const
+{
+    if (mKind != kWave) return;
+    const size_t count = values.size();
+    if (count != 0 && values[0] == 0.0f) throw cTSCurveError("Invalid sin coefficient! First coefficient must be non-zero");
+    if (count > 1 && values[1] == 0.0f) throw cTSCurveError("Invalid sin coefficient! Second coefficient must be non-zero");
+}
 
 // 0xbdc950. The list's size is taken again on each step (the values are not resized here).
 cTSEffectCurve &cTSEffectCurve::Scale(float factor)
 {
     if (mKind == kWave) {
-        if (factor == 0.0f) ThrowCurveError(0xe8e890); // "Invalid multiplication of sine by 0!"
+        if (factor == 0.0f) throw cTSCurveError("Invalid multiplication of sine by 0!");
         mValues[0] = factor * mValues[0];
     } else if (mKind == kList) {
         for (size_t i = 0; i < mValues.size(); ++i) mValues[i] = factor * mValues[i];
@@ -188,7 +195,7 @@ cTSEffectCurve &cTSEffectCurve::Scale(float factor)
 // 0xbdc9f0
 cTSEffectCurve &cTSEffectCurve::Divide(float divisor)
 {
-    if (divisor == 0.0f) ThrowCurveError(0xe8e8b8); // "Invalid division by 0!"
+    if (divisor == 0.0f) throw cTSCurveError("Invalid division by 0!");
     return Scale(1.0f / divisor);
 }
 

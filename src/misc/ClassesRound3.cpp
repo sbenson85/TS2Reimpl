@@ -255,9 +255,14 @@ uint32_t nTSSG::cDisplayListDynamicRenderStrategyState::Release()
     return 0;
 }
 
+namespace nTSSG {
+// src/sg/cDisplayListDynamicRenderStrategy.cpp: the state's destructor 0x36f5c0 (its DynamicStrategyState, the same object).
+void __fastcall DestroyDynamicStrategyState(void *state);
+} // namespace nTSSG
+
 nTSSG::cDisplayListDynamicRenderStrategyState *nTSSG::cDisplayListDynamicRenderStrategyState::DeletingDestructor(uint32_t flags)
 {
-    OriginalFunction<void(__thiscall *)(cDisplayListDynamicRenderStrategyState *), 0x36f5c0>()(this);
+    DestroyDynamicStrategyState(this); // 0x36f5c0, ours (lane 261108m)
     if (flags & 1) ::operator delete(this, sizeof(cDisplayListDynamicRenderStrategyState));
     return this;
 }

@@ -38,7 +38,7 @@
 namespace svcfx {
 
 using Blob = std::vector<uint32_t>;
-constexpr unsigned kSlots = 80;
+constexpr unsigned kSlots = 96; // (cILightRefNode's SetLight is slot 93)
 constexpr unsigned kFakes = 24;
 enum : uint32_t { evCall = 0x60, evNote = 0x61 };
 
@@ -114,6 +114,8 @@ inline Blob gEv;
 using Range = normwords::Range;
 inline std::vector<Range> gRanges;
 inline unsigned gFrameworkIndex = 0;
+// Called when the director framework is asked for (a test logs it to order the getter against the calls around it).
+inline void (*gOnDirectorFramework)() = nullptr;
 inline bool gTrace = false;
 
 inline Obj &F(unsigned i) { return gObjs[i]; }
@@ -412,7 +414,11 @@ void CaptureFakes(Blob &b, const ValueKinds (&table)[N], std::source_location wh
 
 namespace detail {
 inline void *gDirectorVT[16];
-inline void *__fastcall DirectorFramework(void *, void *) { return &gObjs[gFrameworkIndex]; }
+inline void *__fastcall DirectorFramework(void *, void *)
+{
+    if (gOnDirectorFramework) gOnDirectorFramework();
+    return &gObjs[gFrameworkIndex];
+}
 } // namespace detail
 
 // Plugs the fakes into the game's globals for the scope. Cells set through Set() are restored afterwards, and so is

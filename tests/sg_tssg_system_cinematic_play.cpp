@@ -7,9 +7,8 @@
 // parts), the actor objects (models, placements), the extras, the channel owner and channels, the animations and the
 // parts (names, labels, flags, durations in st0), the controllers, the wall manager and the tile service; the framework,
 // settings (cell 0x10cc28c), app (0x10cc288), properties, probe and message are svcfx fakes. The object's own slots 26
-// (find animation) and 29 (end) are a test vtable. Stood in over the image (not replaced yet): 0xae1ed0 (animated face),
-// 0xae42c0 (channel owner), 0xae7900 (object name), 0xae4ef0 (blend), 0xae1f50 (attach), 0x26cbe0 (record, 30 words),
-// 0xaeb0e0 (cleanup), 0x9c5b7e (probe), 0x212e61 (tile service); cRZStopwatch::Start (ours) on both sides. The stopwatch
+// (find animation) and 29 (end) are a test vtable. Stood in over the image (not replaced yet): 0x26cbe0 (record, 30
+// words), 0x9c5b7e (probe), 0x212e61 (tile service); on both sides (ours): 0xae4ef0 (blend), 0xae1f50 (attach), 0xae42c0 (channel owner), 0xae1ed0 (animated face), 0xae7900 (object name), 0xaeb0e0 (cleanup), cRZStopwatch::Start. The stopwatch
 // reset (ours) runs for real on the global stopwatch 0x10cc848, whose bytes are compared.
 //
 // Compared after each run: the event log, the result and *error, the object's bytes (normalised), the fakes, the cells,
@@ -22,6 +21,7 @@
 
 #include "game/game.h"
 #include "rz/cRZStopwatch.h"
+#include "sg/SGUtilities.h"
 #include "sg/cTSSGSystem.h"
 
 #include <cstdint>
@@ -294,13 +294,13 @@ using Stand30 = Stand<std::make_index_sequence<30>>;
 
 struct Fixture {
     Globals globals;
-    shape::CodePatch animatedOf{GameAddress<void>(0xae1ed0), shape::CodeOf(&StandAnimatedOf)};
-    shape::CodePatch channelOwner{GameAddress<void>(0xae42c0), shape::CodeOf(&StandChannelOwner)};
-    shape::CodePatch objectName{GameAddress<void>(0xae7900), shape::CodeOf(&StandObjectName)};
-    shape::CodePatch blend{GameAddress<void>(0xae4ef0), shape::CodeOf(&Stand12::Blend)};
-    shape::CodePatch attach{GameAddress<void>(0xae1f50), shape::CodeOf(&Stand22::Attach)};
+    shape::StandIn animatedOf{0xae1ed0, &nGZSceneGraph::AnimatedFaceOf, &StandAnimatedOf};
+    shape::StandIn channelOwner{0xae42c0, &nGZSceneGraph::ChannelOwnerOf, &StandChannelOwner};
+    shape::StandIn objectName{0xae7900, &nGZSceneGraph::GetNodeTag, &StandObjectName};
+    shape::StandIn blend{0xae4ef0, &nGZSceneGraph::MakeAnimationBlend, &Stand12::Blend};
+    shape::StandIn attach{0xae1f50, &nGZSceneGraph::AttachAnimation, &Stand22::Attach};
     shape::CodePatch record{GameAddress<void>(0x26cbe0), shape::CodeOf(&Stand30::Record)};
-    shape::CodePatch cleanUp{GameAddress<void>(0xaeb0e0), shape::CodeOf(&StandCleanUp)};
+    shape::StandIn cleanUp{0xaeb0e0, &nGZSceneGraph::SetLayersByFlag, &StandCleanUp};
     shape::CodePatch probe{GameAddress<void>(0x9c5b7e), shape::CodeOf(&StandProbe)};
     shape::CodePatch tile{GameAddress<void>(0x212e61), shape::CodeOf(&StandTile)};
     shape::StandIn start{0x1c982b, &cRZStopwatch::Start, &StandStart};

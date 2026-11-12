@@ -76,3 +76,4 @@
 {"group": "WinApiTables", "subsystem": "framework-gz", "reason": "RZ wide-character Win32 function tables (src/rz/WinApiTables.h)"}
 {"group": "WinMain", "subsystem": "framework-gz", "reason": "WinMain and the app start-up (src/app/WinMain.h), as RULES files cTSApp / cRZCmdLine"}
 {"group": "WinMainInfra", "subsystem": "framework-gz", "reason": "WinMain's crash reporter, analytics and terminate handlers (src/app/WinMainInfra.h)"}
+{"group": "DesignMode", "subsystem": "scenegraph", "reason": "the design-mode module 0x3aa260-0x3ac250 (src/sg/DesignMode.h): design-mode subsets of a model's shapes and geometry, used by lighting and the lot imposters"}

@@ -4,8 +4,27 @@
 // angular frequency, a third value, offset). Every particle, decal, camera and screen description holds a few (size, alpha,
 // rotation, the camera's heading, the screen's strength, ...); the effects parser fills them (0xbd1a50, not ours) and the
 // description serializers read and write them. RVAs 1.18.0.187, all /O2.
+#include "gz/CommandParser.h" // cIGZExceptionBase
+#include "rz/cRZString.h"
+
 #include <cstdint>
 #include <vector>
+
+// What the curve throws (0x24 bytes): the game's cTSCurveError (base cIGZExceptionBase; vtable 0xe8e88c, its one slot the
+// message) with the message in a cRZString at +4. Named and laid out as the game's, so the game's handlers that catch it by
+// type (the match is by decorated name) catch ours; the vtable is a plain field (src/gz/CommandParser.h, cError).
+class cTSCurveError : public cIGZExceptionBase {
+public:
+    static constexpr uint32_t kVTable = 0xe8e88c;
+    static constexpr uint32_t kFormatBufferSize = 0x800;
+
+    __declspec(noinline) cTSCurveError(const char *format, ...); // 0xbdc6f0 (cdecl, as any variadic member)
+    __declspec(noinline) cTSCurveError(const cTSCurveError &other); // 0xbdc760
+    cTSCurveError &operator=(const cTSCurveError &) = delete;
+
+    cRZString mMessage; // +4
+};
+static_assert(sizeof(cTSCurveError) == 0x24);
 
 class cTSEffectCurve {
 public:
@@ -28,7 +47,9 @@ public:
     void SetKind(uint32_t kind);
     // 0xbdcd60: a list of equal values (two or more) becomes their constant.
     void Simplify();
-    // 0xbdcbd0: the parsed values (checked by the game's 0xbdcdb0 first: a wave's amplitude or frequency of 0 throws); a wave
+    // 0xbdcdb0: a wave's amplitude and frequency among the values must be non-zero (throws cTSCurveError).
+    __declspec(noinline) void CheckSinCoefficients(const std::vector<float> &values) const;
+    // 0xbdcbd0: the parsed values (checked by CheckSinCoefficients first); a wave
     // takes up to four, the frequency times 2 pi; a list takes them all.
     __declspec(noinline) void SetValues(const std::vector<float> &values);
     // 0xbdca50: the largest value a list holds (-FLT_MAX for none), a wave's |amplitude| + offset; other kinds -FLT_MAX.

@@ -4,17 +4,15 @@
 #include <new>
 
 #include "game/original.h"
+#include "gz/cGZRect.h" // GZRectIntersect
 #include "ifaces/cIGZFrameWork.h"
 #include "rz/RZAutoRef.h"
 #include "rz/Singleton_20ddfb.h" // GetServiceObject
 
 namespace {
 
-// 0x373520 (__thiscall, ret 8): `*out` = a & b when they overlap (true), else all zero (false). `out` may be `a`.
-bool Intersect(cGZRect *out, const cGZRect *a, const cGZRect *b)
-{
-    return OriginalFunction<bool(__thiscall *)(cGZRect *, const cGZRect *, const cGZRect *), 0x373520>()(out, a, b);
-}
+// 0x373520 (ours, src/gz/cGZRect.h): `*out` = a & b when they overlap (true), else all zero (false). `out` may be `a`.
+bool Intersect(cGZRect *out, const cGZRect *a, const cGZRect *b) { return GZRectIntersect(out, a, b); }
 
 bool Valid(const cGZRect *r) { return r->left < r->right && r->top < r->bottom; }
 

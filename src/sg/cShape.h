@@ -93,17 +93,29 @@ struct cShapeBehaviorTraits {
     static void ResetRegistryForTest(); // tests only: the next use builds the registry again
 };
 
-// A material index of the material manager (the cached queried object 0xae8900, cIMaterialManager): -1 is none. A copy
-// takes a reference (slot 20, 0xae8800: unconditionally), the destructor drops it (slot 21 unless -1, 0xae8a00).
+// A material index of the material manager (the cached queried object 0xae8900, cIMaterialManager, fetched again for
+// every call): -1 is none. The members are in sg/ShapeMaterialHandle.cpp (lane 261111d, hooked in
+// hook/tables/SGUtilities.cpp).
 struct ShapeMaterialHandle {
     int32_t mIndex = -1;
     ShapeMaterialHandle() = default;
-    explicit ShapeMaterialHandle(int32_t index); // 0xae8820: takes a reference (unconditionally, -1 too)
-    ShapeMaterialHandle(const ShapeMaterialHandle &other);
+    explicit ShapeMaterialHandle(int32_t index); // 0xae8820: stored, then counted (slot 20; unconditionally, -1 too)
+    // 0xae8840: the manager's FindOrLoad(name) (slot 19) stored, then counted (slot 20, the manager fetched again).
+    explicit ShapeMaterialHandle(const char *name);
+    ShapeMaterialHandle(const ShapeMaterialHandle &other); // 0xae8800: stored, then counted
     ShapeMaterialHandle &operator=(const ShapeMaterialHandle &) = delete;
-    // 0xae88a0: the source counted, the old index dropped (unconditionally, -1 too), the index stored.
-    void Assign(const ShapeMaterialHandle &source);
-    ~ShapeMaterialHandle();
+    // 0xae88a0: the source counted, the old index dropped (unconditionally, -1 too; the manager fetched for each), the
+    // index stored. Returns *this.
+    ShapeMaterialHandle &Assign(const ShapeMaterialHandle &source);
+    // 0xae8a00: unless -1, dropped (slot 21) and -1 stored.
+    void Release();
+    ~ShapeMaterialHandle(); // 0xae8870: Release
+
+    // The hooks' entry points (thiscall at the constructors' and destructor's RVAs; each returns this).
+    ShapeMaterialHandle *ConstructIndex(int32_t index);
+    ShapeMaterialHandle *ConstructByName(const char *name);
+    ShapeMaterialHandle *ConstructCopy(const ShapeMaterialHandle &other);
+    void Destruct();
 };
 static_assert(sizeof(ShapeMaterialHandle) == 4, "ShapeMaterialHandle size");
 

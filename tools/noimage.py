@@ -56,6 +56,7 @@ IMAGE_REL_I386_DIR32 = 0x06
 IMAGE_REL_I386_DIR32NB = 0x07
 IMAGE_REL_I386_REL32 = 0x14
 IMAGE_SCN_LNK_NRELOC_OVFL = 0x01000000
+IMAGE_SCN_LNK_COMDAT = 0x1000
 GAME_BASE_SYMBOL = "_ts2_rva_0"
 OWNED_SYMBOL = re.compile(r"^_ts2_rva_([0-9a-fA-F]+)$")
 
@@ -117,7 +118,9 @@ def read_coff(path):
 
 
 def read_coff_data(data):
-    """read_coff over an object's bytes."""
+    """read_coff over an object's bytes. Each section dict also carries "chars" (its characteristics), "raw" (its raw
+    bytes, b"" when it has none) and, for a COMDAT section, "comdat": (selection, associated section number) from its
+    section symbol's auxiliary record (tools/imagefree.py reads those; this tool doesn't)."""
     big = len(data) >= 8 and struct.unpack_from("<HH", data, 0) == (0, 0xFFFF)
     if big:
         nsec, symptr, nsym = struct.unpack_from("<III", data, 44)
@@ -152,7 +155,8 @@ def read_coff_data(data):
             va, sym, typ = struct.unpack_from("<IIH", data, relptr + r * 10)
             addend = struct.unpack_from("<I", data, rawptr + va)[0] if rawptr and va + 4 <= rawsize else 0
             relocs.append((va, sym, typ, addend))
-        sections.append({"name": raw_name.rstrip(b"\0").decode("latin-1"), "relocs": relocs})
+        sections.append({"name": raw_name.rstrip(b"\0").decode("latin-1"), "relocs": relocs, "chars": chars,
+                         "raw": data[rawptr:rawptr + rawsize] if rawptr else b""})
 
     symbols = {}
     i = 0
@@ -163,6 +167,13 @@ def read_coff_data(data):
         else:
             value, secnum, typ, cls, naux = struct.unpack_from("<IhHBB", data, s + 8)
         symbols[i] = (name_at(data[s:s + 8]), value, secnum, typ, cls)
+        if cls == 3 and value == 0 and naux and 0 < secnum <= nsec and \
+                sections[secnum - 1]["chars"] & IMAGE_SCN_LNK_COMDAT:
+            # the section definition's auxiliary record: length, relocations, line numbers, checksum, number, selection
+            number, selection = struct.unpack_from("<HB", data, s + symsize + 12)
+            if big:
+                number |= struct.unpack_from("<H", data, s + symsize + 16)[0] << 16
+            sections[secnum - 1]["comdat"] = (selection, number)
         i += 1 + naux
     return sections, symbols
 

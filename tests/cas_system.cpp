@@ -65,6 +65,7 @@
 // in order with their keys and values, vectors with their capacity), the out-parameters and every fake's count and words;
 // at the end the counts after the destruction.
 #include "code_patch.h"
+#include "sg/SGUtilities.h"
 #include "difftest.h"
 #include "shape.h"
 #include "ts_services_fixture.h"
@@ -2329,7 +2330,7 @@ struct Stage {
     shape::CodePatch simOutfit{0x54ac80, reinterpret_cast<const void *>(&StandSimOutfit)};
     shape::CodePatch specialItems{0x503e20, reinterpret_cast<const void *>(&StandSpecialItems)};
     shape::CodePatch nameIdApp{0x20df26, reinterpret_cast<const void *>(&StandNameIdApp)};
-    shape::CodePatch modelOf{0xaeba70, reinterpret_cast<const void *>(&StandModelOf)};
+    shape::StandIn modelOf{0xaeba70, &nGZSceneGraph::ShapeRefOfNodeOrSubtree, &StandModelOf};
     shape::CodePatch objectForId{0x549f80, reinterpret_cast<const void *>(&StandObjectForId)}; // FixOutfitParts (lane JQ)
     shape::CodePatch outfitFixed{0x54b250, reinterpret_cast<const void *>(&StandOutfitFixed)};
     shape::CodePatch objectOutfit{0x54a990, reinterpret_cast<const void *>(&StandObjectOutfit)};

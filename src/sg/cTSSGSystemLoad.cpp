@@ -10,6 +10,7 @@
 #include "rz/Singleton_20ddfb.h"
 #include "rz/StaticGetters.h"
 #include "rz/StaticGetters2.h"
+#include "sg/SGUtilities.h"
 
 #include <string>
 
@@ -77,7 +78,10 @@ constexpr uint32_t kCameraIid = 0x49ff7d6f;
 void *PlacementService() { return OriginalFunction<void *(__cdecl *)(), 0x20e0b2>()(); }
 void *CarManager() { return OriginalFunction<void *(__cdecl *)(), 0xb39000>()(); }
 void *CheatHolder() { return OriginalFunction<void *(__cdecl *)(), 0xb38f10>()(); }
-void UpdateSceneObject(void *object, void *items) { OriginalFunction<void(__cdecl *)(void *, void *), 0xae39c0>()(object, items); }
+void UpdateSceneObject(void *object, void *items)
+{
+    nGZSceneGraph::AttachChoreoQueue(static_cast<nGZSceneGraph::cICompositionTreeNode *>(object), items); // 0xae39c0
+}
 void SetLotSetting(uint32_t id, uint32_t value) { OriginalFunction<void(__cdecl *)(uint32_t, uint32_t), 0x254bd0>()(id, value); }
 template <typename... A> void ExecuteCheat(void *parser, const char *format, A... args)
 {

@@ -6,6 +6,7 @@
 
 #include "game/game.h"
 #include "hook/hooks.h"
+#include "sg/SGUtilities.h"
 #include "ts/cTSEffectsExtension.h"
 
 #include "rz/cRZSerializableStream.h"
@@ -344,7 +345,7 @@ DIFF_TEST(EffectsExtension_DeletingDestructorFlags, 0xcc5460)
 DIFF_TEST(EffectsExtension_GetDisplayName, 0xcc5e80)
 {
     using Fn = uint8_t(__thiscall *)(void *);
-    shape::CodePatch displayName(0xae7900u, shape::CodeOf(&StandObjectDisplayName));
+    shape::StandIn displayName(0xae7900u, &nGZSceneGraph::GetNodeTag, &StandObjectDisplayName);
     cTSEffectsExtension image, ours;
     auto *imageFace = reinterpret_cast<uint8_t *>(&image) + 0x18;
     auto *oursFace = reinterpret_cast<uint8_t *>(&ours) + 0x18;
@@ -538,7 +539,7 @@ DIFF_TEST(EffectsExtension_WriteRecords, 0xcc69e0)
 DIFF_TEST(EffectsExtension_BindEffects, 0xcc6550)
 {
     using Fn = void(__thiscall *)(void *);
-    shape::CodePatch findNode(0xae7490u, shape::CodeOf(&StandFindNodeByName));
+    shape::StandIn findNode(0xae7490u, &nGZSceneGraph::FindNodeByName, &StandFindNodeByName);
     cTSEffectsExtension image, ours;
     auto *imageFace = reinterpret_cast<uint8_t *>(&image) + 0x18;
     auto *oursFace = reinterpret_cast<uint8_t *>(&ours) + 0x18;
@@ -611,7 +612,7 @@ DIFF_TEST(EffectsExtension_BindEffects, 0xcc6550)
 // 0xcc5b50's null/empty/locator shortcuts and its one original helper call.
 DIFF_TEST(EffectsExtension_FindEffectNode, 0xcc5b50)
 {
-    shape::CodePatch findNode(0xae7490u, shape::CodeOf(&StandFindNodeByName));
+    shape::StandIn findNode(0xae7490u, &nGZSceneGraph::FindNodeByName, &StandFindNodeByName);
     cTSEffectsExtension extension;
     const char locator[] = "LoCaToR";
     const char empty[] = "";
@@ -1694,13 +1695,13 @@ void Reset()
 struct Scope {
     shape::CodePatch gameNew;
     shape::CodePatch gameDelete;
-    shape::CodePatch findNode;
+    shape::StandIn findNode;
     void **slot;
     void *saved;
     Scope(difftest::Context &ctx, bool captureFreedText = false)
         : gameNew(0x824632u, shape::CodeOf(&GameNewPlain)),
           gameDelete(0x824624u, captureFreedText ? shape::CodeOf(&GameDeleteCapture) : shape::CodeOf(&GameDeletePlain)),
-          findNode(0xae7490u, shape::CodeOf(&StandFindNodeByName)),
+          findNode(0xae7490u, &nGZSceneGraph::FindNodeByName, &StandFindNodeByName),
           slot(ctx.image.At<void *>(0x10c9378)), saved(*slot)
     {
         Reset();

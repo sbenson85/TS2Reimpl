@@ -12,7 +12,9 @@
 #include "rz/cRZStopwatch.h"
 #include "rz/cRZString.h"
 #include "sg/SGLocalString.h"
+#include "sg/SGUtilities.h"
 
+#include <bit>
 #include <cstdint>
 #include <utility>
 
@@ -101,35 +103,37 @@ enum : int32_t { kActorGone = 0x89, kNoCamera = 0x99 };
 constexpr int kSelfFindAnimation = 26;
 constexpr int kSelfEnd = 29;
 
-// Game functions not replaced yet.
-void *AnimatedOf(void *object) { return OriginalFunction<void *(__cdecl *)(void *), 0xae1ed0>()(object); }
-void *ChannelOwner(void *animated) { return OriginalFunction<void *(__cdecl *)(void *), 0xae42c0>()(animated); }
-const char *ObjectName(void *object) { return OriginalFunction<const char *(__cdecl *)(void *), 0xae7900>()(object); }
+// The scene-graph helpers (ours, sg/SGUtilities.h) and the game functions not replaced yet.
+nGZSceneGraph::cICompositionTreeNode *TreeNode(void *object)
+{
+    return static_cast<nGZSceneGraph::cICompositionTreeNode *>(object);
+}
+void *AnimatedOf(void *object) { return nGZSceneGraph::AnimatedFaceOf(TreeNode(object)); }
+void *ChannelOwner(void *animated) { return nGZSceneGraph::ChannelOwnerOf(animated); }
+const char *ObjectName(void *object) { return nGZSceneGraph::GetNodeTag(TreeNode(object)); }
 void *SoundProbe() { return OriginalFunction<void *(__cdecl *)(), 0x9c5b7e>()(); }
 void *TileService() { return OriginalFunction<void *(__cdecl *)(), 0x212e61>()(); }
 void CleanUpNamed(void *object, uint32_t name)
 {
-    // Here the name comes third and the 0 fourth (slot 29's call, 0x255250, has them the other way round).
-    OriginalFunction<void(__cdecl *)(void *, uint32_t, const char *, uint32_t, uint32_t), 0xaeb0e0>()(
-        object, kCleanUpKind, GameAddress<const char>(name), 0, kCleanUpFlags);
+    // Here render layer `name` is added (slot 29's call, 0x255250, removes it instead).
+    nGZSceneGraph::SetLayersByFlag(TreeNode(object), kCleanUpKind, GameAddress<const char>(name), nullptr,
+                                   kCleanUpFlags);
 }
 // 0xae4ef0: the blend of `animation` into *out.
+float FloatBits(uint32_t bits) { return std::bit_cast<float>(bits); }
 void MakeBlend(void **out, void *animation)
 {
-    using Fn = void(__cdecl *)(void **, void *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
-                               uint32_t, uint32_t, uint32_t);
-    OriginalFunction<Fn, 0xae4ef0>()(out, animation, kOne, 1, 0, kOne, 1, kBlendRate, kBlendRate, kBlendEpsilon, kOne,
-                                     kBlendEpsilon);
+    nGZSceneGraph::MakeAnimationBlend(out, animation, FloatBits(kOne), 1, 0.0f, FloatBits(kOne), 1,
+                                      FloatBits(kBlendRate), FloatBits(kBlendRate), FloatBits(kBlendEpsilon),
+                                      FloatBits(kOne), FloatBits(kBlendEpsilon));
 }
 // 0xae1f50: `animation` attached to `target` (in `scene` at `placement`, from `start`) into *out.
 void Attach(void **out, void *target, void *scene, const void *placement, void *animation, uint32_t now, uint32_t start,
             void *blend, uint8_t tag, void *events)
 {
-    using Fn = void(__cdecl *)(void **, void *, void *, const void *, void *, uint32_t, uint32_t, uint32_t, uint32_t,
-                               uint32_t, uint32_t, uint32_t, void *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
-                               uint32_t, void *, uint32_t, uint32_t);
-    OriginalFunction<Fn, 0xae1f50>()(out, target, scene, placement, animation, now, start, 0, kOne, 5, 2, 0, blend, tag,
-                                     1, kOne, 0, 0, 0, events, 0, 1);
+    nGZSceneGraph::AttachAnimation(out, target, scene, placement, animation, int32_t(now), int32_t(start), 0.0f,
+                                   FloatBits(kOne), 5, 2, 0.0f, blend, tag, 1, FloatBits(kOne), 0.0f, 0, 0, events, 0,
+                                   1);
 }
 // 0x26cbe0 (30 words, __cdecl): records a track.
 constexpr size_t kRecordWords = 30;

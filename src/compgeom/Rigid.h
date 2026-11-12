@@ -19,6 +19,11 @@ namespace nGZCompGeom {
 // float.
 double __cdecl Dot87(const float *a, const float *b);
 
+// 0x1a6840 (__cdecl: a, b; the float on the x87 stack; lane 261111d, src/compgeom/Dot4.cpp): the four-float dot product
+// ((a1 b1 + a0 b0) + a2 b2) + a3 b3 in SSE single precision, each operation in the original's operand order (a NaN pair
+// gives the first operand's NaN, quieted). Loaded with fld from a stored float, so exact at any x87 precision.
+float __cdecl Dot4(const float *a, const float *b);
+
 // 0x1a77f0 (__cdecl: out, q; returns out): the row-major 3x3 rotation matrix of the quaternion q (x, y, z, w), each element
 // from products doubled by adding them to themselves, then summed in the original's order.
 float *__cdecl QuaternionToMatrix(float *out, const float *q);

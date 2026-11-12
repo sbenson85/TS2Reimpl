@@ -1,11 +1,12 @@
 // Differential test for nTSCASCore::cTSCASBodyPartSystem, lane JZ: ApplyBoneAdjusts (slot 82, 0xce0e60). Fakes: the
 // entry helper 0xcf04b0 (an entry whose bone adjust records are fake polymorphic objects), the bone lookup 0xae7490 and
-// the extension iterator 0xaeb5b0 (scripted), the target, its bone nodes and extensions, the framework object (0x1ae18d
+// the extension iterator 0xaeb5b0 (scripted; ours, so on both sides), the target, its bone nodes and extensions, the framework object (0x1ae18d
 // on both sides: ours is a stand-in too) and the extension it creates (with a virtual base behind a vbptr). The image's
 // operator new / sized delete (0x824632 / 0x824624) stand in for ours: the original frees the tag strings with them.
 #include "cas_body_part_system.h"
 #include "code_patch.h"
 #include "rz/StaticGetters.h"
+#include "sg/SGUtilities.h"
 
 namespace bpt_bones {
 
@@ -167,8 +168,8 @@ DIFF_TEST(cTSCASBodyPartSystem_ApplyBoneAdjusts, 0xce0e60)
     const VTable vt = CopyVTable(ctx);
     Env env(ctx);
     Redirect r1(ctx, 0xcf04b0, reinterpret_cast<const void *>(&F_cf04b0));
-    Redirect r2(ctx, 0xae7490, reinterpret_cast<const void *>(&F_ae7490));
-    Redirect r3(ctx, 0xaeb5b0, reinterpret_cast<const void *>(&F_aeb5b0));
+    shape::StandIn r2(0xae7490, &nGZSceneGraph::FindNodeByName, &F_ae7490);
+    shape::StandIn r3(0xaeb5b0, &nGZSceneGraph::FindDataList, &F_aeb5b0);
     Redirect newStand(ctx, 0x824632, reinterpret_cast<const void *>(&ImageNew));
     Redirect deleteStand(ctx, 0x824624, reinterpret_cast<const void *>(&ImageSizedDelete));
     shape::StandIn framework(0x1ae18d, &GetDirectorFrameworkObject, &StandFramework);

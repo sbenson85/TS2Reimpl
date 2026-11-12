@@ -17,7 +17,8 @@
 //
 // The objects Init makes (the expression functions and the effects' five named objects) are ours since lane LF
 // (src/ts/cTSCommonSystemObjects.h); the product helpers 0xcb4690 / 0xcb4950 since lane MB (src/app/ProductInfo.h).
-// Still original: the scenegraph walker 0xae8090, the expression-function registry getter 0xae8980 and 0xb3bbd0 (the effects renderer handed on).
+// The scenegraph walker 0xae8090 is ours since lane 261111l (nGZSceneGraph::CollectTextureNames).
+// Still original: the expression-function registry getter 0xae8980 and 0xb3bbd0 (the effects renderer handed on).
 #include "gz/cGZDBSegmentPackedFile.h" // GZServiceAllocator
 #include "gz/cIGZMessageTarget2.h"
 #include "gz/cIGZUnknown.h"

@@ -29,12 +29,16 @@ struct LightingValues {
         float color[3];      // +0
         float intensity;     // +0xc (1 when not given)
         float direction[3];  // +0x10 normalised
+        // 0xb3cdb0 (returns this; lane 261110t): the colour the game's 0x10fb040, intensity 1, direction 0.
+        Light *Construct();
     } mLights[7];            // +0x24, by the light type (the parser's table 0x10fb00c)
     uint32_t mLightMap;      // +0xe8 `lightMap hex`
     float mLightMapTint[3];  // +0xec reset to the game's constant (0x1079104), then scaled by -strength, -tint
     struct Modifier {        // `modifiers type a c [b [d]]` (0x10 bytes)
         float a, b, c, d;    // a, c always; b, d when given
-    } mModifiers[6];         // +0xf8, by the modifier type (the parser's table 0x10fb018)
+        // 0xb3ce50 (returns this; lane 261110t): all four 1.
+        Modifier *Construct();
+    } mModifiers[6];        // +0xf8, by the modifier type (the parser's table 0x10fb018)
     float mUnlitRoomColor[3];        // +0x158
     float mUnlitRoomThreshold;       // +0x164 -threshold
     float mSkylight[3];              // +0x168
@@ -60,7 +64,10 @@ struct LightingValues {
         float outsideAmbientColor[3]; // +0x1c
         float wallThreshold;         // +0x28
         float floorThreshold;        // +0x2c
-    } mDiffusion;                    // +0x1d0
+        // 0xb3cdf0 (returns this; lane 261110t): the ambients 0, the inside colour the game's 0x1079104, the outside
+        // one its 0x10fb040, both thresholds 0x3e0c49ba (about 0.137).
+        Diffusion *Construct();
+    } mDiffusion;                   // +0x1d0
     float mTransitionA;              // +0x200 `transitionTimes`
     float mTransitionB;              // +0x204
     uint32_t m208[3];                // +0x208
@@ -71,14 +78,19 @@ static_assert(sizeof(LightingValues) == 0x214 - 0x20 && offsetof(LightingValues,
                   offsetof(LightingValues, mDiffusion) == 0x1b0 && offsetof(LightingValues, mTransitionA) == 0x1e0,
               "LightingValues layout");
 
-// One lighting state of the lighting script (0x214 bytes): its name, then its values. Its default constructor
-// (0xb3cfb0) and the sub-objects it builds are not ours. Copying copies the name's text (not the name's vtable or
-// count, as cRZString's copy) and the values; the game's out-of-line copy constructor (0x2cb200) and assignment
-// (0xb3d510) do the same, and the lighting state command's slot 4 has the assignment inline.
+// One lighting state of the lighting script (0x214 bytes): its name, then its values. Copying copies the name's text
+// (not the name's vtable or count, as cRZString's copy) and the values; the game's out-of-line copy constructor
+// (0x2cb200) and assignment (0xb3d510) do the same, and the lighting state command's slot 4 has the assignment inline.
 struct LightingState {
     cRZString mName;        // +0
     LightingValues mValues; // +0x20
 
+    // 0xb3cfb0 (returns this; lane 261110t), the defaults: the name empty, nothing enabled, the seven lights and six
+    // modifiers their constructors', no light map, the tint, environment, particles, UI and flat shades the game's
+    // 0x1079104, the unlit-room colour, skylight and fog its 0x10fb040, threshold 0, projective shadow strength and the
+    // four flat-shade scales 1, object light threshold 1000, fog 0 0, the diffusion's constructor, transition times 2 2,
+    // the last three words 0. Every word of the 0x214 bytes is stored.
+    LightingState *Construct();
     LightingState(const LightingState &other);
     LightingState &operator=(const LightingState &other);
     ~LightingState(); // the name's destructor (the game's 0x1d99b0, a copy of cRZString's)
@@ -145,6 +157,8 @@ public:
         static constexpr uint32_t kGetName = name;    /* the game's slot 5 */                                          \
         void Execute(nGZCommandParser::cIArguments *args);                                                             \
         const char *GetName() const;                                                                                   \
+        /* slot 6; only control, fog, lightMap, transitionTimes and unlitRoomColor have their own (hooked) */          \
+        const char *GetHelp(uint32_t index) const;                                                                     \
     }
 
 LIGHTING_COMMAND(cControlCommand, 0xe84418, 0xb3dab0, 0xb3efc0);                  // control -debugPortals -edith -optimize

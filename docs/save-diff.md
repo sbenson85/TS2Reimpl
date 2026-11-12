@@ -156,9 +156,11 @@ whole** (resources are never combined from different fixtures):
 
 The last column is the run's lot result, the one place it is set (`tools/validate_result.py` implements it; what the
 results mean: `docs/orchestrator.md`, "Validation results"). Any other exit, a lotcheck that aborts (exit 1) or a
-`lotsave` step with a nonzero exit is a FAIL too, whatever lotcheck says. **No lot-save fixture has a captured binding
-yet (0 of 16 are captured), so exit 5 is the ceiling and every validation reads QUALIFIED at best until the fixtures are
-recaptured** (`notes/plan.md`, "Queue from the 11-06 review").
+`lotsave` step with a nonzero exit is a FAIL too, whatever lotcheck says. Captured fixtures exist since 2026-11-09
+(12 reference runs recorded: 8 at age 0x08, 4 at age 0x10, beside the 16 backfilled ones), so a run whose lot matches
+one of them can read PASS; a run that matches only a backfilled variant still exits 5 (QUALIFIED). To add more:
+`tools/scenario.ps1 @lot-save-frames -ResetUserData -Quiet -Seed 0x5eed0001 -Reference -NoDeploy`, then
+`tools/lotcheck.py record <snapshot>`.
 
 `KNOWN_OPEN` names an exact resource key and byte ranges: today only the neighbourhood camera
 (EC44BDDC instance 0x262A, floats at 0x51 and 0x59..0x60; size must match; see below).
@@ -270,7 +272,10 @@ schedule table (+0x1a30; 0 for a free id); then the rest (unparsed, compared up 
 A package is normalised as a whole: if any record contradicts the object table (a live object without its
 record, a record that differs other than by the mapping, a stale record that is not the baseline's), nothing in
 that package is normalised, even records byte-identical to the fixture's (records spliced from another run
-under this run's OBJM fail this way). Limit: the id comparison looks only at bytes that differ, so a run id
+under this run's OBJM fail this way). One exception: when the only thing unexplained is OBJM's plain schedule-id
+entries (objects not kept from the baseline: the class the user accepted, notes/decisions.md 2026-11-06), the object
+records are still normalised and OBJM alone stays a difference, judged against the references as bytes; otherwise a
+per-load object's swapped id shows as a missing record (validation 20261109-190105-ea9ec3a8). Limit: the id comparison looks only at bytes that differ, so a run id
 word that happens to equal an unrelated fixture id at the same offset is not caught (it would need field
 knowledge of which words are ids).
 

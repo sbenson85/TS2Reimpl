@@ -21,7 +21,7 @@
 //
 // Covered RVAs: 0xbe86a0 (constructor), 0xbe8a40 / 0xbe8be0 / 0xbe8bcf (destructor, deleting destructor, its +8 thunk), 0xbe9530,
 // 0xbe9560 and their thunks, 0x146a40, 0xbeab90 (Start), 0xbeacd0 (Stop), 0xbe92c0, 0x78e3d0, 0xbe9910, 0xbe98e0, 0xbe96e0,
-// 0xbe99a0, 0x332750, 0xbea9e0, 0xbe9700 (event), 0xbe90e0, 0xbe9010, 0xbe90b0, 0xbe8fe0, 0xbe9070, 0xbe92b0, 0xbe92a0, 0xbe9260,
+// 0xbe99a0, 0x332750, 0xbea9e0, 0xbe8de0 (done check), 0xbe9670 (description), 0xbe9700 (event), 0xbe90e0, 0xbe9010, 0xbe90b0, 0xbe8fe0, 0xbe9070, 0xbe92b0, 0xbe92a0, 0xbe9260,
 // 0xbe9640, 0xbe9150 (Attach), 0xbeaa00 (Detach), 0xbe8c10 (AddToScene), 0xbe9930 (SetFlagged), 0xbea9d8 (Query thunk), 0xbeacc5,
 // 0xbead2d, 0xbe92c4, 0xbe98cb, 0xbe9578, 0xbe9580, and the four that forwarded: 0xbe99c0 (Update, with its helpers 0xbe8f20,
 // 0xbe8f90, 0xbe92d0, 0xbe93f0 done inside it), 0xbea700 (SetResource), 0xbead40 (the camera follow), 0xbe9590 (the event index
@@ -809,7 +809,7 @@ DIFF_TEST(VisualEffect_Slots, 0xbe9700)
     *cell = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(&gService));
     uint32_t totals[2][hCount] = {};
     uint32_t steps[2][8] = {};
-    constexpr uint32_t kSeeds = 300, kSteps = 60;
+    constexpr uint32_t kSeeds = 400, kSteps = 60;
     for (uint32_t seed = 0; seed < kSeeds; ++seed) {
         Blob blobs[2];
         for (int mode = 0; mode < 2; ++mode) {
@@ -835,12 +835,14 @@ DIFF_TEST(VisualEffect_Slots, 0xbe9700)
             for (uint32_t step = 0; step < kSteps; ++step) {
                 b.push_back(0x0b000000u | step);
                 uint32_t op = r() % 52;
+                const uint32_t extra = r() % 10; // the done check and the description (ops 53, 54)
                 // The extra range repeats the ops whose branches need the most state: Update, a child's event, the child
                 // installs and the blend / camera moves.
                 if (op >= 40) {
                     static const uint32_t kRepeat[12] = {19, 19, 19, 52, 5, 5, 21, 29, 36, 34, 11, 52};
                     op = kRepeat[op - 40];
                 }
+                if (extra <= 1) op = 53 + extra;
                 uint32_t result = 0xfeed;
                 gExt[0] = &w.transforms[0];
                 gExt[1] = &w.transforms[1];
@@ -1132,6 +1134,54 @@ DIFF_TEST(VisualEffect_Slots, 0xbe9700)
                             b.push_back(uint32_t(counters[1]));
                         }
                     }
+                    break;
+                }
+                case 53: {
+                    // 0xbe8de0: with an index or not, stopping or not, a message id or none, the description's bit 3 either way.
+                    // Everything it changes goes back after: the walks read the owner's tables by the index, Update the rest.
+                    const uint32_t index = x[13], waiting = o[0x3c], message = x[18], value = x[19], flagWord = w.description[0];
+                    x[13] = r() % 4 ? r() % 3 : 0xffffffffu;
+                    o[0x3c] = uint8_t(r() % 2);
+                    x[18] = r() % 2 ? 0u : 0x1234u + r() % 8;
+                    x[19] = r();
+                    if (x[16] == 0) SetDescription(o, w, r, true);
+                    if (r() % 2) w.description[0] ^= 8;
+                    // A child with bit 0 of its flags does not hold the effect up, running or not.
+                    uint32_t childFlags[4] = {};
+                    const uint32_t childCount = x[76] ? (x[77] - x[76]) / 0x54 : 0, childBuffer = x[76];
+                    for (uint32_t c = 0; c < childCount && c < 4; ++c) {
+                        auto *rec = reinterpret_cast<uint32_t *>(uintptr_t(x[76] + c * 0x54));
+                        childFlags[c] = rec[17];
+                        rec[17] |= r() % 2;
+                    }
+                    result = mode ? uint32_t(reinterpret_cast<cTSVisualEffect *>(e)->IsDone())
+                                  : uint32_t(ctx.Original<bool(__thiscall *)(void *)>(0xbe8de0)(e));
+                    // (Stopping may have dropped the children; the flags went with them.)
+                    for (uint32_t c = 0; x[76] == childBuffer && x[76] && c < childCount && c < 4; ++c)
+                        reinterpret_cast<uint32_t *>(uintptr_t(x[76] + c * 0x54))[17] = childFlags[c];
+                    x[13] = index;
+                    o[0x3c] = uint8_t(waiting);
+                    x[18] = message;
+                    x[19] = value;
+                    w.description[0] = flagWord;
+                    break;
+                }
+                case 54: {
+                    // 0xbe9670: the entry's flag word, its message pair, the owner's camera with bit 2 (a camera changing or not).
+                    if (x[99] == 0) {
+                        FakeOwner *owner = &w.owners[r() % 3].base;
+                        owner->kind = r() % 5;
+                        CallSlot<void>(e4, 0, static_cast<void *>(owner));
+                    }
+                    const uint32_t saved[3] = {w.description[0], w.description[3], w.description[4]};
+                    w.description[0] = r() & 0x1000f;
+                    w.description[3] = r();
+                    w.description[4] = r();
+                    if (mode) reinterpret_cast<cTSVisualEffect *>(e)->Describe(reinterpret_cast<const EffectEntry *>(w.description));
+                    else ctx.Original<void(__thiscall *)(void *, void *)>(0xbe9670)(e, w.description);
+                    w.description[0] = saved[0];
+                    w.description[3] = saved[1];
+                    w.description[4] = saved[2];
                     break;
                 }
                 case 52: {

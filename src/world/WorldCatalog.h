@@ -51,4 +51,23 @@ bool __cdecl Slot80Is2(const uint32_t *id);
 // 0x7ef9d0: entry slot 0x60, the kind (-1 when the entry is missing).
 int32_t __cdecl Kind(const uint32_t *id);
 
+// ---- helpers over the catalog's wall products and the world's partitions (lane RZ, 0x7ef3f0-0x7ef590) ----
+// The catalog (cITSGlobals slot 16) also answers by key through slot 26 (id, 0: the wall product's face, or null), slot 31
+// (id: an object whose virtual base, found through the vbtable at +4 entry +0x18, is such a face) and slot 27 (a default face).
+// The face's slot 8 is its name text and slot 9 a resource; slots 10 and 11 two flags.
+
+// 0x7ef3f0 / 0x7ef430: kind 1 or 3 and the product found by slot 26: its slot 10 / slot 11 flag (tail-called: the caller sees
+// its al). False otherwise.
+uint8_t __cdecl ProductFlag10(const uint32_t *id);
+uint8_t __cdecl ProductFlag11(const uint32_t *id);
+// 0x7ef470 (float in st0): the world partitions' slot 84 for the id (0x2d0ea907 instead when the id has no entry), when that id
+// is kind 1 or 3; 0 otherwise.
+float __cdecl PartitionValue(const uint32_t *id);
+// 0x7ef510: kind 1 or 3: the product's slot 9 value (by slot 26, else slot 31's virtual base, else slot 27's default), when
+// its slot 8 name is non-empty and the value non-zero; 0 otherwise.
+uint32_t __cdecl ProductResource(const uint32_t *id);
+// 0x7ef590: some partition of the world (slot 55 the count, slot 56 copies the i-th 24-byte record) has the id: slot 50 of the
+// record equals *id.
+bool __cdecl AnyPartitionHas(const uint32_t *id);
+
 } // namespace worldcatalog

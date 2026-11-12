@@ -81,14 +81,7 @@ static_assert(sizeof(cTSDelauneyMesh) == 0x7c, "layout: the size 0xb54680 frees"
 // cTSBaseParticlesDescription, cTSMetaParticlesDescription and cTSParticlesDescription (0xbfbb30, 0xbed3f0, 0xbe2bb0):
 // moved to src/ts/cTSParticlesDescription.* (lane IX).
 
-namespace nTSSG {
-struct cFloorColorGrid {
-    cFloorColorGrid *DeletingDestructor(uint32_t flags); // 0x3c4870; destructor 0x4058e0
-    const void *mVTable;
-    uint8_t mRest[0x84 - 4];
-};
-static_assert(sizeof(cFloorColorGrid) == 0x84, "layout: the size 0x3c4870 frees");
-} // namespace nTSSG
+// nTSSG::cFloorColorGrid (0x3c4870): moved to src/sg/cFloorColorGrid.* (coordinator, after lane 261109i).
 
 struct cTSSliceImposterCreator {
     cTSSliceImposterCreator *DeletingDestructor(uint32_t flags); // 0xb51410; destructor 0xb51300

@@ -1,0 +1,58 @@
+#include "hook/hooks.h"
+#include "world/WorldIterators.h"
+
+namespace {
+
+const HookSpec kHooks[] = {
+    {"FUN_a07f0e40", 0x7f0e40, 32, 0xff5ad4ce, MemberAddress(&worlditer::QuadDiamondIterator::Construct)},
+    {"FUN_a07f0ea0", 0x7f0ea0, 32, 0xff5ad4ce, MemberAddress(&worlditer::InnerDiamondIterator::Construct)},
+    {"FUN_a07f0f00", 0x7f0f00, 32, 0xff5ad4ce, MemberAddress(&worlditer::TileDiamondIterator::Construct)},
+    {"FUN_a07f0f60", 0x7f0f60, 32, 0x7c7f7732, MemberAddress(&worlditer::TileBoxIterator::ConstructQuadrants)},
+    {"FUN_a07f0fc0", 0x7f0fc0, 32, 0xd0e09826, MemberAddress(&worlditer::TileBoxIterator::ConstructLevelQuadrants)},
+    {"FUN_a07f10b0", 0x7f10b0, 32, 0x2dc07a38, MemberAddress(&worlditer::TileBoxIterator::ConstructAllQuadrants)},
+    {"FUN_a07f11b0", 0x7f11b0, 32, 0x005265aa, MemberAddress(&worlditer::TileTriangle::Construct)},
+    {"TileBoxIterator_TileBoxIterator", 0x7f12a0, 32, 0x7c7f7732, MemberAddress(&worlditer::TileBoxIterator::Construct)},
+    {"FUN_a07f12f0", 0x7f12f0, 32, 0xd0e09826, MemberAddress(&worlditer::TileBoxIterator::ConstructLevel)},
+    {"FUN_a07f13e0", 0x7f13e0, 32, 0x2dc07a38, MemberAddress(&worlditer::TileBoxIterator::ConstructAll)},
+    {"FUN_a07f14e0", 0x7f14e0, 32, 0x9e3f1264, MemberAddress(&worlditer::RingPointIterator::Construct)},
+    {"FUN_a07f1530", 0x7f1530, 32, 0xd0e09826, MemberAddress(&worlditer::TileBoxIterator::ConstructLevelCorners)},
+    {"FUN_a07f1620", 0x7f1620, 32, 0x7c7f7732, MemberAddress(&worlditer::TileBoxIterator::ConstructBits)},
+    {"FUN_a07f1670", 0x7f1670, 19, 0xd205c54e, MemberAddress(&worlditer::TileTriangle::Destroy)},
+    {"FUN_a07f1690", 0x7f1690, 32, 0xa727ff23, MemberAddress(&worlditer::QuadDiamondIterator::Next)},
+    {"FUN_a07f1740", 0x7f1740, 32, 0x709a4689, MemberAddress(&worlditer::InnerDiamondIterator::Next)},
+    {"FUN_a07f17a0", 0x7f17a0, 32, 0xbbf56420, MemberAddress(&worlditer::TileDiamondIterator::Next)},
+    {"FUN_a07f1800", 0x7f1800, 32, 0x9e41ff51, MemberAddress(&worlditer::TileBoxIterator::NextQuadrant)},
+    {"TileBoxIterator_Next", 0x7f1840, 32, 0x3a691013, MemberAddress(&worlditer::TileBoxIterator::Next)},
+    {"FUN_a07f1870", 0x7f1870, 5, 0x57d5e8cb, MemberAddress(&worlditer::QuadrantBitIterator::Next)},
+    {"FUN_a07f1880", 0x7f1880, 32, 0x4e565be3, MemberAddress(&worlditer::TileBoxIterator::NextBit)},
+    {"FUN_a07f18c0", 0x7f18c0, 10, 0x369403e0, MemberAddress(&worlditer::QuadDiamondIterator::Done)},
+    {"FUN_a07f18d0", 0x7f18d0, 10, 0xb2de0d1a, MemberAddress(&worlditer::TileDiamondIterator::Done)},
+    {"FUN_a07f18e0", 0x7f18e0, 10, 0x514b5d6e, MemberAddress(&worlditer::TileBoxIterator::Done)},
+    {"FUN_a07f18f0", 0x7f18f0, 7, 0x1a9c81cb, MemberAddress(&worlditer::TileTriangle::Done)},
+    {"FUN_a07f1900", 0x7f1900, 7, 0x99899b8a, MemberAddress(&worlditer::TileCornerIterator::Done)},
+    {"FUN_a07f1910", 0x7f1910, 7, 0x5e3fc8d2, MemberAddress(&worlditer::QuadrantBitIterator::Done)},
+    {"FUN_a07f1920", 0x7f1920, 7, 0x5c79768b, MemberAddress(&worlditer::RingPointIterator::Done)},
+    {"FUN_a07f1930", 0x7f1930, 30, 0xc53712de, MemberAddress(&worlditer::QuadDiamondIterator::Get)},
+    {"FUN_a07f1950", 0x7f1950, 24, 0xa7703843, MemberAddress(&worlditer::TileDiamondIterator::Get)},
+    {"FUN_a07f1970", 0x7f1970, 30, 0x2a0470a2, MemberAddress(&worlditer::TileBoxIterator::GetQuadrant)},
+    {"FUN_a07f1990", 0x7f1990, 32, 0xd3974ef4, MemberAddress(&worlditer::TileTriangle::Edge)},
+    {"FUN_a07f19e0", 0x7f19e0, 32, 0x4af21e1e, MemberAddress(&worlditer::TileCornerIterator::Get)},
+    {"FUN_a07f1a10", 0x7f1a10, 24, 0x8d690cd1, MemberAddress(&worlditer::TileBoxIterator::Get)},
+    {"FUN_a07f1a40", 0x7f1a40, 32, 0xa22cccfe, MemberAddress(&worlditer::TileEdgeIterator::Get)},
+    {"FUN_a07f1a80", 0x7f1a80, 32, 0x1c21ee61, MemberAddress(&worlditer::RingPointIterator::Get)},
+    {"FUN_a07f1ac0", 0x7f1ac0, 30, 0xf623b744, MemberAddress(&worlditer::TileBoxIterator::GetBit)},
+    {"FUN_a07f1ae0", 0x7f1ae0, 32, 0x5c080f1a, reinterpret_cast<void *>(&worlditer::DiamondBounds)},
+    {"FUN_a07f1b80", 0x7f1b80, 32, 0x3f13e90e, reinterpret_cast<void *>(&worlditer::RotateCornersInt)},
+    {"FUN_a07f1c60", 0x7f1c60, 32, 0x27e876ba, reinterpret_cast<void *>(&worlditer::RotateCornersFloat)},
+    {"FUN_a07f1cf0", 0x7f1cf0, 16, 0x2628bdf0, MemberAddress(&worlditer::QuadDiamondIterator::Start)},
+    {"FUN_a07f1d00", 0x7f1d00, 11, 0x95dee506, MemberAddress(&worlditer::InnerDiamondIterator::Start)},
+    {"FUN_a07f1d10", 0x7f1d10, 16, 0x55cf4cc8, MemberAddress(&worlditer::TileDiamondIterator::Start)},
+    {"FUN_a07f1d20", 0x7f1d20, 16, 0x2778603b, MemberAddress(&worlditer::TileBoxIterator::Reset)},
+    {"FUN_a07f1d30", 0x7f1d30, 19, 0xa8b5b0a4, MemberAddress(&worlditer::QuadDiamondIterator::StartColumn)},
+    {"FUN_a07f1d50", 0x7f1d50, 32, 0xe90ffed9, MemberAddress(&worlditer::InnerDiamondIterator::StartLevel)},
+    {"FUN_a07f1da0", 0x7f1da0, 18, 0x217b97cb, MemberAddress(&worlditer::TileDiamondIterator::StartLevel)},
+    {"FUN_a07f1dc0", 0x7f1dc0, 32, 0xbd862f37, MemberAddress(&worlditer::QuadDiamondIterator::StartRow)},
+};
+REGISTER_HOOKS(kHooks);
+
+} // namespace

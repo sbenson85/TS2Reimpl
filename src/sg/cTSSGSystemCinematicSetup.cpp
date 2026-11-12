@@ -8,6 +8,7 @@
 #include "rz/StringKeyParser.h"
 #include "rz/cRZIniFile.h"
 #include "sg/SGLocalString.h"
+#include "sg/SGUtilities.h"
 
 #include <cstring>
 
@@ -62,9 +63,12 @@ constexpr int kSelfFindAnimation = 26;
 constexpr int kSelfPlay = 28;
 constexpr int kSelfEnd = 29;
 
-// An object's animated face, or null (0xae1ed0, __cdecl, not replaced yet): the actor needs one when the cinematic
-// names a requirement for it, and the scene manager's camera needs one for the cinematic to be held.
-void *AnimatedOf(void *object) { return OriginalFunction<void *(__cdecl *)(void *), 0xae1ed0>()(object); }
+// An object's animated face, or null (0xae1ed0, ours): the actor needs one when the cinematic names a requirement for
+// it, and the scene manager's camera needs one for the cinematic to be held.
+void *AnimatedOf(void *object)
+{
+    return nGZSceneGraph::AnimatedFaceOf(static_cast<nGZSceneGraph::cICompositionTreeNode *>(object));
+}
 
 } // namespace
 

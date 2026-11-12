@@ -45,6 +45,9 @@ public:
     cTSEffectsResource(const cTSEffectsResource &) = delete;
     cTSEffectsResource &operator=(const cTSEffectsResource &) = delete;
     static cTSEffectsResource *Create(); // 0xbd2f90 (cdecl): new, null on failure
+    // 0xbf9da0 / 0xbf9ee0 (cdecl): one effect in a stream, with its components (0xbf9b00, 0xbf9c60).
+    static void ReadEffect(void *stream, uint32_t version, EffectEntry *entry);
+    static void WriteEffect(void *stream, const EffectEntry *entry);
 
     // cIGZUnknown, every face
     bool QueryInterface(uint32_t riid, void **out) override; // 0xbd3090

@@ -25,6 +25,8 @@ const HookSpec kHooks[] = {
     {"cTSEffectsResource_GetClassId", 0xbd3050, 6, 0x5a390f49, reinterpret_cast<void *>(&A::GetClassId)},
     {"cTSEffectsResource_WriteEffectTrigger", 0xbd8dc0, 32, 0xbbc53ac3, reinterpret_cast<void *>(&WriteEffectTrigger)},
     {"cTSEffectsResource_ReadEffectTrigger", 0xbd8a70, 32, 0x5d4e0e05, reinterpret_cast<void *>(&ReadEffectTrigger)},
+    {"FUN_a0bf9da0", 0xbf9da0, 32, 0x873ad632, reinterpret_cast<void *>(&cTSEffectsResource::ReadEffect)},
+    {"FUN_a0bf9ee0", 0xbf9ee0, 32, 0x6234871d, reinterpret_cast<void *>(&cTSEffectsResource::WriteEffect)},
 };
 REGISTER_HOOKS(kHooks);
 

@@ -9,6 +9,7 @@
 #include "rz/StaticGetters2.h" // Dispatch8
 #include "rz/RZFileStreams.h"
 #include "rz/cRZString.h"
+#include "sg/SGUtilities.h" // the texture generators
 
 #include "game/game.h"
 #include "game/original.h"
@@ -966,13 +967,14 @@ void cTextureCommand::Execute(cp::cIArguments *args)
             name = sized.Chars();
         }
     }
-    // A texture the manager does not have yet is made when the line asks for a generated one (the generators are
-    // __cdecl and not ours; each writes the image to the counted pointer, which lets go of the one before), and added.
+    // A texture the manager does not have yet is made when the line asks for a generated one (the generators in
+    // SGUtilitiesTexture.cpp each write the new texture over the counted pointer), and added.
+    // ORIGINAL-BUG: a generator overwrites *out without releasing what it held, so when a line asks for more than one
+    // generated texture (or a sized density one and another), every texture but the last leaks a reference.
     if (!VirtualCall<bool(__thiscall *)(void *, const char *), 25>(Manager(), name)) {
         UnknownRef image;
         if (width > 0 && height > 0)
-            OriginalFunction<void(__cdecl *)(int32_t, int32_t, float, float, void **), 0xaec1a0>()(width, height, 240.0f, 60.0f,
-                                                                                                image.AsPPVoid());
+            MakeDensityTexture(width, height, 240.0f, 60.0f, image.AsPPVoid());
         ParserFace face(State());
         if (noise) {
             Vec2 cells, scale;
@@ -980,8 +982,7 @@ void cTextureCommand::Execute(cp::cIArguments *args)
             float octaves = face.EvalFloat(noise[1]);
             face.EvalVector2(&scale.x, noise[2], 2);
             void **out = image.AsPPVoid();
-            OriginalFunction<void(__cdecl *)(int32_t, int32_t, int32_t, float, float, void **), 0xaec6b0>()(
-                Truncate(cells.x), Truncate(cells.y), Truncate(octaves), scale.x, scale.y, out);
+            MakeNoiseTexture(Truncate(cells.x), Truncate(cells.y), Truncate(octaves), scale.x, scale.y, out);
         }
         if (rampH) {
             Vec2 size;
@@ -990,8 +991,7 @@ void cTextureCommand::Execute(cp::cIArguments *args)
             face.EvalVector3(&from.x, rampH[1], 3);
             face.EvalVector3(&to.x, rampH[2], 3);
             void **out = image.AsPPVoid();
-            OriginalFunction<void(__cdecl *)(int32_t, int32_t, const Vec3 *, const Vec3 *, void **), 0xaec8e0>()(
-                Truncate(size.x), Truncate(size.y), &from, &to, out);
+            MakeRampHTexture(Truncate(size.x), Truncate(size.y), &from.x, &to.x, out);
         }
         if (rampV) {
             Vec2 size;
@@ -1000,19 +1000,18 @@ void cTextureCommand::Execute(cp::cIArguments *args)
             face.EvalVector3(&from.x, rampV[1], 3);
             face.EvalVector3(&to.x, rampV[2], 3);
             void **out = image.AsPPVoid();
-            OriginalFunction<void(__cdecl *)(int32_t, int32_t, const Vec3 *, const Vec3 *, void **), 0xaecba0>()(
-                Truncate(size.x), Truncate(size.y), &from, &to, out);
+            MakeRampVTexture(Truncate(size.x), Truncate(size.y), &from.x, &to.x, out);
         }
         if (mipTest) {
             Vec2 size;
             face.EvalVector2(&size.x, mipTest[0], 2);
             void **out = image.AsPPVoid();
-            OriginalFunction<void(__cdecl *)(int32_t, int32_t, void **), 0xaec310>()(Truncate(size.x), Truncate(size.y), out);
+            MakeMipTestTexture(Truncate(size.x), Truncate(size.y), out);
         }
         if (normalCube) {
             uint32_t size = face.EvalUint(normalCube[0]);
             void **out = image.AsPPVoid();
-            OriginalFunction<void(__cdecl *)(uint32_t, void **), 0xaec4a0>()(size, out);
+            MakeNormalCubeTexture(size, out);
         }
         if (falloffCube) {
             uint32_t size = face.EvalUint(falloffCube[0]);
@@ -1022,8 +1021,7 @@ void cTextureCommand::Execute(cp::cIArguments *args)
             face.EvalVector2(&range.x, falloffCube[2], 2);
             float power = face.EvalFloat(falloffCube[3]);
             void **out = image.AsPPVoid();
-            OriginalFunction<void(__cdecl *)(uint32_t, const Vec2 *, const Vec3 *, int32_t, void **), 0xaebd70>()(
-                size, &range, &color, static_cast<int32_t>(power), out);
+            MakeFalloffCubeTexture(size, &range.x, &color.x, static_cast<int32_t>(power), out);
         }
         if (image)
             VirtualCall<void(__thiscall *)(void *, cIGZUnknown *, const char *, uint32_t), 20>(Manager(), image.Get(), name, 1);

@@ -460,6 +460,56 @@ Still to build (D1 / M2 on):
 5. Reused: `tests/shape.h`, `tests/sg_deleting_destructors.h`, `tests/ts_services_fixture.h`, `tests/code_patch.h`,
    `tests/game_allocator.h`.
 
+## Lighting test fixtures
+
+The cLightingManager tests (rows LG1-LG4, lane 261109s) share three headers. Each header's top comment lists what it
+fakes. Include the highest one you need and extend it there rather than copying it. Every header is in an anonymous
+namespace, so each test file gets its own copy.
+- **`tests/sg_lighting_common.h`** (no fakes). It holds:
+  - the log `gLog` and `L`, the bit casts `U` / `Fl` / `P`, and `LF` (floats logged);
+  - `Hash`, a null-safe FNV-1a over a string;
+  - the two seed hashes `Mix` (world, eval, life) and `Mix2` (rebuild, room portals). They are different functions: keep
+    the one your draws were made with;
+  - `Word<T>`, `PutWord` and `PutFloat`;
+  - the draws `Nice` and `NaN`, and `Wide`;
+  - `AtBothPrecisions(ctx, what, cases, run(seed, label))` and `SidesAtBothPrecisions(ctx, what, cases, count,
+    side(draw, s))`. The second runs the original (s 0) and ours (s 1) from one draw at 53-bit, then at 24-bit (draw + 0x100000),
+    compares them with svcfx::Same and, with `count`, adds one ctx.cases per seed;
+  - `SavedGlobals`: `Save(rva, bytes)` in a derived constructor, restored by the destructor, and `Append(blob)`.
+- **`tests/sg_lighting_world.h`**. Used by eval, passes, sky, LG4a's builder fixture `sg_lighting_build.h` (and so
+  build and portals), and through `sg_lighting_tiles.h` by vertex, walls and edges. It holds the 0x548-byte manager
+  object, the light sets, the name / map / terrain fakes and `Build(seed)`. config and life use only common.h.
+- **`tests/sg_lighting_fakes.h`**, namespace `lightfx` (LG4: rebuild, room portals, portals). Call `FillShared()` first
+  in a test's FillTables, then set the test's own `gIdOf` (references as ids in the log), `gMake` (the object for a COM
+  class id) and `LotValues(table)`. It holds:
+  - FakeRef nodes, lights and texture lights over `gNodeVT` / `gLightVT` / `gTextureVT`;
+  - the framework 0x1ae18d's GetClassObject, the scene manager, the name 0xae78f0 and direction setters, and the
+    manager's slot-36 lot value;
+  - the light constructors 0x3c7fd0 / 0x3c8120 / 0x3c7de0 (`gMade`);
+  - the lerp sets: the pool `gLerps`, Construct into `gNewLerps`, and the Lerp* fakes;
+  - `StandSprintf`.
+  - For LG4h (tests/sg_lighting_shadow.cpp, tests/sg_lighting_step.cpp): `FakeGrid` behind the system's slot 40 (the
+    terrain: slots 7 size, 8 point, 9 normal); `FakeTexture` by class 0x1c4a276c through `MakeTexture` (slots 1/2, 6
+    create, 9 lock, 18 fill, 28 pitch); the texture handle 0xae8730, its face and the cached object 0xae8900
+    (`ShadowServices`); `Builders`, stand-ins on both sides for the 14 builders the Rebuilds call and 0x2d2a70, each
+    calling `gAfterBuilder` (a test can flip globals mid-run); `Stopwatches` (0x1c9030 / 0x1c9256 / 0x1c982b on both
+    sides, 0x1c95ec patched in the image: each watch numbered at +4 in construction order, Elapsed answering the
+    scripted `gReadings`); `StandSceneFlags` for 0xaeeea0 with the scene manager's slot 17.
+- **`tests/sg_lighting_init.cpp`** (LG3g, Init and Shutdown) uses none of these: it builds on `tests/ts_services_fixture.h`
+  (svcfx; `kSlots` raised to 96 for cILightRefNode's SetLight, slot 93) with its own heap watch (`Ident`: fakes, heap
+  blocks by allocation number, the +0x2c holder), `Snapshot` (the manager's words logged at every call), `Tick` (the
+  n-th call writes drawn words into the manager, so members read again after a call are seen; 16 per run, half within
+  the first 16 calls: 4 per run at 300 seeds missed the +0x18 re-read after one Release) and stand-ins for the
+  walk, the cDiffusionManager and cLerpLightSet constructors, SetKeys, the texture manager and registry getters and
+  the texture handle. Every `Globals::Set` / `SetWord` goes before `StartSide()` (the globals' vector grows).
+- Tests keep their own: config (`sg_lighting_config.cpp`: a smaller FakeRef whose SetIntensity does not store), portals'
+  build.h world (its own gLerps / LerpClearActive, so it uses `lightfx::` qualified names), and each test's id function,
+  maker and lot table.
+- **Moving a test onto the headers**:
+  - before: save its per-test case counts (`difftest.ps1 -Filter ...` without `-Summary`, the `cases)` lines);
+  - after: compare them with Compare-Object;
+  - rerun a few of its old mutants.
+
 ## Pitfalls and risks
 
 General pitfalls. Class-specific ones ("What bit lane X") are in each class's section.
@@ -3655,6 +3705,457 @@ The command parser's image references (lanes RQ, RS, RU) and lane RW's cRZRefCou
 message-server getter references were per-lane gate work: their records are in the archive; the gate's current list is
 in the O assessment.
 
+## nGZSceneGraph free helpers (row group SU: SGUtilities)
+
+The cdecl helpers our lighting, shadow, cinematic, CAS and effects code reached through `OriginalFunction`. Source
+src/sg/SGUtilities.h / .cpp, hooks src/hook/tables/SGUtilities.cpp, status db/status/SGUtilities.jsonl, tests
+tests/sg_utilities.cpp (readers, transforms) and tests/sg_utilities_tree.cpp (tree and extension helpers, on a random
+tree of node fakes with extension chains and a framework stand-in).
+
+### Result (lane 261111b, 2026-11-11)
+
+| RVA | Size | Name | Notes |
+|---|---|---|---|
+| 0xaf7190 | 116 | ReadFloatProperty | parser slot 27 (variable text), then slot 23 (function table); our ExpressionEvaluator; changed = !(new == old) |
+| 0xaf7210 | 119 | ReadIntProperty | rounds by adding 1.5 * 2^23 (0xd9ff00) and taking the bits less 0x4b400000 |
+| 0xaf7110 | 114 | ReadBoolProperty | one byte, 1 unless the value == 0.0 (NaN gives 1) |
+| 0xaf7290 | 387 | ReadVector3Property | 3 or 4 elements; changed when an element is more than 31 ULPs off (sign-folded bits, -0 == +0) |
+| 0xae78f0 | 14 | SetNodeTag | slot 19 |
+| 0xae7900 | 9 | GetNodeTag | slot 26 (hookable: 9 bytes) |
+| 0xae7490 | 298 | FindNodeByName | QI transform 0xe51c10f5, tag _stricmp; children 42 / 38, skip flag (>= 0) on children only |
+| 0xae7820 | 197 | FindNodeOfKindByName | IsKindOf (25) then tag; the hit's QI answer is the result |
+| 0xaead10 | 107 | SubtreeHasFlag | const walk 41 / 37, no skip |
+| 0xaeb0e0 | 167 | SetLayersByFlag | AddLayer 77 then RemoveLayer 79 when flagged; skip flag on children |
+| 0xaed420 | 211 | ForEachShapeBind | QI shape-ref 0xa516cd10; every shape's slot 34 (a, b) first to end; all children; release last |
+| 0xae1ed0 | 113 | AnimatedFaceOf | FindExtension 0x1aff3bd4; released through the face's virtual base |
+| 0xaeb5b0 | 238 | FindDataList | FindExtension 0x6a836d51 from `after`'s GetNext; a miss releases what it wrote |
+| 0xaeb3f0 | 294 | GetOrAddDataList | reuse: FindDataList; else framework CreateInstance(0x6a836d56), AddExtension, SetListName (ORIGINAL-BUG: unchecked) |
+| 0xaeb2c0 | 166 | RelativeTransform | node's world transform first, Invert 0x19cd80, bone's Compose 0x19c080 |
+| 0xaeee30 | 102 | AimNode | Quaternion::SetRotationBetween(-Z (the negated 0x1073698), dir), slot 65 |
+| 0xaf22d0 | 106 | ProjectBox | orthographic byte = m[14] == 0 && m[13] == 0; projector 0xaf25a0 (thiscall, still original) |
+| 0xae7d00 | 345 | GrowByShapeBounds | (box, skip, frameNode, node), recursive: TestFlag(4) && !slot 70 && slot 97 -> frameNode's world transform inverted, as a frame (flags word 1, offset, SetRotation), slot 71 box in it, Grow; children 42 / 38 with the skip flag |
+| 0xae42c0 | 218 | ChannelOwnerOf | animated face slot 59 FindExtension 0x48ece762; on success the extension's second virtual base slot 12 (0x6a6fd04d); the answer released (returned uncounted) when found, the extension always released when written |
+
+19 functions, 3,321 bytes. Mutants: in the status notes.
+
+Call graph facts for the tests: the original's _stricmp on a null list name is a CRT invalid-parameter fast fail (the
+tree test keeps list names non-null). The readers' texts must avoid evaluator throws: more than four elements, quotients
+by near-zero values and malformed numbers all throw cError through the reader.
+
+### Result (lane 261111c, 2026-11-11)
+
+All cdecl, hooked in `src/hook/tables/SGUtilities.cpp`, verified by difftest (tests named in the status entries) with
+mutants (notes in `db/status/SGUtilities.jsonl`).
+
+| RVA | Size | Name | Notes |
+|---|---|---|---|
+| 0xae2dc0 | 176 | CreateChoreoQueue | framework CreateInstance of the choreography queue for a node (src/sg/SGUtilitiesChoreo.cpp) |
+| 0xae39c0 | 567 | AttachChoreoQueue | QI 0x5ca76db6 -> SetNodeTag "cinecam"; AnimatedFaceOf or CreateChoreoQueue; the 0xa9de6c97 / 0xc8ebf854 extensions found or created and added |
+| 0xae3c00 | 207 | DetachChoreoQueue | face slot 0 (1); vbase slot 18 then 23; the owner (slot 54) slot 15 >= 0 then slot 7 |
+| 0xae4ef0 | 483 | MakeAnimationBlend | cdecl, all 12 words on the stack (the decompiler's "register arguments" were wrong); 1e-6 / 0.9999 frame-time arithmetic; result's slot 2 with 13 arguments |
+| 0xae1f50 | 812 | AttachAnimation | 22 stack words; CreateInstance(0xc9de69b6, 0xc9de69ad); controller vbase slots 9-20, 24-26; the kind checks gate slot 21; param_2 slot 10 attach |
+| 0xaef950 | 1,183 | MakeConeMesh | (out, radius, length, cap byte, segments): the spot light's bound mesh |
+| 0xaf05b0 | 1,071 | MakeSphereMesh | (out, radius, segments, name, tangents byte): the point light's bound mesh |
+| 0xaeeea0 | 1,125 | RebuildLightBounds | was t_SetSceneFlags: (scene, flags); cBranchNodesIIDFilter walk of the lights, each light's bound mesh rebuilt by type (sphere for point lights, cone from tan(half angle) for spots); callers cLightingManager's Rebuild/Update now call ours |
+| 0xaf16f0 | 992 | MakeQuadMesh | (out, centre, size, uvLow, uvHigh), returns out; half size as float(double(v) * 0.5); one "layer" group of four corners; node and mesh creation unchecked (ORIGINAL-BUG); cShadow's MakeQuadGeometry now calls ours |
+
+9 functions, 6,616 bytes. Callers switched to ours: cLightingManager (0xaeeea0), cTSModelEffect 0xc05cf0 (cone and
+sphere), cShadow (0xaf16f0); their tests stand these in on both sides (`shape::StandIn`).
+
+Test facts: NaN operand order (`AddS`/`SubS` operand order) is only seen when both operands are NaNs with different
+payloads, so the mesh and light tests draw a NaN with a random payload and sign for a quarter of the input words.
+
+### Left: call tables (still original)
+
+- **0xaf25a0 (3,187 B, ProjectBox's projector)**: thiscall, `ret 8` (two stack words); called by ProjectBox 0xaf22d0
+  with the orthographic byte at *this. Writes float bounds into this+4..0x2b, seeded with -1e6 / 1e6 (0xc9742400 /
+  0x49742400); picks the matrix row offset 0x20 or 0x30 by the byte *this. Callees: 0x19d390 BoundBox::Corner (ours,
+  verified) and 0x1a6840 (69 B, cdecl, unnamed: a four-float dot product returned on x87; also called by 0x1a6890,
+  0x98bca0, 0xb4dad0, 0xb4ee40, 0xb501a0). Has x87 float10 parts: test it at both x87 precisions with NaN payloads.
+
+### Scout of 0xae2280-0xaf4000 (lane 261111d, 2026-11-11)
+
+What was left in the region with no status entry, 100 B and up (72 functions, about 48.5 KB), from the call edges,
+the decompiles and the callers' names. Everything below is cdecl unless marked thiscall. "Ours" means a status entry
+exists; the unowned callees outside the region are listed per batch. Names are tentative unless a test settled them.
+
+**Library / STL instances (never reimplemented):** 0xaea660 vector<Blob<4>>::_Emplace_reallocate, 0xaf3700
+vector<StrBlob<36>>::_Tidy (both already marked), and by their bodies 0xaf3220 (108 B: destroy range of 36-byte
+{word, cRZString} elements, the string's free inlined) and 0xaf3290 (560 B: the same vector's reallocation, max_size
+0x71c71c7, called from 0xaf4650, itself vector<StrBlob<36>>). Run `tools/libmatch.py` on 0xaf3220 / 0xaf3290 before
+anyone touches them.
+
+**Small members met on the way (under 100 B, owned by this lane's part 3 or to be named):** 0xaea7a0 is
+cBranchNodesIIDFilter's constructor (thiscall (iid): +4 = iid, vptr; was mislabelled std::codecvt_base::codecvt_base),
+0xaea7c0 cBranchNodesMaskBitAndIIDFilter's (thiscall (mask, iid)); 0xae8800 / 0xae8820 / 0xae8840 / 0xae8870 /
+0xae88a0 / 0xae8a00 are the material-index handle (ShapeMaterialHandle in src/sg/cShape.h): copy, from an index, from a
+name (manager slot 19 then 20), destructor (EH-framed wrapper of 0xae8a00), Assign, release body. 0xae6870 NameCrc
+(Crc32 of a non-empty string, else 0), 0xae4470 (slot 77 != 0x2fa18737), 0xae50e0 (slot 10, slot 26(0), its slot 7 vs
+1e-6), 0xaeb6a0 RemoveDataLists (every FindDataList hit removed through slot 23), 0xaebd00 / 0xaebd30, 0xaf4250 /
+0xaf42a0.
+
+| RVA | Size | What it is | Callers | Unowned callees |
+|---|---|---|---|---|
+| **Anim / IK / locomotion helpers (cAnimatable, cLocomotable, nGZSceneDBAnim)** | | | | |
+| 0xae2280 | 2241 | locomotion set-up (cLocomotable vf52): "subset0" box parts (0xaef5b0), shape refs, _itoa names | 0x281aa0 | 0xae6990, 0xaef5b0, 0xc63510, 0x1ad812 |
+| 0xae6990 | 1231 | its helper: a ring of parts from sin/cos (CRT libm), framework-made geometry 0x5ba38381 | 0xae2280 | 0x1ad812 |
+| 0xae2b50 | 623 | cAnimatable vf33: framework object 0x2a6f2e97 set up | 0x279630 | |
+| 0xae2e70 | 473 | AnimatedFaceOf-like (0x1aff3bd4, 0xc9de69ad) on a tagged node | 0x9d2a00 | 0xaf4250, 0xaf42a0 |
+| 0xae3050 | 1890 | debug dump of the animation channels ("*** %d [%d] "), cAnimatable vf29 / vf31 | 0x26faf0, 0x276090, 0x276ed0 | 0x1ad812, 0x1ad827 |
+| 0xae37c0 | 505 | IK: face (AnimatedFaceOf) slot lookups 0x6e80a11a / 0xe9075bbe, returns bool | 0x9f7eb0, 0xa002c0 (cActiveAnimIK) | 0xae76f0 |
+| 0xae3cd0 | 727 | (node, float, flag): framework 0x5ca10ca7 instance on every tree node; 8 callers (CAS thumbnails, sim view) | 0x271dc0 ... | |
+| 0xae3fb0 | 776 | (node, a, b, flag, out): named-node lookup through AnimatedFaceOf and 0xae75c0 | 0x26bfc0 | 0x1ad827 |
+| 0xae43c0 | 161 | clamp a 3-vector to the limits at 0x1070f1c..f28; returns whether clamped | 0xa021a3, 0xa063b3, 0xae4490 | |
+| 0xae4780 | 379 | look-at angles from a direction (flag picks y or z), x87 0x831270 | 0xa063b3, 0xae4490 | 0x831270 |
+| 0xae4490 | 752 | look-at: RigidInvert / Compose (ours), 0xae43c0 / 0xae4780 | 0x279630 | 0xc63690 |
+| 0xae4900 | 1025 | blend controller 0x8b969d59 made and set (sqrt) | 0x281aa0, cActiveAnimLoco | |
+| 0xae4d10 | 458 | same family, no sqrt | 0x281aa0, cActiveAnimLoco | |
+| 0xae5140 | 812 | same family (cAnimatable vf24 / 34 / 36) | 0x26be70, 0x26e100, 0x27aae0 | |
+| 0xae5470 | 971 | per-channel time update (0xae50e0) | 0x272680 | |
+| 0xae5840 | 2611 | dynamics behaviour set-up ("DynamicsBehavior*", "tsDynamicsBehavior.s"), branch-filter walk | 0x28e060, 0x28f890, 0x627e26 | 0xc63380 |
+| 0xae6290 | 1493 | IK targets from node names ("_grip", "_hair", "_ikctr", "_ikpole", "control0") | cLocomotable vf49 / vf50 | 0xc63600, 0xc63690, 0xc63af0 |
+| 0xae6900 | 141 | name with a two-letter side prefix swapped (left / right strings at 0x10714f0 / f4) into a string builder | cIKChain, cIKTarget, ... (10) | |
+| 0xae75c0 | 298 | recursive find by tag (_stricmp) under transform nodes | 0x259350, 0xae3fb0 | |
+| 0xae76f0 | 304 | recursive find through 0xaeb820 | 0x270fb0, 0xae37c0 | 0xaeb820 (114) |
+| **Tree walks and lookups (free, on the sg_utilities_tree fixture)** | | | | |
+| 0xae7e60 | 146 | recursive: flagged nodes' slot 93 list, each slot 45(0); children 42 / 38 | nTSSG managers (7) | |
+| 0xaeb070 | 105 | recursive: TestFlag(5) -> slot 81(node) | 4 | |
+| 0xaeb190 | 123 | recursive: TestFlag(5) -> slots 78, 80 | 4 | |
+| 0xaeb210 | 162 | recursive mask filter (slot 49 flags against four masks), slot 66 | cSceneManager (6), ... | |
+| 0xaeb520 | 134 | FindDataList in the subtree (children 41 / 37, skip flag) | 0x25b950, 0xb3c070 | |
+| 0xaeb8a0 | 246 | the node's shape ref, or its first child's (QI 0xa516cd10) | 6 | |
+| 0xaeb9a0 | 198 | first child that is a transform node (QI 0xe51c10f5) | 4 | |
+| 0xaeba70 | 136 | t_ModelOfMesh: QI shape ref, else 0xaebb00 | 20 | |
+| 0xaebb00 | 360 | its recursive search | 0xaeba70 | |
+| 0xaebc70 | 141 | (node, x): slot 50's object slot 39(x); bool | 12 | |
+| 0xaed340 | 214 | (a, node, target): the node's iterator (slot 42 as an iterator: 4 / 5 / 6), target slot 34(a, each) | 25 | |
+| 0xae8090 | 431 | the texture-name walker of cTSCommonSystem::CollectTextureKeys | 0xcb9ee0 | 0xa53cf0 |
+| 0xaea980 | 109 | recursive collector into a vector<Blob<4>> | cTSSimOutfitData vf108 | |
+| 0xaea9f0 | 232 | recursive collector of shape refs (0x18b860 emplace) | 4 | |
+| 0xaea840 | 315 | named search (_stricmp) | 0x292e60, 0xaeab90 | |
+| 0xaeab90 | 189 | framework 0x9d054f52 object for 0xaea840's hit | 0x3ad940, cTSSimOutfitData vf91 | |
+| **Skin / CAS model helpers (cISkinExtension 0x3ca0e8ab, "_cres" models)** | | | | |
+| 0xae9f70 | 227 | FindSkinExtension(node, id, after) | 0x25dd70, 0x290380 | |
+| 0xaea100 | 238 | same by name (_stricmp) | 3 | |
+| 0xae9da0 | 457 | skin extension created (0xfca0e8b3) and added | 4 | |
+| 0xaea1f0 | 355 | rebind a skin's shapes' materials, cloning shapes counted twice or more (slot 15 0x3c6eb1f0) | 5 | |
+| 0xaea360 | 321 | undo a skin's bindings (slots 15 / 3 / 5 / 7 / 19 / 18) | 5 | |
+| 0xaea4b0 | 265 | every skin extension of a node undone (0xaea360) | 10 (CAS UI) | |
+| 0xaea5c0 | 149 | same, first one | 4 | |
+| 0xae8fd0 | 1993 | skinning / IK morph set-up ("DynamicsBehavior*", "IKTargetMorph*"), branch filters | 0xae8a20, 0xae97a0 | |
+| 0xae8a20 | 1441 | object model load ("_cres", ParseKey, ToLower) then 0xae8fd0 | cObject vf3, 0xba7d90, 0xba9910 | 0x38c800, 0x1ad812 |
+| 0xae97a0 | 1523 | the same for a person part | 0x3a98d0, 0x3a9bd0 | 0x38c800, 0x1411c0 |
+| **Geometry data container helpers (builders)** | | | | |
+| 0xaed500 / 0xaedbb0 | 108 / 273 | thiscall: 16-byte result zeroed, then a GMDC element search (vector<Blob<4>> 0x1461c0) | builders (3) | |
+| 0xaed570 / 0xaedcd0 | 105 / 252 | the same by name (_stricmp) | 6 | |
+| 0xaeda40 | 130 | element header lookup (LinkedElementHeader, ours) by (node, kind, index) | 14 | |
+| 0xaedfa0 | 142 | its index form, -1 when absent | 11 | |
+| 0xaee2c0 | 680 | element read into vector<short> (cIndexedIterator ours) | 0xa8cbc0 | 0xa7b0f0, 0x483a60 (lib) |
+| 0xaee570 | 683 | same into vector<Blob<12>> | 0xa8dd90 | 0xa7b0f0 |
+| **Texture commands (cTextureCommand vf4 0xad6f30, ours; all done by lane 261111g, src/sg/SGUtilitiesTexture.cpp)** | | | | |
+| 0xaebd70 | 1068 | MakeFalloffCubeTexture, done | 0xad6f30 | 0x18e0b0 (CubeDirection), 0xaebd00 (Pow), both done |
+| 0xaec1a0 / 0xaec310 | 358 / 387 | MakeDensityTexture / MakeMipTestTexture, done | 0xad6f30 | 0xc631e0 (HueColour), done |
+| 0xaec4a0 / 0xaec6b0 / 0xaec8e0 / 0xaecba0 | 520 / 554 / 697 / 685 | MakeNormalCubeTexture / MakeNoiseTexture / MakeRampHTexture / MakeRampVTexture, done | 0xad6f30 | |
+| 0xaece50 | 477 | MakeTextureFromBuffer (cIGZBuffer copied into a one-level image, TextureManager Add), done | 0x5827e0 (ours), 0xc251a0 | |
+| 0xaf2450 | 323 | CaptureViewerTextures, done (lane 261111l) | 0x36b3e0, cScreenGrabber, 0xc08050 | |
+| **Meshes (the sg_utilities_mesh fixture applies as is)** | | | | |
+| 0xaef5b0 | 924 | MakeBoxMesh (part 3 of this lane) | cTSModelEffect, look-at, 0xae2280, ... | |
+| 0xaf09e0 | 2610 | the pool water's rect mesh ("rectMesh", "bump_%d", sqrt); done (lane 261111n) | cTSCommonPoolWater vf8 | |
+| 0xaf1420 | 718 | MakeBillboardQuadMesh, done (lane 261111e) | 0xaf3860 | |
+| 0xaf1ad0 | 992 | MakeQuadMeshXZ, done (lane 261111e) | 0x7357b9 | |
+| 0xaf1eb0 | 838 | MakePlainQuadMesh, done (lane 261111e) | 0x73199b, cTSScreenEffect | |
+| 0xaf25a0 | 3187 | ProjectBox's projector (part 3 of this lane) | 0xaf22d0 | |
+| **Text billboard (cTextureTextUpdateStrategy)** | | | | |
+| 0xaf3860 | 2124 | MakeBillboardTextOutput, done (lane 261111m) | 0x9d4c50 | |
+| 0xaf3560 | 383 | cTextureTextUpdateStrategy's constructor, done (lane 261111m) | 0xaf3860 | |
+| 0xaf37f0 | 112 | cTextureTextUpdateStrategy::Push, done (lane 261111m) | 0xaf4250 | |
+
+SU4 result (lane 261111e): the three small makers are ours and byte-checked by difftest (480 cases each, NaN words, both
+x87 precisions). Facts: all three create the node 0x7ba3838c and mesh builder 0x9bffc10d, call AddPart (slot 32), Reset(0),
+then AddPosition / AddTexCoord / AddNormal and the group "layer" (0xdba3c8) through SetGroupName, MarkUnknown, AddIndex(5,k)
+(0xaf1420, 0xaf1ad0) or AddPositionIndex(k) (0xaf1eb0), CommitGroup, Finish, Release; neither result is checked. Half sizes
+are `float(double(v) * 0.5)` (the double at 0xda1870 is 0.5); the "+ 0" on one centre coordinate (0xaf1ad0 y, 0xaf1eb0 z)
+is a real AddS and quietens a NaN. 0xaf1eb0's normal is the never-written global at 0x1073e98 {0,0,1}. All callers are
+original code, so no switch was possible.
+
+0xaf09e0 (the pool water's rect mesh) left as a call table: it is a class-sized function, not a recipe fit. Parameters are
+a record at ebx (+0x8 result cell returned, +0xc width, +0x10 height, +0x14 columns, +0x18 flag byte, +0x1c / +0x20 offset
+flags, +0x24 mode 0..3). Calls: framework GetClassObject for the node and the mesh builder (0x7ba3838c, 0x9bffc10d) and two
+more objects held through virtual bases (released at [ebp-0x20/0x24/0x28] with slot 2 via the vbase offset), AddPart x4,
+Reset(0), SetMorphTargetCount(count) with count from a 1.5*2^23 rounded sqrt, per vertex AddPosition (0x9), AddNormal (0x10),
+AddTexCoord, per morph target a cRZString Sprintf "bump_%d" (0x1ad6f7, format at 0xe7d2b0) feeding the builder's slot 0x48
+SetMorphNames (name string at 0xe7d2b8), AddMorphPosition (slot 0x5c) and AddMorphNormal (slot 0x60, only when the flag
+byte is set, normalised with sqrt through _libm_sse2_sqrt_precise at 0x82fc60); then SetGroupName 0x6c (string 0xdb30fc), and
+a face loop over (height-1) x (width-1) cells that emits triangles with slots 0x70 (begin), 0x9c (AddIndex kinds,value x2..3),
+0x90 (arg 0, when the flag is clear), 0x74 (end), in a pattern chosen by mode (0, 1, else; mode 3 alternates per cell by
+(row ^ col) & 1 + 1), then Finish (slot 1) and Release of the four objects. Unowned or unverified: slots 0x5c, 0x60, 0x70,
+0x74, 0x90, 0x9c, 0x48 of the mesh builder (arity not checked), the two vbase-held objects, and cRZString::Sprintf
+(0x1ad6f7); the float chain per morph (about 60 instructions) needs a fake builder with morph slots. Estimated a lane of its
+own (Opus): fakes for the morph slots, a Sprintf name fake and the sqrt at both precisions.
+
+Proposed lanes, bottom-up (each 5-8 KB; the region's callees are mostly ours or in an earlier batch):
+
+1. **SU4 meshes** (5.2 KB, Sonnet): 0xaf1420, 0xaf1ad0, 0xaf1eb0, 0xaf09e0. Recipe: tests/sg_utilities_mesh.cpp as is
+   (the geometry-node fakes, NaN words, both precisions); callers switch: cTSScreenEffect, cTSCommonPoolWater if ours.
+2. **SU5 tree walks** (4.5 KB, Sonnet): the "Tree walks and lookups" block plus 0xaeb6a0, 0xae6870, 0xae4470,
+   0xae6900. Recipe: tests/sg_utilities_tree.cpp's random tree and extension chains; 0xae8090 needs 0xa53cf0 (347 B,
+   unowned: take it along) and a cTSCommonSystem caller check; 0xaea980 / 0xaea9f0 grow vectors (reserve before the
+   allocation counter).
+3. **SU6 geometry-container and texture-command helpers** (7 KB, Opus for the commands): the two blocks above. The
+   container helpers use cGeometryDataContainer fakes (tests/sg_geometry_* fixtures); the commands need the image
+   fakes of tests/sg_light_map_manager.cpp (0x1c4a276c / 0xfc49f6ee) and 0x18e0b0, 0xc631e0 (unowned, 258 / 412 B)
+   first; split the commands off if 0xc631e0 turns out to be a class member.
+4. **SU7 skin / CAS model** (7.5 KB, Opus): the skin block. Needs 0x38c800 (411 B) and 0xaea7a0 / 0xaea7c0 (the
+   branch filters' constructors: 0xae8fd0 builds them on the stack and runs the filter walk); fakes: a skin extension
+   (20 slots, src/sg/cSkinExtension.h) and a resource manager answering "_cres" keys.
+5. **SU8 / SU9 anim and IK** (17 KB, Opus, split in two or three): look-at / IK first (0xae43c0, 0xae4780, 0xae4490,
+   0xae37c0, 0xae76f0, 0xae75c0, 0xae3fb0, 0xae6290, 0xae2e70: about 5 KB; needs 0xc63600 / 0xc63690 / 0xc63af0,
+   0xaeb820), then the controllers (0xae4900, 0xae4d10, 0xae5140, 0xae5470 + 0xae50e0, 0xae2b50, 0xae3cd0: 4.7 KB,
+   reuses tests/sg_utilities_anim.cpp's blend fakes), then 0xae5840, 0xae3050, 0xae2280 + 0xae6990 (8 KB; after SU4,
+   needs 0xc63380 / 0xc63510). Text billboard (0xaf3860, 0xaf3560, 0xaf37f0: 2.6 KB) goes with the
+   cTextureTextUpdateStrategy class lane, not here.
+
+SU8a result (lane 261111i, src/sg/SGUtilitiesIK.cpp, tests/sg_utilities_ik.cpp): verified and hooked QuatInverse 0xc63600,
+QuatMultiply 0xc63690, ClampLookAngles 0xae43c0, LookAngles 0xae4780, CanLookAt 0xae4490, FindNodeByNameConst 0xae75c0,
+FindNodeByTagCrc 0xae76f0, FindIKTargetNode 0xae37c0, CanFindIKTargets 0xae3fb0, ShowPlayingAnimations 0xae2e70 (4028 B).
+0xae6900 was already done by lane 261111f; 0xaeb820 is ours (GetCachedObjectB); 0x831270 is the CRT atan2 (library).
+Facts: the look-at maths keeps SSE operand order (a NaN's payload is the first operand's); LookAngles' atan2 goes through
+the CRT. FindIKTargetNode reads the rig's *second* virtual base (vbtable entry 2) and asks the target's name id twice (the
+face lookup gets the first answer). CanFindIKTargets (subject, other, chains, alt, bool *otherMissing): subject's first vbase
+slot 18 gives an object QI'd for the model (0x4512dd13, result ignored, pointer released); chains 51/20, links 36/20 (node id
+42 / alt 43, checked through subject slot 49), targets 47/23 (kind 15: 1 the subject, only with a model; 2 `other`'s animated
+face, or by name 16 / alt 17 with 0xae75c0 when it has none); id 22 / alt 23, 0 skipped, 0x6e80a11a returns true; all loops
+unsigned. A null name is copied into a std::string anyway (ORIGINAL-BUG, a fault). ShowPlayingAnimations (node, display):
+the animated face (0x1aff3bd4) as the queue; 0xaf42a0 clears and 0xaf4250 adds labels (colour 0xffffff00; the node's tag
+first, then each active, not-done entry's animation (QI 0xc9de69ad on the entry's first vbase) resource name from the
+animation's second vbase slot 34 -> resource's first vbase slot 17, empty names skipped); the count loop is signed.
+0xaf4250 / 0xaf42a0 stay original (OriginalFunction): they belong with the text billboard class lane.
+
+Left for SU8b: **0xae6290** (1493 B, IK targets from node names), `mapped`: it needs 0xc63af0 (1001 B, quaternion to
+Euler angles by its use, tentative name QuatToEuler) owned and verified first; QuatInverse / QuatMultiply, which it also
+calls, are now ours. Then the SU8b controller rows above (0xae4900, 0xae4d10, 0xae5140, 0xae5470 + 0xae50e0, 0xae2b50,
+0xae3cd0).
+
+SU8b result (lane 261111j): verified and hooked 11 functions, 7535 B.
+- IK (src/sg/SGUtilitiesIK.cpp, tests/sg_utilities_ik.cpp): QuatToMatrix3 0xc63b20 (q, stride), Matrix3ToEuler 0xc63c50
+  (its gimbal epsilon is .data 0x10859e8 entry 8, 0x387f0000, never written), QuatToEuler 0xc63af0 (the wrapper),
+  MakeIKTargetsFromNames 0xae6290 (2831 B with the three).
+- Controllers (src/sg/SGUtilitiesBlend.cpp, tests/sg_utilities_blend.cpp, 4704 B): BlendOverlapMode 0xae50e0,
+  MakeBlendForSource 0xae4d10, MakeTransitionBlend 0xae4900, StartControllerBlend 0xae5140, RetimeControllerBlends
+  0xae5470 (calls our 0xae50e0), MakeControllerInstance 0xae2b50, ScaleSkeleton 0xae3cd0.
+Facts: the blend (class 0x8b969d64, iid 0x8b969d59) is set up through its slot 2 (13 words: kind, overlap mode, three
+params, fade in, fade out, length, five more); its getters are 10 time, 11 elapsed, 14 length, 15 / 16 fades, 20-22
+params, 24 span(from, to), 26(0) a curve whose slot 7 is the lead. "No length" is 2147483392 (0x4efffffe). The fits
+thresholds are length + 1e-6 (squeeze) and length + 1e-5 (report not fitting); mode 0 squeezes the fades by
+length / total * 0.9999, mode 1 turns into mode 2 when half the fades overlap. MakeTransitionBlend scales its phase
+terms by sqrt(length / total) (three of them also by 0.98). Retime mixes x87 (memory-operand NaN rules) with SSE; the
+controller's getters (state 30, ticks 35 / 39 (0x80000100 none), blend 45, index 47, rate scale 49) are on an unsettled
+controller class. ScaleSkeleton: the owner (skeleton's first vbase slot 18) is QI'd for the model (0x4512dd13); a
+traversal (0x5ca10ca7) lists the nodes; bone-scale extensions (0xe9075bbe, slot 7 axis, 8 weight) pick the axis (0-2,
+4 all, 3 none). ORIGINAL-BUGs kept: a failed CreateInstance is called through null; ScaleSkeleton's axis outside 0-4
+writes the original's own stack frame (not reproduced; axis 5 would rescale the ratio for later nodes).
+
+SU9 plan (done by lane 261111k, below) (0xae5840 2611 B, 0xae3050 1890 B, 0xae2280 2241 B + 0xae6990 1231 B):
+0xae5840 needs 0xc63380 (branch-filter walk) and the dynamics behaviour strings; 0xae2280 needs 0xc63510 and 0xae6990
+(sin/cos through the CRT) and calls our MakeBoxMesh 0xaef5b0; 0xae3050 is a debug dump (cAnimatable vf29 / vf31, the
+"*** %d [%d] " format through 0x1ad812 / 0x1ad827). The blend fakes of tests/sg_utilities_blend.cpp (VObj with
+vbptr, the framework stand-in, the NaN-dense AnyFloat) are the fixture to reuse.
+
+SU9 result (lane 261111k): verified and hooked 6 functions, 8.6 KB; the SU rows with a known caller are done.
+- QuatRotate 0xc63380 and QuatFromAxisAngle 0xc63510 (src/sg/SGUtilitiesIK.cpp, tests/sg_utilities_ik.cpp).
+- MakePathRibbonMesh 0xae6990 and MakeLocomotionRequest 0xae2280 (cLocomotable vf52; src/sg/SGUtilitiesLoco.cpp,
+  tests/sg_utilities_loco.cpp): the request (class 0x9c1d008c, not ours) is set up from 31 arguments, its path shown
+  as a ribbon (0.1 apart, 0.04 wide) under the node owner's parent.
+- DumpAnimationChannels 0xae3050 (src/sg/SGUtilitiesAnimDump.cpp, tests/sg_utilities_animdump.cpp): the output sink is
+  compiled out; the getters and the cRZString::Sprintf texts are all that is observable.
+- MakeDynamicsBehaviors 0xae5840 (src/sg/SGUtilitiesDynamics.cpp, tests/sg_utilities_dynamics.cpp; callers 0x28e060,
+  0x28f890, 0x627e26): dynamics (class 0xfb00791d) with a behaviour set (0xa9de45ba); the kind is the first name of
+  the static table 0x1071460 (four {cRZString, float scale}, 0x24 each, built by 0x13f3a0: auskel 1, tuskel 1, cuskel
+  0.6, puskel 0.4) the skeleton answers slot 52 for (by NameCrc); scale = skeleton slot 67 x the table's (x87: NaN
+  pairs pick as Mul87). The owner (skeleton vbase 1 slot 18) is QI'd for the tree (0x4512dd13); slot 44 fills a
+  {cursor, begin, end} range over a cBranchNodesMaskBitAndIIDFilter (mask from skeleton slot 66, iid 0xe51c10f5).
+  Each tagged node with a "tsDynamicsBehavior.s" list of skin type 10 gets a behaviour (0x8c1eb8dc): value (-1 none,
+  0 loose 50 deg, 1 slider 0.03, 2 hinge narrowed toward the rest offset), rest pose, limits overridable by
+  DynamicsBehaviorLimit0..5 (degrees except value 1), stiffness 35, damping 10, and a spring (0x1b115b24, values 0/2,
+  pull y = scale x 0.3 / 0.2) or damper (0x5b0aff38, value 1) attached under key 0x9b5b3506. ORIGINAL-BUGs kept: the
+  dynamics, set and behaviour CreateInstance results are used unchecked.
+
+Result (lane 261111d, part 3): verified and hooked Dot4 0x1a6840, the projector 0xaf25a0 (ProjectBox now runs ours
+end to end), MakeBoxMesh 0xaef5b0 and the six shape material handle members 0xae8800 / 0xae8820 / 0xae8840 / 0xae8870
+/ 0xae88a0 / 0xae8a00 (4401 B; tests/sg_utilities_project.cpp, tests/sg_utilities_mesh.cpp). cTSModelEffect::Attach
+calls ours for all of them. Mutants 25 of 30 killed; the 5 survivors are equivalent (NaN-only or exact-negation
+differences that Fold's minss/maxss discard). Left: nothing with a call table (the handles are hooked, so their
+other image callers get ours too).
+
+Result (lane 261111f, SU5 part 1): verified and hooked eight tree walks and small helpers (src/sg/SGUtilitiesTree.cpp,
+tests/sg_utilities_tree.cpp): NameCrc 0xae6870, Slot77IsNotDefault 0xae4470, RemoveDataLists 0xaeb6a0,
+FindDataListInTree 0xaeb520, SetLayerTagInTree 0xaeb070, SetLayerBitsInTree 0xaeb190, SetBoundFlagInTree 0xaeb210
+(returns before touching children when (maskB & flags) && !(maskD & flags)), ResetShapesInTree 0xae7e60 (shape slot 45
+with 0 on flag-4 nodes). 32 mutants, 32 killed. Callers in src/ts still go through OriginalFunction (their stand-in
+tests patch 0xae7e60 / 0xaeb070 by RVA); the hooks make them reach ours anyway.
+Continued (same lane, part 2): verified and hooked seventeen more in the same files: ShapeRefOfNodeOrChild 0xaeb8a0,
+TransformOfChild 0xaeb9a0, ShapeRefOfNodeOrSubtree 0xaeba70, ShapeRefInSubtree 0xaebb00 (the four QI walks, tested with
+a dirty-QI fake: slot 0 writes a counted pointer and answers false; QI true with pointer, false with pointer, false with
+null), PassToSlot50Object 0xaebc70, BindNamedBuilderItems 0xaed340, AppendSideSwappedName 0xae6900, IndexOfNamedPair
+0xaea840, ApplyNamedPairs 0xaeab90, CollectNodes 0xaea980 and CollectShapes 0xaea9f0. The two collectors need no game
+allocator scope: the originals grow vector<Blob<4>> through std::allocator instances over the process heap
+(operator new 0x824632), so our std::vector<void *> crosses freely. In TransformOfChild and ShapeRefInSubtree a
+non-null held pointer ends the loop, so the held cell is null at the top of every iteration: the per-iteration
+release and the final Release are unreachable (those mutants are equivalent survivors).
+Callers switched to ours: nTSSGNHoodOccupantManager BuildScene (0xae7e60) and RebuildMergedLayers / AddRoadOccupant
+(0xaeb070); tests/ts_nhood_sg_manager.cpp stands them in with shape::StandIn on both sides (logs unchanged).
+Other callers of the new functions (cTSCASSystem 0xaeba70, Occupants 0xaeba70 / 0xaeb9a0 / 0xaeb8a0 / 0xaed340) still
+use OriginalFunction; the hooks route them to ours.
+Left with a call table (done since, lane 261111l): 0xae8090 (431 B, collects the names under an object for cTSCommonSystem::CollectTextureKeys;
+callees: STL instance 0xa53cf0, 0xaeb730, 0xaeb6f0, 0xaeb760, and 0xae8900 = GetCachedQueriedObject, ours). Not
+implemented: the three 0xaeb7xx / 0xaeb6f0 callees are unowned.
+
+Result (lane 261111g, SU6): verified and hooked 19 functions, 13.5 KB. Geometry containers (src/sg/SGUtilitiesGeometry.cpp,
+tests/sg_utilities_geometry.cpp): 0xaed500, 0xaedbb0, 0xaed570, 0xaedcd0, 0xaeda40, 0xaedfa0, 0xaee2c0, 0xaee570.
+Textures (src/sg/SGUtilitiesTexture.cpp, tests/sg_utilities_texture.cpp): the callees CubeDirection 0x18e0b0, Pow
+0xaebd00 and HueColour 0xc631e0, the seven generators, and MakeTextureFromBuffer 0xaece50. The texture tests log every
+image, texture and COM call in order, run both x87 precisions and NaNs of both signs, and read their constants from the
+image. Facts:
+- The generators build an image through the framework (0x1c4a276c), Init it, fill every level, then make a texture
+  (0xfc49f6ee, or the cube class) and Load it. *out is overwritten without releasing the old value; that is
+  reproduced (ORIGINAL-BUG in MaterialCommands.cpp).
+- 0xaece50 takes a cIGZBuffer and calls Lock(0x40) / Unlock(0x40). It copies GetBytesPerPixel*width bytes per row,
+  from GetColorSurfaceBits / Stride into the image's level 0, and adds the texture to the TextureManager (slot 20,
+  flags 1) only when the flag byte is set.
+
+Callers switched: cTextureCommand vf4 0xad6f30 (its seven generators), the SimAntics primitive 0x5827e0
+(src/simantics/PrimAA6D.cpp, for 0xaece50) and cTSCASBodyPartSystem::RefreshGeometry 0xce7ee0 (for 0xaeda40). Their
+tests (gz_material_commands_texture, simantics_prims_aa6d, cas_body_part_system_geometry) now stand both sides in with
+shape::StandIn.
+Mutants: 16 of 16 killed on the geometry helpers. On the texture code, 25 of 31 were killed and 6 survivors are
+equivalent:
+- "hue d >= 0": at d = +-0 both branches give the same value.
+- The from/to operand order in the ramp lerp: u is NaN only when t is, and the first addend is then already NaN.
+- The channel clamp at 0xfe: at x = 255 both give the byte 0xff.
+- RampV's denominator through int32: it differs only for heights above 2^31, which no image reaches.
+- Falloff's operand order in (range1 - range0) * magnitude and in inverse * dir: any NaN level clamps to byte 0
+  whatever its payload, and dir and inverse are never NaN.
+
+Left with a call table (done since, lane 261111l: CaptureViewerTextures): 0xaf2450 (323 B). It is cdecl (out, source), not thiscall, and it fills a texture handle state.
+- It sets out[0] = 0 and out[1] = 1.0f, then out[0x20] = source slot 0x1c4/4 (a bool). If that is set it returns.
+- Otherwise a cTextureHandle is built from slot 0x1b0's id (InitFromId 0xae8260), assigned to out+0x1c (0xae82e0) and
+  destroyed (0xae82b0). If out+0x1c is invalid (0x18c080) it returns.
+- Then out[0] = slot 0x1a4 (count), out[1] = field +8 of the record returned by slot 0x1b8(&local), and the counted
+  pointer at out+0x18 is replaced by slot 0x1ac's object (AddRef slot 1 on the new, Release slot 2 on the old).
+- For i < count, out+8+4i is replaced by slot 0x1a8(i)'s object the same way.
+  The array has room for four (it ends at +0x18), so a count above 4 would overwrite the out+0x18 cell.
+- Not implemented: the source class (slots 0x1a4-0x1c4) is not identified and the handle members' arity is unchecked.
+  It needs a source fake with those six slots plus the cTextureHandle fixtures; about one small lane.
+
+Result (lane 261111h, SU7): verified and hooked the whole skin block, 12 functions, 7012 B (src/sg/SGUtilitiesSkin.cpp,
+tests/sg_utilities_skin.cpp): FindSkinExtension 0xae9f70, FindSkinExtensionByName 0xaea100, AddSkinExtension 0xae9da0,
+RebindSkin 0xaea1f0, UndoSkin 0xaea360, UndoSkinsWithWord 0xaea4b0, UndoAllSkins 0xaea5c0, SetUpSkinning 0xae8fd0,
+LoadObjectModel 0xae8a20, LoadPersonPart 0xae97a0 and the branch filters' constructors 0xaea7a0 / 0xaea7c0.
+- 0xaea7a0 is cBranchNodesIIDFilter's constructor (the iid, then vtable 0xe7cf54; thiscall, ret 4), not
+  std::codecvt_base as the library match said: db/library-exclusions.jsonl has the line, and library-matches / names
+  need regenerating (coordinator). 0x38c800 is vector<T*>::_Emplace_reallocate (library): the skin vectors are
+  SkinVector, std::vector over GZServiceAllocator (the allocator service, cell 0x10c95d4), so ours grows the same way.
+- Interface facts the code relies on: cIObjectGraphNode slot 24 FindExtension(iid, out, start) searches from `start`
+  inclusive (first extension when null); slot 44 MakeIterator44(out, a, filter) fills three counted
+  cISceneNodeIterator (cursor, begin, end); cISkinExtension's 20-slot face (src/sg/cSkinExtension.h); cIExtension slot
+  15 Clone returns an uncounted base, 18 GetOwner, 20 GetNext.
+- LoadObjectModel loads "<name>_cres" (ParseKey with type 0xe519c933) through the framework service (cell 0x10c9378,
+  slot 5 (0x56b906e, 0x656b8efc)) and the manager's slot 3 Load(key, 0xe519c92c, out, 0, 0); the word then comes from
+  the resource's slot 64. Items' tags are lower-cased before the (case-sensitive) bone tag compare; LoadPersonPart does
+  the same and falls back to the pair node's parent's tag.
+- SetUpSkinning: "bone_adjust" lists move the bone whose tag strcmp-matches; a filter < 0 walks with the IID filter,
+  else the mask filter (mask = filter); dynamics lists ("tsDynamicsBehavior.s") are cloned onto bones by skin word;
+  IK lists by word, where skin word 3 also takes types 7 and 8.
+- ORIGINAL-BUGs reproduced (in the source): unchecked creations, holders, owners and clones; the IK base list is
+  forgotten after the first bone it is cloned onto (a second matching bone faults); strcmp on a null bone tag.
+Tests: hand-rolled worlds (nodes, skin / data-list extensions over a virtual base, shapes, iterators, the bone
+traversal, the director, the service, the resource manager, the allocator, ParseKey) logging every call by object id
+and every object's state at the end; QI and FindExtension misses in all three forms (null, out untouched, counted
+pointer with false); false answers as 0 and 0x100. Repeat 50 clean. Mutants: 55, 54 killed, 1 equivalent survivor: dropping SetUpSkinning's `base = nullptr`. The
+original keeps the base list in edi (0xae961a) and overwrites it with the delta search at 0xae965b, so a second matching
+bone faults on null; worlds where that cannot happen (one bone per tag case blind, one skin per type) never read it.
+No callers switched: no src caller reached these through OriginalFunction (the IID filter was already built inline).
+Nothing left with a call table.
+
+Result (lane 261111l, the helper block's leftovers): verified and hooked 15 functions.
+- Maths in src/sg/SGUtilitiesIK.cpp (tests/sg_utilities_ik.cpp): QuatSlerp 0xc63790, Matrix3RotationX / Y 0xc64040 /
+  0xc640c0, Matrix3Multiply 0xc64140 and ToleranceForBits 0xc643a0.
+  - Slerp blends linearly (then normalises) when |dot| >= 0.95f (0x3f733333).
+  - The sign is the dot's sign bit, so -0 counts as negative.
+  - The multiply's sums start from a real +0 add, and `out` may alias either input.
+  - The tolerance table 0x10859e8 is never written: (2^i - 1) * 2^-22.
+- Free helpers: ChannelSourceOf 0xae43a0 (src/sg/SGUtilities.cpp), and in src/sg/SGUtilitiesTree.cpp SwapSidePrefix
+  0xae68a0, IsAncestorOf 0xaeaae0, NodeKindName 0xaeab10, SetFlagInTree 0xaeac50 and CollectTextureNames 0xae8090.
+  - SwapSidePrefix reads "l_" / "r_" through the never-written pointers 0x10714f0 / 0x10714f4.
+  - CollectTextureNames fills a std::vector of counted ServiceCells: 0xa53cf0 is MSVC's _Emplace_reallocate.
+    - A null material from GetInfo is read through (ORIGINAL-BUG).
+- The viewer texture state, 0x24 bytes (src/sg/SGUtilitiesViewer.cpp, tests/sg_utilities_viewer.cpp): CaptureViewerTextures
+  0xaf2450 (the old FillTextureHandleState) and ApplyViewerTextures 0xaf23f0.
+  - A texture count of 5 writes over mRef94 (ORIGINAL-BUG, reproduced).
+- GeometrySelection::ElementHeader 0xaeda10 / GroupInfo 0xaedb10 (thiscall, ret 8; src/sg/GeometrySelection.cpp).
+  - Both hand the caller's out buffer straight to the container (no local copy); the fakes check it.
+- Callers switched: cTSCommonSystem::CollectTextureKeys (0xae8090) and the nTSSGNHoodOccupantManager scene / occupant
+  code (0xaeac50); their tests stand ours in on both sides.
+- No entry, library: 0xc643b4, the STL `_Tree_temp_node` constructor.
+- Left `mapped`:
+  - 0xaeb7c0 is ServiceCell::Dispatch9, a member of ServiceCell (StaticGetters2): the slot-9 sibling of 0xaeb800.
+  - 0xaf09e0, the pool water rect mesh: it still needs the morph-slot builder fake described above.
+- Mutants: 28 run (2 of them reruns after a test fix), 25 killed, 3 survived: 2 equivalent, 1 killed on its rerun.
+  - QuatSlerp's slerp-branch sum with its products swapped: a finite dot leaves NaN only from t (in both products) or
+    one product alone, so the add's bits are the same.
+  - The counted-cell setter's early return also skipped when both are null: nothing changes either way.
+  - A GroupInfo mutant through a local copy first survived; the fakes now check they get the caller's buffer, and it
+    (and the same mutant on ElementHeader) is killed.
+
+Result (lane 261111m, the text billboards): verified 14 functions, 4867 B.
+- cTextureTextUpdateStrategy (src/sg/cTextureTextUpdateStrategy.h/.cpp, tests/sg_texture_text_strategy.cpp), 9 entries,
+  1872 B, all in effect through callers.
+  - Members: ctor 0xaf3560, QI 0xaf4100, Update 0xaf44b0, deleting dtor 0xaf3780, Push 0xaf37f0, Clear 0xaf40b0.
+  - The STL vector instances 0xaf3290, 0xaf34f0 and 0xaf3220 are replaced by our `std::vector<Line>` member. 0xaf3220
+    needs `callers_handled` for its EH funclet / unwind-action calls (FuncInfo 0xfc9d78 and 0xfc9c70).
+  - Layout: 0x1c bytes (iid 0xcb86c1bd), font +8, push count +0xc, the line vector +0x10. A line is 0x24 bytes: colour,
+    then a cRZString.
+  - The ctor finds "DebugFont" through the font system (quality 1). Its line count is height / line spacing, at least 1.
+    ORIGINAL-BUG: a spacing of 0 divides by zero, and the font is unchecked.
+  - Push ORs in 0xff000000 and writes the ring at count % size.
+  - Update clears every locked row, then draws the last `size` lines, oldest first, at x 4 one spacing apart. Each line
+    is drawn in its PackColor colour, with 0x8000000 as the font's second colour. The ARGB face is released before use
+    (ORIGINAL-BUG).
+  - QI answers any iid and fails only on a null out. The dtor frees the lines before it releases the font.
+- The free functions are in src/sg/SGUtilitiesText.cpp (tests/sg_utilities_text.cpp), all hooked:
+  MakeBillboardTextOutput 0xaf3860, RemoveBillboardTextOutput 0xaf4120, AddNodeTextLabel 0xaf4250, ClearNodeTextLabels
+  0xaf42a0 and FindNodeTextOutput 0xaf42e0.
+  - Node tag "@@TextOutput_<name>"; texture and material name "@@TextOutput_<node word>_<name>".
+  - Blending stays on unless alpha == 1.0f, so a NaN alpha blends. The background is "(%g,%g,%g,%g)" as r, g, b, a.
+  - The difftest caught a most-vexing-parse bug in our first MakeBillboardTextOutput.
+- Callers switched: ShowPlayingAnimations 0xae2e70 calls ours; tests/sg_utilities_ik.cpp stands both in with
+  shape::StandIn.
+- Mutants: 16 run, 16 killed (10 on the class, 6 on the free functions), none survived.
+- Left `mapped`: 0xaf09e0, the pool water rect mesh. It still needs the morph-slot builder fake described above, and it
+  is a lane of its own.
+
+Result (lane 261111n, the pool water rect mesh and the lighting leftovers): verified 4 functions, 5527 B, all hooked.
+- MakePoolWaterRectMesh 0xaf09e0 (2610 B; src/sg/SGUtilitiesMesh2.cpp, test SG_Utilities_MakePoolWaterRectMesh in
+  tests/sg_utilities_mesh.cpp). The lattice side is ceil(sqrt(morphs)); every builder call is logged with its float
+  bits. Node and mesh creation are unchecked (ORIGINAL-BUG). Mutants: 11 run, 11 killed.
+- BuildLightSetNodes 0xb3f770 (117 B) and AppendLightSetNodes 0xb3f7f0 (2287 B), src/sg/cLightingManagerSetNodes.cpp,
+  tests/sg_lighting_set_nodes.cpp. The light set's enabled bits as light-reference nodes with their kinds (bit 7 the
+  outdoor ambient, 0..6 the directional lights, 8 the fog, 9 the environment, 10 the particles texture light). Caller
+  BuildSunHeightMapLights 0x2cfd60 switched from OriginalFunction (tests/sg_lighting_rebuild.cpp stands ours in).
+  Mutants: 13 run, 13 killed.
+- LoadAmbientMapImage 0xb409f0 (513 B), src/sg/cLightingManagerAmbientMap.cpp, tests/sg_lighting_ambient_map.cpp. The
+  image resource (type 0x856ddbac) copied pixel by pixel into the slot's cImageData; on failure the slot is emptied,
+  then its image released. The image is used unchecked after GetClassObject (ORIGINAL-BUG). Caller DoMessage 0x2d44b0
+  switched (tests/sg_lighting_messages.cpp now stands ours in for its former code patch). Mutants: 11 run, 11 killed (the failure path's release-before-empty survived until the test logged the slot at
+  every AddRef / Release).
+- Left `mapped`, annotated tentative in Ghidra (lane n): the lot imposters' image writer, 0xb401c0 constructor (213 B; a
+  12-byte object: counted cRZFile, the framework's class 0xca316c55 / iid 0x2a316c43, a both-present byte), 0xb402a0
+  Write (644 B; a 0x2a70-byte codec settings block, file and codec vtable calls; callees 0x825300 and 0x8281e0 unread),
+  0xb40540 (22 B, forwards with 0) and 0xb40970 (93 B, the settings for formats 1 / 4 / 5). Callers 0x366980 and
+  0x36b3e0 are original lot imposter code; it is a codec writer class of its own, for a lane with the codec's
+  interface (0x2a316c43) mapped.
+- Not scenegraph: 0xb40c00 belongs to the UI (callers 0xc24f90 and 0xc251a0, ui-game); left alone.
+
 ## Open
 
 Built 2026-11-03 (lane VL) from `tools/classinfo.py` over every nGZSceneGraph class with a vtable (106 classes; 99
@@ -3737,16 +4238,84 @@ not-done bytes, run-1023; the bracketed labels are `rendering.md`'s):
 | lane | groups | KB | needs | test | risk |
 |---|---|---:|---|---|---|
 | **TS: nTSSG system** | | | | | |
-| TS1 | cDisplayListDynamicRenderStrategy (3% done), cDisplayListCensorRenderStrategy, the render surfaces | 29 | DL | sgfx device world | medium: 0x36e400 builds the censor strategy inline [T1] |
+| TS1 | lane 261108c: the render surfaces (cTSRenderSurfaceImpl and its back-buffer, target and texture surfaces: 38 functions verified, tests/sg_render_surface.cpp) and cDisplayListCensorRenderStrategy (13 functions verified, tests/sg_censor_strategy.cpp) done; their constructors are hooked, so the surfaces the dynamic strategy's slot 8 0x375b00 builds inline after new, and the censor its constructor 0x36e400 builds inline (new 0x38, then the hooked 0x3775c0), are ours already. The dynamic strategy split out as TS1b, TS1c | - | DL | sgfx device world | done |
+| TS1b | cDisplayListDynamicRenderStrategy, its own part (lane 261108g: 16 functions verified, tests/sg_display_list_dynamic.cpp; the class is 75% done by db size): constructor 0x36e400 and factory 0x372190 hooked; destructors, the helper and trees members, slot 8 0x375b00 (builds and sizes the surfaces), UpdateSurfaces 0x372a50, TurboRectSupported 0x3737f0, ReleaseSurfaceResources 0x373d70 and the face's slots 3, 6, 7, 9, 10 in effect through callers. Notes after the table | 8 | TS1 | sgfx device world | done |
+| TS1c | cDisplayListDynamicRenderStrategy, the draw entry points (lane 261108k: 13 functions verified, 6.1 KB, tests/sg_display_list_dynamic_draw.cpp): +8 slot 4 Render 0x374930, +8 slot 5 Clear 0x373920, primary slot 6 SetUpTarget 0x374dd0, Prepare 0x371b10, Draw 0x373e20, Finish 0x376460, MarkOpaqueUI 0x375240, MatricesDiffer 0x36d3c0, the helper's and table's FrameStep / Reset; DisableScissor 0x3714b0 hooked (the original drawing paths call it), the rest in effect through callers. Every slot of our vtables is ours now. The drawing paths and the rest split out as TS1d. Notes after the table | 15 | TS1b | sgfx device world; the TS1b fixture | done |
+| TS1d | cDisplayListDynamicRenderStrategy, what Finish and MarkOpaqueUI still reached in the original (lane 261108m: 22 functions verified, 4.3 KB, tests/sg_display_list_dynamic_draw.cpp): the outlines 0x371670 and their drawer (0x375620, 0x375550, 0x3717e0, 0x3718f0, 0x3714e0, 0x371520, 0x371930, 0x3715b0, 0x371600, 0x3753c0), the debug-buffer overlay 0x376840 with 0x374ce0, the window callback 0x3752d0 with the window property read 0x372670 (hooked: TS1e's 0x370cd0 calls it) and write 0x375660, and the frame state (class 0x6d548978: factory 0x3721f0 and destructor 0x36f5c0 hooked, 0x36e790, 0x36e8b0, 0x36e960, 0x36f640). Finish has no OriginalFunction left; the drawing paths split out as TS1e. Notes after the table | 12 | TS1c | sgfx device world; the TS1c draw fixture | done |
+| TS1e | cDisplayListDynamicRenderStrategy, the drawing paths' per-frame helpers (lane 261108o: 6 functions verified, 1.6 KB, tests/sg_display_list_dynamic_paths.cpp and tests/sg_interval_tree.cpp): MarkRecords 0x3724a0, ComputeBounds 0x370eb0 and SetUpScissor 0x3719a0 hooked (the original paths 0x3743e0 / 0x374ad0 / 0x374bb0 call them), the trees member's Build 0x370b70, Overlaps 0x373750 and HitsShareRectangle 0x3735b0 in effect through MarkRecords; the trees constructor 0x36e9c0 no longer calls the original. The interval tree split out as IT1 (done in this lane), the rest as TS1f and TS1g. Notes after the table | 12 | TS1d | sgfx device world | done |
+| IT1 | nTSSG::cIntervalTree, the trees member's interval tree (lane 261108o: 12 functions verified, 1.4 KB, src/sg/cIntervalTree.h, tests/sg_interval_tree.cpp): constructor 0x401910, destructors 0x401a10 / 0x401a70, Clear 0x401a90, DeleteSubtree 0x401ab0, Insert 0x401af0 (InsertUnbalanced 0x401e90, rotations 0x401bf0 / 0x401c90), Query 0x401d40, the node's constructors 0x401980 / 0x4019d0; all in effect through callers (the trees member, ours). The root getter 0x401d30 is a folded body (inline as Root()) | - | - | standalone | done |
+| TS1f | cDisplayListDynamicRenderStrategy, the dirty-rect update (lane 261108p: 16 functions verified, 7.2 KB, tests/sg_display_list_dynamic_update.cpp): UpdateDirtyRects 0x3706a0 hooked (the original drawing paths call it), AddRect 0x370470, the frame table's Update 0x372430, Collect 0x36fc40, Push 0x3703f0, PushVanished 0x370980 and DrawItemPixelRect 0x372270, the helper's Collect 0x372480, CollectWindows 0x3702c0, Add 0x370430, Window 0x370cd0, WindowCallback 0x370e40 and Record 0x375a20, WindowScreenRect 0x372600, WindowId 0x3726f0, WindowOpaque 0x3738b0 in effect through callers. The censor's 0x377f50 / 0x378140 / 0x378200 split out as TS1h; the vector code is library. Notes after the table | 12 | TS1e | sgfx device world | done |
+| TS1g | cDisplayListDynamicRenderStrategy, the drawing paths' item drawers and clears (lane 261108r: 6 functions verified, 1.2 KB, tests/sg_censor_dirty_rects.cpp's SG_DynamicItemDraw): DrawOneItem 0x3743a0, DrawItemRun 0x374350, DrawReflectionItems 0x374270, DrawItemsBy 0x374100, DrawCensor 0x374ad0 and ClearRects 0x373b70, each hooked (the original paths call them). The paths themselves split out as TS1i. Notes after the table | 12 | TS1f, TS1h | sgfx device world | done |
+| TS1h | cDisplayListCensorRenderStrategy, the dirty-rect part (split out of TS1f by lane 261108p; lane 261108r: 8 functions verified, 1.4 KB, tests/sg_censor_dirty_rects.cpp's SG_CensorDirtyRects): CollectDirtyRects 0x377f50 (UpdateDirtyRects 0x3706a0 now calls ours), ListBoxRects 0x378020 and RenderTexture 0x378370 hooked (the original paths call them), CopyBoxRects 0x378140, the viewer frame state getter 0x378200, SetUpTexture 0x378400, DrawItems 0x3782c0 and DrawOne 0x378350 (29 bytes) in effect through callers. Notes after the table | 12 | TS1 | the censor test's world | done |
+| TS1i | cDisplayListDynamicRenderStrategy, the drawing paths themselves (split out of TS1g by lane 261108r; lane 261108s: 8 functions verified, 2.9 KB, tests/sg_display_list_dynamic_draw.cpp's SG_DynamicDrawPaths, plus cGZRect's intersection 0x373520, 132 bytes, hooked, tests/gz_rect_intersect.cpp): DrawOwnPath 0x3743e0 (type 3 reflections) and DrawPath 0x374670, DrawSide 0x374bb0, ListItems 0x373a70 with the table's Record 0x372150, PresentRegistered 0x371150, CopyToSecond 0x371240 and Present 0x373f00, all in effect through Draw 0x373e20 (ours). The TS1c draw test's stand-ins for the paths are gone; the class has no OriginalFunction call into its own code left. Notes after the table | 12 | TS1g | sgfx device world; the TS1c draw fixture | done |
 | **LG: nTSSG lighting** | | | | | |
-| LG0 | structure pass: owners of cLightingManager (0x2c9000-0x2e6000 and the second file 0x3bd000-0x3c4100, 27 KB unnamed next to cLerpLightSet) and of cDiffusionManager; the LG1-LG5 split | - | - | - | - [T0] |
-| LG1-LG3 | cLightingManager (class and the helpers LG0 assigns) | 94 | LG0, N2 | plain; float maths | high: size, float exactness [T2-T4] |
-| LG4, LG5 | cDiffusionManager | 49 | LG1 | plain | high: float exactness [T5, T6] |
-| LG6 | cLightMapManager, cShadowManager (9% done) | 30 | LG1 | sgfx device world | medium [T7] |
-| LG7 | cShadow, cLightSettings, cLightRigManager, cDiffusionLightExtension rest, cAmbientFromLightMapLight, cHeightMapShadowLight, cLightingParserState, the other nTSSG lights | 29 | LG6 | plain; cChoreoQueue original | medium [T8] |
+| LG0 | structure pass (lane 261108a, done): the split below; notes after the table | - | - | - | - |
+| LG1 | cLightingManager light evaluation (lane 261108a: 16 functions verified, tests/sg_lighting_eval.cpp; left: 0x2d74b0, 1.1 KB, the only caller of Blend 0x2d1600; 0x2d8120 moved to LG4, it calls world/ground code; 0x2e59d0 is an inlined strcmp): ambient of the current light set (0x2d6740, the slot 16/17 wrappers, 0x2d66f0), terrain normal and height (0x2e3280, 0x2e3640), outdoor shadow (slot 32, 0x2e2aa0), the small vector helpers (0x2e3120, 0x2e56b0, 0x2d79f0, 0x2d1600, 0x2dae80/0x2daee0, 0x2d6b80, slot 35) | 6 | LG0 | plain; float maths, fake image and height-field objects | high: float exactness (SSE floats, x87 values returned through slots) |
+| LG2 | cLightingManager lightmap lighting (lanes 261108b, 261108e: done): slots 39-45 (0x2cbd90, 0x2cc660, 0x2cc370, 0x2ccb80, 0x2d1720, 0x2d1ec0, 0x2d2420) and the per-vertex lighters under them (0x2db070-0x2de610, 0x2d6230, 0x2d6500, 0x2d7ad0) | 26 | LG1 | plain; lightmap textures in plain memory | high: float exactness |
+| LG3 | cLightingManager leaves (lane 261108h, done: 14 functions verified, 1.7 KB, tests/sg_lighting_life.cpp and sg_lighting_commands.cpp): CurrentSet 0x2d37c0, slots 12, 14, 15 (object strength), 19 (SelectLightSet), 33 (ambient image texel), 36, 37 (lot values), the three anonymous light commands (lightAttribOverride, lightAttributes and its attribute child). The rest moved to LG3b | 1.7 | LG1 | plain | done |
+| LG3b | cLightingManager lifecycle (split from LG3 by 261108h; split again by lane 261110o into LG3b-LG3h, bottom-up). LG3b is part 1 (lane 261110o, done: 5 functions verified, 2.5 KB, src/sg/cLightingManagerLife.cpp, tests/sg_lighting_lifecycle.cpp): slot 7 ReleaseWorld 0x2d3820, slot 9 ReleaseLot 0x2d3910, slot 8 SetupNeighborhood 0x2d1300, slot 22 FindLightingFile 0x2d0db0, ApplyLightSet 0x2d0730. The own code is 23.1 KB, not 22.6: part 1 2.5 KB plus LG3c-LG3h below | 2.5 | LG4 builders (ours), the sky-sample vector (ours) | plain + service fakes: `lightfx::life` in tests/sg_lighting_fakes.h (message server, RZ heap, ambients, option lists + PathExists) | done |
+| LG3c | Light-set loading and choice (5.0 KB): slot 5 LoadLightingFiles 0x2df8a0 (806), ReadLightingResources 0x2d0ae0 (705), SelectHoodLightSet 0x2e10a0 (1198), SelectTimeOfDayLightSet 0x2e4480 (1724), slot 6 SetupLot 0x2d10b0 (590). Recipe in the LG3b notes. Selectors done (lane 261110q: 0x2e4480, 0x2e10a0 and their helpers SetSkyMode 0x2e29f0 (118) and SetSkyboxCubeTexture 0x2dfe10 (178) verified, 3.2 KB, src/sg/cLightingManagerSelect.cpp, tests/sg_lighting_select.cpp; slot 19 calls ours). Left: 0x2df8a0, 0x2d0ae0, 0x2d10b0 (2.1 KB; recipe checked by 261110q) | done (lane 261110r: 0x2df8a0, 0x2d0ae0, 0x2d10b0 verified, 2.1 KB; src/sg/cLightingManagerLoad.cpp, cLightingManagerLife.cpp; tests/sg_lighting_load.cpp, sg_lighting_setup_lot.cpp) | LG3b (ApplyLightSet, FindLightingFile, ours), LG4 builders, cLerpLightSet (ours), the selectors (ours) | plain + the `lightfx::life` fakes; new: the resource manager (0xb390c0's slot 3; offsets 0x4c, 0x88, 0x9c) and its resource objects, the parser's file slots | Sonnet for the three left (one lane: 0x2df8a0 needs 0x2d0ae0) |
+| LG3d | ReadRoomSettings 0x2e3710 (3043; lane 261110p, done: src/sg/cLightingManagerSettings.cpp, tests/sg_lighting_settings.cpp): 64 named reads into the manager (the settings are named in the header now). The readers 0xaf7110 / 0xaf7190 / 0xaf7210 are the game's, code-patched in the test and called through OriginalFunction. For the next lane: the framework call is slot 5 (class 0x0ac1887e, iid 0x4bb0d269, &out), not 3 (slot 3 is the settings object's SetProperty); the fakes (parser, framework, settings object, readers by name) are in tests/sg_lighting_settings.cpp's `roomfx` | 3.0 | none of ours beyond the readers 0xaf7110 / 0xaf7190 / 0xaf7210 (stand-ins) | plain; new: a parser fake answering named reads from a table | done |
+| LG3e | DoMessage 0x2d44b0 (2357) and slot 10 Update 0x2df430 (922). Recipe in the LG3b notes. Done (lane 261110s: both verified, 3.3 KB, no split; src/sg/cLightingManagerUpdate.cpp, cLightingManagerMessages.cpp; tests/sg_lighting_update.cpp, sg_lighting_messages.cpp; 0x211da3 (the state service) and 0xb409f0 (the ambient map load) stay the game's, code-patched in the test) | 3.3 | LG3c (slot 5, 0x2d0ae0), LG3d, LG4 RebuildAll / RebuildStep, the stopwatch (ours) | plain + message fakes; new: messages with ids and data words | Opus: the +4 message-target `this`, Ghidra's wrong `this` type in slot 10, a state machine over four flags |
+| LG3f | Constructor 0x2ca6f0 (1463), destructor 0x2cb800 (833), Create 0x2d83a0 (89). Recipe in the LG3b notes. Done (lane 261110t: those three verified, plus the light set copy 0x2cb200 (in effect through callers: our LightingState copy constructor), LightingState 0xb3cfb0 with Light 0xb3cdb0 / Diffusion 0xb3cdf0 / Modifier 0xb3ce50, the settings block 0xb3d240 / 0x2cbbb0 and cSunHeightMap's destructor 0x2cb6c0, 4.2 KB; src/sg/cLightingManagerCreate.cpp, gz/LightingCommands.cpp; tests/sg_lighting_construct.cpp; the deleting destructor 0x2cbc40 calls ours. Left: 0x2c9590 the set vector's growth (library-shaped, mapped). Standalone blockers: LG3g / LG3h, callees such as 0xb409f0, the owned vtables db5e90 / db5f4c (no image-free alias yet) and LightingState's copy storing cRZString's game vtable) | 2.4 | cLightSet 0xb3cfb0 and the 0xb3d240 settings block (not ours: take them in this lane, about 0.6 KB), cSunHeightMap (ours), LightSets_EmplaceReallocate / CopyLightSet (library-shaped) | layout test: construct both sides into drawn bytes, compare every word with the vtables as ids; destroy both | Opus: whole-object layout, the library members' exact shapes, the standalone switch-over |
+| LG3g | Done: Shutdown slot 4 0x2e2b60 (1397; lane 261110u, Sonnet) and Init slot 3 0x2d98c0 (2461; lane 261110v, Opus), with cTSLightingParserState's constructor 0xb3ce70 (310) and the inline nTSSG::cLightingParserState constructor; src/sg/cLightingManagerInit.cpp, src/sg/cLightingParserState.cpp, tests/sg_lighting_init.cpp. Still the game's: the world DB getter 0x20e0b2 (GetCachedWorldDB, ~25 callers; a StaticGetters row). Corrected recipe in the LG3g notes | 3.9 | LG3f, cDiffusionManager (ours), cTextureHandle (ours), the framework / COM maker | svcfx fakes (tests/ts_services_fixture.h) | done |
+| LG3h | Slot 13 ApplyObjectLighting 0x2e4c40 (2632) and slot 11 0x2d14b0 (334). Recipe in the LG3b notes | 3.0 | cDiffusionLightExtension (LG7e), the branch-node filters 0xaea7c0 / 0xaea7f0, cRZRandom (ours) | plain + node fakes (sg_lighting_world.h); new: an event sink for 0xe9d24d51 / 0x49e37821 / 0x8a561e23 | Opus: Ghidra loses `this` (it reads it as a stack local), many inlined string temporaries |
+| LG4a | cLightingManager light builders, the leaves (split from LG4 by 261109j; lane 261109j, done: 12 functions verified, 4.7 KB, src/sg/cLightingManagerBuild.cpp, tests/sg_lighting_build.cpp; notes after the table): the largest/smallest-component predicates 0x2dedb0, 0x2def70, 0x2df0a0; the Rebuild leaves 0x2d2830 (sky-sample objects' refresh), 0x2e4b50 (scene objects through slot 13), 0x2dff00 / 0x2dffd0 (remove the built lights; LG3b's slots 7-9 and Shutdown call them), 0x2dfc80 (lerp evaluation; Refresh 0x2d8370 now calls ours), 0x2e4300 (sun height map rebuild over cSunHeightMap); the portal sampler 0x2d8b40 with 0x2e0210 and 0x2d88b0 (the 0xcc records). Its two passes 0x2d8410 / 0x2d8e00 moved to LG4b | 4.7 | LG1, LG5, LG5b (cLerpLightSet); still original: Restart 0x1c95ec, 0x2d8410, 0x2d8e00 | the shared builder fixture tests/sg_lighting_build.h (fake objects with a virtual base, scene manager, scene iterator, lightmaps, lerp-set and sun-height-map stand-ins on both sides, stopwatch, sky samples with light and portal-record vectors over pools, the switch bytes) | done |
+| LG4b | the portal sampler's two passes and the wall corners (lane 261109k, done: 3 functions verified, 3.3 KB, src/sg/cLightingManager.cpp, tests/sg_lighting_passes.cpp; notes after the table): SampleRoomTiles 0x2d8410, SampleWallPortals 0x2d8e00 (SamplePortals calls ours; its test stands both in), WallCorners 0x2d8120 (LightWallShaded calls ours; its test stands it in). The rest of the old row is LG4e | 3.3 | LG4a's fixture, world heights (0x7e4680), world tile math (0x7dd580); still original: 0x20e006 (colour service), 0x20e0b2, 0x7f2340 | tests/sg_lighting_world.h plus world, terrain, light and colour fakes | done |
+| LG4e | the edge builders (split from LG4b by 261109k; lane 261109n, done: 3 functions verified, 4.4 KB, src/sg/cLightingManagerEdges.cpp, tests/sg_lighting_edges.cpp; notes after the table): BlendLotEdges 0x2da3b0 over CurvedPoolEdges 0x2d94a0 (the lot-edge texel blend), ShadePortals 0x2d71f0, all three hooked. The two portal-light builders moved to LG4f | 4.4 | LG4a's fixture, world tile math (0x7dde50); still original: 0x19d250 | LG4a's fixture plus lightmap texture fakes (tests/sg_lighting_tiles.h) | done |
+| LG4f | the portal-light builders (split from LG4e by 261109n; lane 261109o, done: 3 functions verified, 7.7 KB, src/sg/cLightingManagerPortals.cpp, tests/sg_lighting_portals.cpp; notes after the table): PortalColors 0x2d6c10, BuildPortalLights 0x2e0480 (over PortalColors, ShadePortals and library 0x2c9a10 / 0x2ca640 on 0x6c-byte cPortalLight elements), ApplyPortalLights 0x2e1c30 (also over ShadePortals), all three hooked | 7.7 | LG4e, LG1 (0x2d66f0), cLerpLightSet (0x3c0ec0, 0x3c1a80, 0x3c1d60, 0x3c2570, 0x3c25d0, 0x3c2e30), cRZString::Sprintf, cRZRandom; still original: 0x3a97d0 (17 B, the sample key) | LG4a's fixture plus node / extension / lit-object fakes (tests/sg_lighting_portals.cpp) | done |
+| LG4c | the config light creators (lane 261109m, done: 4 functions verified, 11.9 KB, src/sg/cLightingManagerConfigLights.cpp, tests/sg_lighting_config.cpp): CreateConfigLight 0x2ccec0 (ret 0x14) over CreateAmbientLight 0x2ccf10 (4.6 KB), CreateBounceLight 0x2ce130 and CreateMinSideLight 0x2ceee0, all four hooked; the config is nTSSG::cLightConfig (0x30 bytes, src/sg/cLightingManager.h), manager +0x46 is mFixedBounce | 11.9 | LG4a (predicates 0x2dedb0 / 0x2def70 / 0x2df0a0), LG5b (AddLight 0x3c10a0, AddDirectional 0x3c1600), nTSSG lights (0x3c7d30); still original: 0xae78f0, 0xaeee30; library 0x2c9800 | LG4a's fixture, cLerpLightSet as in tests/sg_lerp_light_set.cpp | high: three long float bodies |
+| LG4d | the top builders (lane 261109p, done: 3 functions verified, 4.2 KB, src/sg/cLightingManagerBuilders.cpp, tests/sg_lighting_rebuild.cpp; notes after the table): BuildSunHeightMapLights 0x2cfd60, BuildRoomLights 0x2d0250 (over LG4c's CreateConfigLight), BuildFlatOutdoorLights 0x2e1560, all three hooked. The rest of the old row is LG4g | 4.2 | LG4c, LG5b (cLerpLightSet), nTSSG lights (0x3c7fd0, 0x3c8120), cRZString::Sprintf; still original: 0x3a97d0 (the sample key), 0xb3f770 (BuildLightSetNodes, 117 B over 0xb3f7f0), 0xae78f0 (SetNodeName) | tests/sg_lighting_rebuild.cpp on tests/sg_lighting_fakes.h (node / light / lerp fakes shared since 261109s; not LG4a's fixture) | done |
+| LG4g | the rooms' portals (split from LG4d by 261109p; lane 261109r, done: 5 functions verified, 4.8 KB, src/sg/cLightingManagerRoomPortals.cpp and src/sg/SkySampleKey.cpp, tests/sg_lighting_room_portals.cpp; notes after the table): BuildRoomPortals 0x2d50f0, AddRoomPortal 0x2d5430, cPortalRecord::Construct 0x2cada0, cPortalLight::Construct 0x3c37b0 and the sample key SkySampleKey 0x3a97d0 (17 B, other callers outside the row), all five hooked. 0x2d2a70 and the two Rebuilds moved to LG4h | 4.8 | LG4f (the node / extension / lit-object shapes), world heights (0x7e4680), cDiffusionLightExtension (LG7e), the filter destructor 0xaea7f0; still original: 0x7e37b0, 0x7f2340, 0x19d250 | tests/sg_lighting_room_portals.cpp (its own wall-side, portal, lit-object and ground fakes; nodes, lights and lerps from tests/sg_lighting_fakes.h since 261109s) | done |
+| LG4h | the rest of the old LG4g (split by 261109r; lane 261110a, done: 3 functions verified, 5.9 KB, src/sg/cLightingManagerShadow.cpp and src/sg/cLightingManagerRebuild.cpp, tests/sg_lighting_shadow.cpp and tests/sg_lighting_step.cpp; notes after the table): BuildSunShadowTexture 0x2d2a70 (3.4 KB; LG3b's slots 7 and 0x2d1300 call it), RebuildStep 0x2d3a50 (1.4 KB, time-sliced; slot 9 0x2df430 calls it), RebuildAll 0x2d4010 (1.2 KB; slot 9 and Refresh 0x2d8370, ours, call it), all three hooked | 5.9 | 0x2d2a70: terrain (0x20defb slot 0xa0, then terrain slots 0x1c grid size, 0x20 heights), CurrentSet 0x2d37c0, cSunHeightMap Resize 0x3c0750 / BuildShadow 0x3bfde0 (ours, LG5), library 0x2c8f10 (vector assign), COM GetClassObject (0x1c4a276c / 0xfc49f6ee) for the two textures +0x38 / +0x3c and their slots 0x18 / 0x24 / 0x48 / 0x70, the lot level's slots 0x68 / 0x6c / 0x98, cTextureHandle 0xae8730 / 0xae8900, 0x1ae18d, 0x1dae60; the Rebuilds: every LG4 builder (all ours now: 0x2cfd60, 0x2d0250, 0x2d2830, 0x2d50f0, 0x2d8b40, 0x2da3b0, 0x2dfc80, 0x2dff00, 0x2dffd0, 0x2e0480, 0x2e1560, 0x2e1c30, 0x2e4300, 0x2e4b50) plus 0x2d2a70; still original: 0xaeeea0 (1.1 KB, unowned, cdecl (scene, flags): t_SetSceneFlags), the stopwatch restart 0x1c95ec (rz; 0x1c9030 / 0x1c9256 / 0x1c982b are called as ours) | tests/sg_lighting_shadow.cpp and tests/sg_lighting_step.cpp on tests/sg_lighting_fakes.h: `FakeGrid`, `ShadowServices`, `MakeTexture` for 0x2d2a70; `Builders` (14 builders and 0x2d2a70 on both sides), `Stopwatches` (scripted Elapsed readings) and `StandSceneFlags` for the Rebuilds | done |
+| LG5 | cSunHeightMap, the first part of the second file 0x3be100-0x3c0800 (lane 261108i, done: 11 functions verified, 9.9 KB, tests/sg_sun_height_map.cpp): the 0x3be100 subobject the lighting manager builds at +0x248, ResetFlat, Resize, the light-map grid builders under 0x2e4300 (AddAwnings 0x3be1c0, AddRoofs 0x3be5c0, BuildGround 0x3bea70, AddWalls 0x3bef50, FloorVisible 0x3c06e0) and the shadow sweep (BuildShadow 0x3bfde0, SweepX 0x3bfe60, SweepY 0x3c0280). The rest moved to LG5b; notes after the table | 9.9 | world layer (ours) | sgfx world (worldfx fakes: DB, roofs, partitions, catalog) | done |
+| LG5b | the rest of the second file 0x3c08e0-0x3c37b0 (split from LG5 by 261108i; lane 261108l, done: 21 functions verified, 10.0 KB, src/sg/cLerpLightSet.{h,cpp}, tests/sg_lerp_light_set.cpp): cLerpLightSet (vtable 0xdbea94: constructor, both destructors, the entry's life, ClearActive, FadeOutUnused, Find, FindPoint, Clear, SetKeys, the attribute events) and its evaluation (0x3c2e60, 0x3c3450 under 0x2dfc80), the render-group light creators (0x3c2120 over 0x3c10a0, 0x3c1600, 0x3c1a80, 0x3c1d60). The vector instances (about 1.7 KB) are library code; notes after the table | 10.0 | still original (`original_calls`): 0x20defb, 0x20df51, 0x3c7d30, 0x3c80b0, 0x3c8120, 0x3c7e80, 0x3c7fd0, 0x3c7de0 (the nTSSG light constructors, next file), 0xae78f0, 0xaeee30 | plain + render-group fakes | done |
+| **LD: diffusion** (was LG4, LG5) | | | | | |
+| LD1 | cDiffusionManager (0x94 bytes, ctor 0x3c4140, vtables 0xdbeb7c / 0xdbebe4 / 0xdbebf8; lane 261109f, done: 26 functions verified, 5.1 KB, src/sg/cDiffusionManager.{h,cpp}, tests/sg_diffusion_manager.cpp, notes after the table): the constructor (hooked), destructors, slots 3-7 and 12-24, DoMessage 0x3c5920, ReadSettings 0x3c6220, ApplySettings 0x3c60f0, ResizeGrids 0x3c5eb0. Of the helpers, the rest are library code (std::vector / std::set) or row LD2's (the grid copy 0x3c42c0, the grids' 0x3c4670-0x3c4720, 0x3c6520, 0x3c6590, 0x3c3a50) | 5.1 | LG3 | plain + message fakes | medium |
+| LD1b | cDiffusionManager's slots 8-11 (split from LD1 by 261109f). Done, all verified (src/sg/cDiffusionManagerPortals.cpp, tests/sg_diffusion_slots.cpp): lane 261110l slots 8, 9, 10 (0x3c4f20, 0x3c5050, 0x3c48a0) and helpers 0x3c5a60, 0x3c5c30, 0x3c3870, 0x3c3a70; lane 261110m slot 11 (0x3c4b30, 993 bytes). See the LD1b notes and the receiver table after the LD2m notes | 3.3 | LD1, best after LD2 | LD1's fakes (tests/sg_diffusion_manager.cpp). Recipe: those fakes plus LD2a's floorfx generator (tests/sg_floor_color_grid.h) for the grids; take the both-precision loop and `SavedGlobals` from tests/sg_lighting_common.h rather than writing them again; for bodies that reach the wall light maps, tests/sg_wall_lights.cpp's fakes (see the LD2m notes) | medium: mostly LD2 calls |
+| LD2a | cFloorColorGrid's storage and leaves (split from LD2 by 261109i, which owned the range 0x405200-0x412600 in Ghidra; lane 261109i, done: 18 functions verified, 3.6 KB, src/sg/cFloorColorGrid.{h,cpp}, tests/sg_floor_color_grid.cpp, notes after the table): the constructor 0x4056d0, copy 0x3c42c0, destructor 0x4058e0, SetSize 0x4098d0 (and its four STL instantiations, in effect through it), Cell 0x409880, Link 0x40abd0, CellIndex 0x40abe0, the colour setters 0x4098b0 / 0x409a00, the collectors 0x405910 / 0x405a00 / 0x405ae0, Reset 0x406f40, Mark 0x405bc0 | 3.6 | LD1 | plain; the grid built from a seed | done |
+| LD2b | cFloorColorGrid's light cells: 0x4072a0, 0x4080c0, 0x4085e0, 0x4077a0, 0x4087e0, and the light passes LD1 calls 0x4060d0 / 0x406300 (Lights) and 0x4065b0 (TakeBlobs) | 9.1 | LD2a | LD2a's grid generator, plus the light lists LD1's test hands in | high: float sums over 16-entry halves (operand order, NaN payloads) |
+| LD2c | cFloorColorGrid's step and the rebuild's leaves (lane 261109q, done: 11 functions verified, 7.0 KB, src/sg/cFloorColorGrid.cpp, tests/sg_floor_color_grid_step.cpp, notes after the table): Step 0x405d70, LightReaches 0x406ff0, ResetColors 0x408860, ApplyLight 0x4089a0, Propagate 0x409170, Spread 0x409080, GetColor 0x408e30; LevelAt 0x408790, MarkFloorTiles 0x40a9e0, LinkSamples 0x40a610, PruneCorner 0x40a790. Split: Rebuild and BuildCells to LD2g | 7.0 | LD2a, LD2b | LD2a's generator; worldfx for the world DB | done |
+| LD2g | cFloorColorGrid's rebuild (lane 261110b, done: 7 functions verified, 4.1 KB, src/sg/cFloorColorGrid.cpp, tests/sg_floor_color_grid_rebuild.cpp, notes after the table): Rebuild 0x40ac20 and BuildCells 0x409a20 hooked (LD1 calls our Rebuild now); the element constructors 0x405810 / 0x405850 / 0x4058b0 and the STL 0x4054c0 / 0x405680 in effect through callers. 0x4051c0 (std::set<short> insert) stays original: a body shared with cTSBehaviorTree and others | 4.1 | LD2c | LD2a's generator; tests/sg_floor_color_world.h (LD2c's World, moved, and CellWorld for BuildCells) | done |
+| LD2d | cWallDiffusionManager's records and storage (lane 261110c, done: 32 functions verified, 1.7 KB, src/sg/cWallDiffusionManager.{h,cpp}, tests/sg_wall_diffusion.{h,cpp}, notes after the table): the constructor 0x40be50, slot 0 0x40bff0, the setters 0x411b30 / 0x411b60 (the other four are folded bodies, ours called by LD1), the segment (ctor 0x40bd90, copy 0x40bcd0, Above / Below and their setters) and run records (ctor 0x40bc90, counts, locations, FrontCellQuery 0x411460, Above / BelowAt and setters, flag setters, Clear 0x40d570, SetAngle 0x411960, Length 0x410280), Fixed16 0x40bc60 / 0x40bc00, the angle tests 0x4101f0 / 0x411430 / 0x410170. LD1's Start and ApplySettings call ours. The rest of the old row is LD2h; its STL is library by shape (below) | 11.2 | LD1 | a wall-manager generator (new). Recipe: a new header for the generator; plain records need no lighting fakes, but take the log, `Nice` / `NaN` and the both-precision loop from tests/sg_lighting_common.h | medium: many small leaves |
+| LD2h | the bottom of the old LD2h (split by caller by lane 261110d; done: 17 functions verified and hooked, 4.3 KB, src/sg/cWallDiffusionManager.{h,cpp}, tests/sg_wall_diffusion_colors.cpp, notes after the table; LD1 calls our four passes): what calls only LD2d's records. The packed colours: the segment's six-colour setters 0x40cf30 (both sides) / 0x40d180 (one side) / 0x40d3c0 (a row of the block) and the max-merge 0x40d260; the run's 0x40cec0, 0x40d090, 0x40d4b0; the ambient 0x40c720 and the passes LD1 calls 0x40d010, 0x411c60, 0x411c20 (moved from LD2f). The block's border: 0x40f5a0 (from LD2f) over the neighbours 0x40fe70 and the fill 0x40da80. Leaves: WallSegmentRef's IsValid 0x410250, the point along a run 0x410760, the flag walk 0x4119f0. 0x40b590 is library (std::vector<WallDiffusionChange>::_Insert_range, the collectors' insert at the end) | 4.3 | LD2d | LD2d's generator (tests/sg_wall_diffusion.h) | done |
+| LD2i | done (lane 261110e: 9 functions verified and hooked, 3.1 KB, src/sg/cWallDiffusionManager.{h,cpp}, tests/sg_wall_propagate.cpp, notes after the table; our cDiffusionManager calls our DiffuseMarked): the propagation under 0x40f0f0 (split from LD2h by 261110d): 0x410890 -> 0x411300 -> the recursive 0x4108d0 (over 0x410c10 / 0x411380, 0x410d50) and 0x410fe0 (over 0x411160, which calls Fixed16's SetFalloff); with 0x40f0f0 itself (196 bytes, from LD2f; it calls 0x15abe0 and 0x824624, not read) the pass LD1 calls is whole | 3.1 | LD2d (only the records; IsValid 0x410250 from LD2h) | LD2d's generator | high: float, recursion over the refs |
+| LD2j | done (lane 261110f: 4 functions verified and hooked, 2.4 KB, src/sg/cWallDiffusionManager.{h,cpp}, tests/sg_wall_step.cpp, notes after the LD2i notes; the CRT's precise cos / sin / pow shown bit-identical to the image's): Step's maths (split from LD2h by 261110d): 0x40c040 over 0x40d5a0, 0x411500, 0x411700 (calls only Fixed16 SetFromFloat, SideCount, Length and libm sin / cos / pow / sqrt, library). Step 0x40c2e0 (LD2f) is its only caller. Lane 261110e read it and left it for a lane of its own (LD2i notes): 0x40c040 calls the image's _libm_sse2_cos_precise 0x8309c0, _libm_sse2_sin_precise 0x830b80 and _libm_sse2_pow_precise 0x8380c0, and the x87 dot product 0x19d250 (21 bytes, st0 at the x87's precision); 0x40d5a0 calls _libm_sse2_sqrt_precise 0x82fc60 only for a negative argument (sqrtsd inline otherwise) and Length 0x410280 | 2.4 | LD2d | LD2d's generator | high: float, libm |
+| LD2e | done (lane 261110g: 6 functions verified and hooked, 2.7 KB, src/sg/cWallDiffusionManager.{h,cpp}, tests/sg_wall_entry.cpp, notes after the LD2j notes; LD1 calls ours for all six): LD1's entry points (split by 261110g, Rebuild's side to LD2k): the collectors CollectWalls2 0x40c620 / CollectWalls 0x40c650, Reset 0x40eff0, Mark 0x40c800, GetColor 0x410320 and the segment search FindSegment 0x40f960 under it | 2.7 | LD2d, LD2h | wallfx (Fill, Channels, StandCellQuery with gQueryWords / gQueryZeroLow) | done |
+| LD2k | done (lane 261110h: 5 functions verified and hooked, 2.2 KB, src/sg/cWallDiffusionManager.{h,cpp}, tests/sg_wall_rebuild.cpp, notes after the LD2e notes; LD1 calls our Rebuild now): Rebuild's side (split from LD2e by 261110g): Rebuild 0x412240 (86 B; LD1 calls it through OriginalFunction, cDiffusionManager.cpp twice) over 0x40d850 (554: the framework getter 0x20e0b2, FindSegment 0x40f960 (ours), the setters, 0x7eec60), 0x4120d0 (356: 0x20de97, 0x411ca0) and 0x411ca0 (1066: the runs built from the world's walls; library vectors, the segment builder 0x40c680 (148), 0x7f2260, 0x1eeb80, 0x7dddc0); 0x412450 is library. About 2.2 KB | 2.2 | LD2e | wallfx plus world fakes for the walls 0x411ca0 walks (0x7f2260 beyond StandCellQuery's hash, 0x1eeb80, 0x7dddc0, 0x7eec60) and the framework getters 0x20de97 / 0x20e0b2 (tests/sg_lighting_fakes.h) | high: the world fakes; STL growth (library, by shape: our vectors' policy must match the image's); float exactness |
+| LD2f | done (lane 261110i: 5 functions verified and hooked, 2.9 KB, src/sg/cWallDiffusionManager.{h,cpp}, tests/sg_wall_passes.cpp, notes after the LD2k notes; our cDiffusionManager's Diffuse / DiffuseUnlit call ours for all three passes): Step 0x40c2e0 (818), the blob pass 0x40edb0 (567) over BlendRowAt 0x4104a0 (49) and BlendRow 0x4104e0 (375), CollectBlobs 0x40fa40 (1063). The rest of the old row split by 261110i into LD2l (the blends) and LD2m (0x40dd30) | 2.9 | LD2e, LD2h, LD2i, LD2j | wallfx (Fill, CornerShape, StepRig and StepLight in tests/sg_wall_passes.cpp; FillLight in tests/sg_wall_diffusion.h) | done |
+| LD2l | done (lane 261110j: 4 functions verified and hooked, 1.7 KB, src/sg/cWallDiffusionManager.{h,cpp}, tests/sg_wall_blend.cpp, notes after the LD2f notes; our Diffuse / DiffuseUnlit call ours): Blend 0x40f6a0 (348) and BlendUnlit 0x40f800 (351) over BlendLightMap 0x40f390 (513) and BlendFloors 0x40f1c0 (454). Planned as: the blends (split from LD2f by 261110i): Blend 0x40f6a0 and BlendUnlit 0x40f800 (LD1's Diffuse / DiffuseUnlit call them through OriginalFunction), with their per-run 0x40f1c0 / 0x40f390. About 1.7 KB | 1.7 | LD2f; ours to call: MergeMax 0x40d260, IsValid 0x410250, PointAlong 0x410760, FrontLocationWord2, BelowAt 0x4114b0; still original: the framework getter 0x20defb (light map service), the light map's slot 23; std::set iteration (library) | wallfx's Fill / CornerShape (tests/sg_wall_passes.cpp: move CornerShape to tests/sg_wall_diffusion.h if reused) plus a light-map fake for 0x20defb with a logging slot 23 (tests/sg_lighting_fakes.h has the framework getters). Used: tests/sg_wall_blend.cpp's own system / light map / floors fakes (Fakes, Sample), Saturate, Weight | done |
+| LD2m | done (lane 261110k: 4 functions verified and hooked, 4.4 KB, src/sg/cWallDiffusionManager.{h,cpp}, tests/sg_wall_lights.cpp, notes after the LD2l notes; our cDiffusionManager calls ours): ApplyLights 0x40dd30 (4144), PackLightColor 0x4106a0 (183), ApplyAllLights 0x40ed70 / ApplyChangedLights 0x40ed90 (26 each). Planned as: 0x40dd30 (4144 B, split from LD2f by 261110i; LD1 reaches it through the wrappers 0x40ed70 / 0x40ed90, 26 B each) and its helper 0x4106a0 (183). About 4.4 KB | 4.4 | LD2f; still original: 0x412510, the partitions service 0x20de97, 0x2e5870, 0x7ef1d0, 0x40b440 (library?), 0x256950, 0x257cf0, 0x148bb0, virtual calls on world objects, Fixed16 SetFromFloat (ours), 0x2c9bd0, 0x197100. Read them before splitting further | LD2k's world rig (tests/sg_wall_rebuild.cpp: Graph / StandPartitions / StandWorld) and wallfx; new fakes for the object / room callees. Used: tests/sg_wall_lights.cpp's image / light-map / partitions fakes and wallfx (QueryModes, FakeObject moved into tests/sg_wall_diffusion.h) | done |
+| LG6 | cLightMapManager's life cycle, director slots 3-6 and 12-23, DoMessage / ReadSettings, the helpers and its two maps' functors (lane 261108q, done: 37 functions verified, 7.9 KB; the maps' std code is library, see the notes; src/sg/cLightMapManager.{h,cpp}, tests/sg_light_map_manager.cpp; notes after the table). The light-map builders moved to LG6b, cShadowManager to LG6c | 7.9 | still original (`original_calls`): LG6b's bodies, the services 0x20e0b2 / 0x20de97, the face height 0x2c6f20, the border test 0x7f2340, the settings readers 0xaf7110 / 0xaf7190 / 0xaf7210 | the LG6 world (fakes: framework, settings, message server, allocator, world DB, partitions, texture manager, images) | done |
+| LG6b | cLightMapManager's light-map builders (split from LG6 by 261108q; lane 261108t, done: 18 functions verified, 7.9 KB, the class complete; notes after the table): slots 7-11 (Update 0x2c7cd0, SetColor 0x2c6460, SetTransition 0x2c6eb0, UpdateIncidence 0x2c6ad0, Advance 0x2c7540), the image builders 0x2c5340 (a floor image and its free tiles) and 0x2c5a60 (a wall atlas), the drawers 0x2c6200 (a floor tile) and 0x2c6630 (a wall region), the face height 0x2c6f20, 0x2c8280, 0x2c85c0, 0x2c6950, 0x2c6860, 0x2c6d80, the MMX kernel 0x2c6890, BlendImage 0x2c7570 and ClassId 0x2c7450 | 7.9 | still original (`original_calls`): the services 0x20df9a / 0x20defb / 0x20e0b2, the wall flag 0x7e2050, the image library's blend 0xb3c6c0 | the LG6 world plus image / texture fakes that keep pixels | done |
+| LG6c | cShadowManager rest (vtable 0xdb68ac, 0xd4 bytes; factory 0x2e7ba0, constructor 0x2e63a0, destructor 0x2e6c70; lane IR had verified 9 slots). Lane 261108u, done: the class whole except slot 10's body (34 entries verified, 10.1 KB, 9.4 KB new: the factory hooked, the rest in effect through it; slots 3-5, 7-9, DoMessage 0x2e77c0, the helpers 0x2e7d10, 0x2e8e30, 0x2e6f40, 0x2e6e40, 0x2e8bf0, 0x2e8920, 0x2e9700, 0x2e9690, 0x2e97d0, 0x2e8d00, the life cycle, the +4 thunks, cShadowEntry's constructor / copy / destructor; src/sg/cShadowManager.{h,cpp}, tests/sg_shadow_manager.cpp and sg_shadow_manager_life.cpp; notes after the table). The drawing split out as LG6d | 10.1 | still original (`original_calls`): the services 0x20dfb5 / 0x20e0b2 / 0x20de97 / 0x20defb / 0xb38f60 (LG6d's drawing is ours since 261109a) | the LG6c world (tests/sg_shadow_manager_life.cpp: framework, settings, message server, director classes, texture service, placement, partitions, camera, renderer, the drawing stood in) | done |
+| LG6d | cShadowManager's drawing (split from LG6c by 261108u; lane 261109a, done: 9 functions verified, 4.8 KB, src/sg/cShadowManager.{h,cpp}, tests/sg_shadow_manager_life.cpp; notes after the table): slot 10's body MakeStaticShadow 0x2e7380, DrawShadow 0x2e9920, PrepareNode 0x2e7020, RenderStatic 0x2e8650, RenderTarget 0x2e87c0, ShadowBounds 0x3ad230, ShadowDirection 0x3ad6b0 (in effect through the factory hook); FitShadowCamera 0x3ad080 and FindRootBone 0x3ace40 hooked (cShadow and ShadowUpdateSettings 0x356e40 call them too) | 4.8 | LG6c | the LG6c world with real drawing fakes (node tree, viewer, camera owner, shapes / parts / data lists, light holder, graphic system) | done |
+| LG7a | the nTSSG light classes (split from LG7; lane 261108n, done: 145 functions verified, 5.9 KB, src/sg/nTSSGLights.{h,cpp}, tests/sg_nTSSG_lights.cpp, notes after the table): cAmbientFromLightMapLight 0x3c7d30, cHeightMapShadowLight 0x3c7fd0, cHeightMapBinaryShadowLight 0x3c7e80, cHalfspacePointLight 0x3c7de0, cShadeLight 0x3c80b0, cTerrainShadeLight 0x3c8120 (constructors hooked; destructors, own slots, thunks and the shade level's destructor 0x3c81c0 in effect through callers), nTSSG::TileUnder 0x3c9bd0 | 5.9 | VW, TL, LG5b | plain; the placement service 0x20e0b2 and 0x19d130 original | done |
+| LG7b | cLightSettings (split from LG7 by 261108n; lane 261108v, done: 16 functions verified, 3.9 KB, src/sg/cLightSettings.{h,cpp}, tests/sg_light_settings.cpp, notes after the table): constructor 0x3c6a30 (hooked), destructors 0x3c6b40 / 0x3c6de0 / 0x3c6dd0, QueryInterface 0x3c7c70 / 0x3c7c97, slots 5-10 (0x3c7540, 0x3c7ca0 folded, 0x3c6ec0, 0x3c75a0, 0x3c7180, 0x3c7590), helpers 0x3c70c0, 0x3c6e00, 0x3c79c0, 0x3c7710 | 3.9 | the name table 0xaf6560 and lookup 0xaf6df0 (ours) | plain + node / light / COM / parser fakes | done |
+| LG7c | cLightRigManager (split from LG7b by 261108v; lane 261109b, done: 24 functions verified, 6.3 KB, src/sg/cLightRigManager.{h,cpp}, tests/sg_light_rig_manager.cpp, notes after the table): 0x34 bytes, constructor 0x2c2af0, its vtable 0xdb582c's 18 bodies 0x2c2180-0x2c42d0 (slot 7 0x2c3c70 and 14 0x2c30f0 the largest) and the helpers they call (0x2c1590, 0x2c14f0, 0x2c1540, 0x2c3340, 0x2c1800, 0x2c1ab0; the std::string maps' instances among them are library) | ~3.6 | the COM director (stood in), LG7b's cILightSettings if a slot takes one | plain + service fakes | medium |
+| LG7d | cShadow (split from LG7b by 261108v; lane 261109e, done: 35 functions verified, 7.3 KB, src/sg/cShadow.{h,cpp}, tests/sg_shadow.cpp, notes after the table): the factory 0x355700 (hooked), constructor 0x354320, destructors 0x354480 / 0x3545b0, the vtable 0xdba2f4's own bodies (slots 0, 3-13, 15-17, 22; Update 0x355d20 the largest) and their helpers 0x355290, 0x356a20, 0x355b50, 0x355410, 0x357750 (hooked), 0x357d70, 0x356b40, 0x3568d0, 0x355a70, 0x355bd0 (hooked), ClipPlanesMeet 0x3ad380, ShadowFootprint 0x3aced0 (hooked), ObjectBounds 0x3558d0, FindSubsetMaterial 0x3acd30 (hooked), SubsetMaterial 0x355470 | 7.3 | LG6 (cShadowManager, lane 261108u) | plain | done |
+| LG7d2 | cShadow's resources and settings (split from LG7d by 261109e; lane 261109g, done: 7 verified, 5.2 KB, notes after LG7d's; CreateResources and its helpers split off as LG7d3): UpdateSettings 0x356e40 (2313 B), PlaceProjectors 0x357810 (1361 B), FloorTest 0x3554b0 (577 B), TileSpan 0x355770, SubsetWorldBounds 0x355990, SubsetBounds 0xae7f00, PointInView 0x3ad430, and ObjectVisible 0x355bd0's hook dropped (no original caller left) | ~5.2 | LG7d; FitShadowCamera 0x3ad080 / FindRootBone 0x3ace40 (ours, LG6d) | LG7d's test world | medium-hard |
+| LG7d3 | cShadow's CreateResources (split from LG7d2 by 261109g; lane 261109h, done: 6 verified, 3.3 KB, notes after LG7d2's; UpdateLevel 0x357750's hook dropped): CreateResources 0x354790 (2805 B: our node, the drawable, viewer, render target, grid and two projectors made through the COM director and the shadow manager), the two it calls 0x354630 (123 B) and 0x3546b0 (211 B), and cObjectShadowFilter (anonymous namespace, 0x14 bytes, vtables 0xdba368 / 0xdba37c: vf3 0x356a70 158 B, and 0x354580 behind the vf4_3 thunk 0x3545a3). Called through OriginalFunction by Update / Refresh / SetObject / ModeChanged; it calls UpdateLevel 0x357750 (at 0x354f12), which is why that hook stays (drop it once this is ours) | ~3.3 | LG7d2 | LG7d's test world: the stand-in that fills the resources becomes fakes for the COM director's creates, the shadow manager's texture and the viewer / target setup | medium-hard |
+| LG7e | cDiffusionLightExtension retrofit (split from LG7b by 261108v): a real class on src/sg/cIDiffusionLightExtension.h (all 31 slots), factory 0x2ea3b0 hooked (the constructor's only caller), every other body in effect through callers; class 0x2e9eb0-0x2eabbd (the row's old 0xaea7c0-0xaeb3f0 was a copy error: that is nRZSceneGraph's branch-node filters): done (lane 261109c, 63 verified, 2.9 KB, src/sg/cDiffusionLightExtension.*, tests/sg_diffusion_light_extension.cpp; notes after the table) | 2.9 | LG7b's face header | plain | done |
+| LG7f | cLightingParserState (split from LG7b by 261108v) and its base cTSLightingParserState. Done (lane 261110y: 128 functions verified, 4.6 KB; src/sg/cLightingParserState.{h,cpp}, src/gz/LightingCommands.cpp (LightingState::operator=, the commands' GetHelp), src/hook/tables/cLightingParserState.cpp; tests/sg_lighting_parser_state.cpp; notes and call tables in the LG7f notes after the LG3g recipe). Left: 0xb41a80 (the app lighting run, called by RestartViaReset 0x2e02e0), the library and other classes' functions in 0xb3cd00-0xb40a00 listed in the notes | 4.6 | LG3g (the constructors), cp::cBaseParser (ours), cLightSettings (ours) | parser stand-ins (BaseStandIn in the test) | done |
+| LG7g | the light rig file's parser side (split from LG7c by 261109b; lane 261109d, done: 70 functions verified, 3.9 KB, src/sg/cLightRigAndCameraParserState.{h,cpp}, tests/sg_light_rig_parser.cpp, notes after the table): the parser state class (constructor 0x2c1800, destructor 0x2c1cb0, vtables 0xdb5880 and its faces' 54 thunks), its five commands (`lightrig` with EndBlock 0x2c3b20, `resource`, `root`, `anim`, `autoRig`) and AddRig 0x2c21a0 (called by EndBlock, not a slot itself), which inserts records into our cLightRigManager's map | 3.9 | LG7c | parser fakes (LG7b's) | medium |
 | **LT: lot geometry** | | | | | |
-| LT1 | cLotSkirt, cWaterGeometryBuilder, cBlurBrush, cOverlayNode | 32 | D3 | plain; world-lot and cDraw2D callees original | medium: 21.7 of 25.6 KB inferred [T9] |
-| LT2 | cLotImposterDisplay, cLotImposter, cLotImposterManager | 30 | D3, DL | sgfx (render to texture) | medium [T10] |
+| LT1 | cBlurBrush and cOverlayNode done (lane 261108d, notes after the table); left: cLotSkirt, cWaterGeometryBuilder (split out as LT1a, LT1b below) | 4.4 | D3 | plain; world-lot and cDraw2D callees original | done |
+| LT1a | cLotSkirt (0x13c bytes, ctor 0x2fadd0; ~25.9 KB executed, the helpers 0x2f55f0-0x2fc280 mostly its own) | 26 | LT1, world-lot | plain + world-lot fakes | high: many world-lot callees not ours yet; 0x2f55f0 is also called by world-lot 0x3bbf30; STL sort instances stay the toolchain's |
+| LT1b | cWaterGeometryBuilder: done (lane 261108f, notes after the table); 0x3b7c40 is cTerrain's, moved to LT1c | 7 | D2 (QE's cGeometryBuilder base) | plain; the geometry-builder fixtures | done |
+| LT1c | cTerrain's water part: ReadWaterRenderParameters 0x3b7c40 (4.4 KB, the water material's render parameters), the water-builder Load 0x3b9360 / Unload 0x3b9380 statics and the flag 0x10da1b4 they set | 4.5 | LT1b, cTerrain | plain + material/parameter fakes | medium: belongs with cTerrain's lane if one comes first |
+| LT2 | split by lane 261108f (owner check only, notes after the table) into LT2a-LT2c | - | - | - | - |
+| LT2a | cLotImposterDesc and cLotImposter, plus the file 0x3f5360-0x3f8a10 (the design modes, cDesignModes / cDesignModeNode), 0x3ac4f0, 0x335a60, 0x401790, 0xae7af0, 0xb40560: done (lane 261108j, 45 verified, 8.2 KB; notes after the table) | 8.2 | D3 | plain + shape / resource fakes | done |
+| LT2a2 | LT2a's file 0x3f5360-0x3f8a10 left undone, plus 0x400d60 / 0x401210: split by lane 261111t ("LT2a2 scout (lane 261111t)" after the LT2b2a/b notes) into LT2a2a (the wall-slice record and the definitions command's helpers, 4.8 KB), LT2a2b (ApplyDefinition's design-mode callees, 5 KB), LT2a2c (0x401210's family, 2 KB, after world-lot's 0x7f29a0) and LT2a2d (0x400d60 and its 17 draw-by-kind callees, ~33 KB). LT2a2a and LT2a2b done (lanes 261111t, 261111u); LT2a2c and LT2a2d open | 45 | LT2a | see the scout | split |
+| LT2b | cLotImposterManager life cycle and definitions file (ctor 0x362a10, dtor 0x362de0, Create 0x367790, QI, Release, Init, Shutdown, the deleting destructor, DoMessage, LoadDefinitions, cImposterDefinitions::Clear 0x3f7a20 and its map erase 0x362470): done (lane 261108j, 12 verified, 2.8 KB; notes after the table) | 2.8 | LT2a | plain + message / parser fakes | done |
+| LT2b2 | split by lane 261111q into LT2b2a-LT2b2f below (scout table and plan in "LT2b2 scout" after the LT2b notes); the first batch is done (lane 261111q, 15 verified, 3.3 KB: the image writer 0xb401c0-0xb40970, the raster helpers 0x363490-0x363a10, Shutdown's helpers 0x369800 / 0x3698f0, 0x366fc0, 0x368f50, 0x368f70, 0x368fa0) | - | - | - | split |
+| LT2b2a | the generation path's leaves. Done in part (lane 261111r, 16 verified, 3.9 KB; notes in "LT2b2a notes" after the LT2b2 scout): 0x36c7a0, 0x368de0, 0x369460, 0x369070, 0x363120, 0x363250, 0x369430, 0x3677f0, 0x36d100, the command's 0x369500, 0x36c690, 0x366fe0, 0x3632b0, 0x368e20, 0x36c510, 0x366460. The rest done by lane 261111s (5 verified, 1.35 KB; notes in "LT2b2a/b notes (lane 261111s)"): 0x362950, 0x365410, 0x364940, 0x36b2b0, the command's Execute 0x366f10. Not the manager's, no status: 0x363010 / 0x363080 (dead code and nTSUI::cScreenGrabber) | 5.5 | LT2b2 first batch | world-DB, image, string and service fakes (tests/sg_lot_imposter_world.cpp, _slices.cpp, _loading.cpp, _services.cpp) | done |
+| LT2b2b | the second tier: 0x363b90, 0x366180, 0x365670, 0x365990, 0x365d40, 0x3661a0, 0x364b60, 0x3654d0. Slots 6 0x369960 / 9 0x369a30 done (lane 261111s, 0.37 KB). Most of the rest call original code no lane has done: see "LT2b2a/b notes (lane 261111s)" before launching | 5.8 | LT2b2a; their original callees first (notes) | image + slice fakes | medium-high |
+| LT2b2c | slot 7's tier: 0x364170, 0x364cd0, slot 7 0x364f40, 0x366670, 0x3691a0 | 5.1 | LT2b2a | sgfx + slice imposter creator fakes | high: many original cTSSliceImposterCreator callees |
+| LT2b2d | 0x366980 (one of the image writer's two callers) and 0x369ae0 with its two large callees: 0x366980, 0x369ae0, 0x369cc0, 0x36a6f0 | 7.5 | LT2b2a | the writer test's file / codec fakes, sgfx | high: two 2.6-3 KB bodies |
+| LT2b2e | 0x367c20 and 0x3672e0 | 5.7 | LT2b2a, LT2b2b | sgfx (render to texture) | high: 4.5 KB body, 27 callees |
+| LT2b2f | 0x36b3e0 and slot 5 0x367800 (generate), the two adjustor thunks 0x36957d / 0x3697f5 | 5.4 | LT2b2a-e | everything above | high: last, calls every other lane's code |
+| LT2c | cLotImposterDisplay (ctor 0x2adfa0, dtor 0x2ae1d0; vtables 0xdb38e0 / 0xdb38fc / 0xdb3934 message face): 21.0 KB executed in 43 functions, 16.9 KB of it owner-inferred (0x2add00-0x2b35f0, 0x3bbbc0, 0x29b940) | 21 | LT2a, LT2b, DL | sgfx (render to texture) | medium [T10]; DoMessage 0x2b0890 and the hood-load builders 0x2af4d0 / 0x2aff70 are the bulk |
 | LT3 | cMergedGeometryNode, cSeasonManager, the composited-texture update strategies, cGableRoof and the gables | 39 | M4, D3 | plain | medium; split if the gables are large [T11, T13] |
 | **TS (rest)** | | | | | |
 | TS2 | cTSSGSystem rest (and its retrofit to the standalone shape), cSceneManager, cTSWinSceneGraph | 35 | most of the above | plain + service fakes | medium [T12] |
@@ -3755,6 +4324,1887 @@ not-done bytes, run-1023; the bracketed labels are `rendering.md`'s):
 | CM1 | cTSCameraSmoothSims1Controller, cTSCameraControllerManager | 31 | N3 | plain; float maths | medium: seven vtables [C1] |
 | CM2 | cTSCameraSmoothFirstPersonController, cCameraFirstPersonController, cCameraCameraManController, cCameraCreateASimController, cTSCameraGenericController, cTSCameraParserState, cTSConfigTargets | 19 | CM1 | plain | medium [C2] |
 | CM3 | cCameraLive, cCameraBuild, cCameraNeighborhood, cTSCameraEffect, cCameraEffectsSupport | 21 | CM1 | plain | medium [C2] |
+
+LG0 notes (lane 261108a; KB above are db sizes, not executed bytes; the coverage tool needs the namespace,
+`--group nTSSG::cLightingManager`: 101.8 KB executed in 126 functions, cDiffusionManager 55.1 KB in 154):
+- cLightingManager is 0x548 bytes: vtables 0xdb5e90 (46 slots) and 0xdb5f4c (4, the message-target face). Layout in
+  `src/sg/cLightingManager.h`; the constructor adds a message-id set at +0xc (9 ids), floats at +0x50..+0x7c, a list at
+  +0xd4, three 0xb3d240 subobjects, a list at +0x214, the 0x3be100 subobject, a stopwatch at +0x4e8 (mode 4) and a
+  cRZString at +0x524, and pushes one default cLightSet (0x214 bytes) before setting the current index +0xd0 to 0.
+- cLightingParserState (vtables 0xdb5f60/0xdb5f7c/0xdb5f8c) is the 14-byte thunks scattered through the file (0.9 KB,
+  LG7b). cVectorEvent<cVector3f> slots (0x2cbc10, 0x2d1090, 0x2d2a50, 0x2e3680) are template code in the same file.
+- 0x3bd1a0-0x3be0f0 is not lighting (it calls 0x2a9fc0..0x2adbe0); the second file starts at 0x3be100.
+- The light-evaluation floors use the inlined 1.5 * 2^23 bias floor (round (x - 0.5), one up when that equals x), as
+  elsewhere (`cTSEffectsManager.cpp` FloorToInt); keep it rather than floorf (they differ for large values).
+- LG1 (lane 261108a): the slot-62 terrain height (0x2e3640) and the sun height map's HeightAbove (0x2e2aa0) are x87
+  values; TerrainNormal subtracts two of them straight from the register (fsubr dword), so those two differences are
+  x87 subtractions at the thread's precision, not float ones (the test's fake heights are true doubles, so a float model
+  fails). Every SSE operation keeps the original's operand order (the convex helpers MulS/AddS/SubS/DivS) and the tests
+  plant up to two NaNs per case; the x87 NaN pick (register beats a signalling memory NaN, else the larger significand)
+  is local to cLightingManager.cpp. The ambient maps (+0xa4 vector, one per light set) and the terrain (+0x1c) are
+  receivers of unknown class: slots 26/27/38 and 62 are called raw. Mutant note for whoever takes on LG2's hemisphere
+  code: MSVC 14.40 compiles both `0 > d ? 0 : d` and `0 >= d ? 0 : d` to the same maxss (a -0 d stays -0 in both; a
+  mutant build printed -0 weights), so a clamp's `>`/`>=` mutant survives there and is equivalent after compilation.
+- LG2 (lane 261108b, 12 of 26 functions verified, 18.9 KB): the tile lighters AddFlatQuad 0x2d6500, AddFlatTriangle
+  0x2d6230, LightQuad 0x2dcc40, LightTriangle 0x2db070, the four shadowed lighters (0x2dd1b0, 0x2db640, 0x2ddb80,
+  0x2dc0e0: one LightTileShadowed body with quad/triangle and mask/sun-shaded flags), EvaluateAmbientShaded 0x2d74b0,
+  AddSkyLight 0x2d7ad0, slot 45 SendSkyLight 0x2d2420 and slot 41 LightTiles 0x2cc370. Tests:
+  `tests/sg_lighting_vertex.cpp` (flat, smooth, shaded, shadowed, tiles), `tests/sg_lighting_sky.cpp`. Facts:
+  - Lightmap texels are BGRA words in rows bottom-up: the callers pass the last row and a negative stride (slot 41:
+    texels + (height - 1) * pitch / 4, stride -pitch / 4; the texture is fetched again only when the index changes, -1
+    meaning none yet, so a found tile with index -1 first would light through a null pointer).
+  - The lit object at +0x18 (mLitObject) lists the tiles (slot 16: 16-byte records {x, y, level, kind byte}) and takes
+    the sky-lit colours (slot 22); +0x5c (mShadeTiles) picks the sun-shaded lighters. The terrain's slot 61 takes the
+    kind as a char: slot 41's triangle path pushes it from a register with stale upper bytes, so fakes must mask it.
+  - ORIGINAL-BUG 0x2d7ad0: both sample loops skip sample 0 by testing only the index's low 16 bits, so sample 65536 is
+    skipped too (the 32-bit mutants are killed by the 65536-65538-sample cases); SendSkyLight 0x2d2420 makes the same
+    test and passes the 16-bit index on.
+  - AddSkyLight's "nothing to add" test is a 32-ulp ordered-integer compare of the sky colour against the zero vector
+    0x10d9424 (NearlyEqual in the source); SendSkyLight's percentage from slot 36 is an int16 in a noisy word.
+- LG2 rest (lane 261108e, 7 functions verified, 8.8 KB): SegmentLess 0x257cf0, LightWallShaded 0x2de610, slot 39
+  LightOutdoorTiles 0x2cbd90, 40 LightWalls 0x2cc660, 42 LightListedWalls 0x2ccb80, 43 LightRoomsBySky 0x2d1720, 44
+  LightListedBySky 0x2d1ec0. Test file: `tests/sg_lighting_walls.cpp`. The tiles fixture (lit object, lightmaps, textures,
+  service at 0x10cc29c, normals, sun grids) is now `tests/sg_lighting_tiles.h`, shared with `sg_lighting_vertex.cpp`
+  (an anonymous namespace: one copy of the fakes per test file). Facts:
+  - None of these light vertex buffers (261108b's guess). They all light lightmap textures: room tiles from the world
+    (+0x20 mWorld, class not identified: slot 76 (room, &list, flag) appends a room's tiles to a ServiceBlockVector of
+    16-byte records, 79 gives a tile's room, 55/56/50 count, fetch and classify walls) and wall sides into rectangles
+    from mRef24's slot 21. 0x195720 only frees the tile list.
+  - A wall is {x0, y0, level, x1, y1, level} (levels as int32). Slots 40 and 43 light each segment once: a
+    `std::set` in SegmentLess order of the segment with its ends ordered, find then insert. The far side is the
+    segment with its ends swapped. Slots 42 and 44 light only the near side of each listed wall, with no set.
+  - A side's room comes from 0x7f2340 (world code, kept original): 16 room bits in the low half of a noisy word.
+    Slot 40 skips sides with a room unless the kind is 3. For kind 3 it lights only the rectangle's rows past 3 * its width (none if it is no taller).
+    Slot 43 adds the sky colour only to sides with a non-zero room of positive weight. Slot 44 does the same, but its
+    tiles are not checked for being shown or for room 0.
+  - LightWallShaded reads its quad corners from 0x2d8120 (LG4's, kept original). Rectangles of 4 x 8 texels use fixed
+    half-texel steps (u from -0.25, v from -1/12); others step 1 / (w - 1). Each texel's colour is written back to the
+    running colour, so the next texel starts from it.
+  - Unchecked reads, the original's preconditions: mSunHeights' cells (from corner x/y and mScale) and the room weights
+    (an int16 index). The generator keeps NaN out of corner x/y and mScale, and keeps rooms below the weight count.
+  - Stand-ins: `shape::CodePatch` replaces 0x7f2340 and 0x2d8120 in the image, which covers both sides, since both
+    call it through OriginalFunction. The tests log the calls they receive. The world fake's slot 76 appends without
+    clearing, as the original expects of it (slot 43 resets the list per room).
+  - Mutants: 53, all killed. Random grid values never killed `x / 3` replaced by `x * (1 / 3.0f)` in slot 39's debug
+    view: the two differ in the last bit, and that bit reaches a byte only at a rounding tie of the ramp. The generator
+    now plants values up to 3 ulps from 3 * (2k + 1) / 128 (`NearTie`), and about 1 in 30 of them tells the two apart.
+    Plan such values for any float-to-byte path whose operand order or constant a mutant changes.
+  - Left: nothing in LG2. 0x2d8120 and 0x7f2340 stay original calls until LG4 and the world lanes take them.
+- LG3 (lane 261108h, 14 functions verified, 1.7 KB; the rest split out as LG3b). Tests: `tests/sg_lighting_life.cpp`
+  (the manager's slots on a random 0x548-byte image), `tests/sg_lighting_commands.cpp` (the commands, on the material
+  commands' World from `tests/gz_material_commands.h` with a 0x430-byte state of their own). Facts:
+  - Objects are lit through an "ObjectLighting" extension that 0xaeb5b0 finds by name (class not identified; kept
+    original, the tests jump it to a fake). Its slot 3 (name, float) sets a value and slot 15 (name, &float) reads one;
+    slot 12 also reaches its virtual base through the vbptr at +4 (vbtable entry 1) and calls that base's slot 18
+    result's slot 23.
+  - Slots 14 and 15 keep the given strength only when byte +0x4d is set and the current set's word +0x20 has bit 12
+    (the lighting script's "edith" control switch, `gz/LightingCommands.h`); otherwise the strength becomes 1. Slot 14
+    skips the update when "Strength" already reads within 0.001: a double compare of a float difference, so the `>` /
+    `>=` and float-compare mutants are equivalent (no float lies in [0.001, 0.001f), 0.001f being the float just
+    above 0.001). Both raise +0x500 to at least +0x508 * 1000. The tests plant +0 and -0 on both sides of that max,
+    and the original agrees with ours, but the `>` / `>=` mutants of it still survive: MSVC compiles both to the same
+    maxss, as LG1's note says of the hemisphere clamps.
+  - Slot 33 clamps the floored texel coordinates as unsigned against the terrain size (+0x20c/+0x210), so sizes 0 and
+    above 0x7fffffff pass huge columns to the image's slot 38. CurrentSet 0x2d37c0 compares the index unsigned too.
+  - Slot 19 compares the name with strcmp (case matters) against the game's default name; the light-set pickers
+    0x2e4480 and 0x2e10a0 and 0x2d0730 stay original (LG3b) and only al of 0x2e10a0's answer counts.
+  - The commands live in an anonymous namespace (RTTI `?A0xa5581f72`), named nTSSG here. The attribute child's GetName
+    is folded with the material script's attribute command (shared_vf_2df270, not hooked). The attributes object at
+    the state's +0x404 (class not identified) takes slot 7 (parser face, settings name, attribute, value) and slot 8
+    (base, settings name); the std::string at +0x40c holds the open block's settings name.
+  - Mutants: 53 runs, 45 killed. The slot-19 _stricmp survivor led to a case-flipped default name in the test (killed
+    on the rerun); the other survivors are equivalent: the two 0.001 compares, the max (three runs), a signed width the
+    usual conversions make unsigned again, and the attributes command's case-insensitive compare against ":".
+  - LG3b, the standalone shape: Create 0x2d83a0 (new 0x548 + constructor) has one caller, cDllCOMDirector's constructor
+    0x244e30 (ours), and the destructor's only caller is the deleting destructor 0x2cbc40 (ours, which still calls the
+    original destructor). So once the constructor and destructor are ours the class can go standalone, but they build
+    and destroy members whose classes are not ours: three 0xb3d240 subobjects (+0xdc, +0x12c, +0x17c), the 0x3be100
+    sun height map (+0x248, LG5), cLightSet 0xb3cfb0 (+0x2d0 and the temporary default set pushed by
+    LightSets_EmplaceReallocate 0x2c9590 / CopyLightSet 0x2cb200, both library-shaped vector code), a list head from
+    0x2e57d0, the stopwatch and two cRZStrings; the destructor calls 13 helpers (0x140fe0, 0x14c060, 0x15d790,
+    0x177770, 0x197100, 0x1c0366, 0x2c9bd0, 0x2cb550, 0x2cb5d0, 0x2cb650, 0x2cb6c0, 0x2cbbb0, and
+    cTextureHandle::Destroy 0xae82b0, ours). Slots 6-9 call LG4's builders and slot 11 cDiffusionLightExtension (LG7),
+    which is why LG3b now follows LG4 and LG5 rather than LG1.
+
+LG3b split (lane 261110o, 2026-11-10). LG3b became LG3b-LG3h. Every function below is thiscall on the manager (0x548
+bytes) unless it says otherwise. Offsets are from the manager's start; DoMessage's `this` is the message-target
+subobject at +4.
+- LG3b, part 1 (done). Tests: `tests/sg_lighting_lifecycle.cpp` (5 tests, 12000 cases each); fakes in
+  `lightfx::life` (tests/sg_lighting_fakes.h: `StandServer` message server, `RzHeap`, `Ambients`, `PathServices`).
+  - Slot 22's separator 0xda52b4 is "/", not "\": a test with only backslash paths never reaches PathExists (lane
+    261110o's first mutants all survived for that reason).
+  - 0x1c03b7 tail-calls Malloc; the option list's strings are GZStrings (the allocator service's), the list nodes are
+    `AllocateListNodes` 0x1e7190 (0x20 bytes each) freed by DestroyStringListNodes 0x1d5ea0.
+  - FillShared does not set `gLerps[].vt`: a test that releases sky samples or +0x228 sets it itself.
+  - ApplyLightSet's two messages are not null-checked (ORIGINAL-BUG in src); the null case is not tested.
+  - Mutants: 21 run, 19 killed; the 2 survivors equivalent: falloff `>=` (0x2d07f1-0x2d0808: the float is widened by
+    cvtps2pd and compared by comisd with the double 1e-6 at 0xdaaa28, which no float equals) and a plain multiply for
+    `MulFirst` (0x2d07a5 / 0x2d07b0 movss then mulss: the first factor's NaN wins, which our build of the plain product
+    also does; MulFirst keeps it independent of operand order).
+- Library instances in the range (never ours): 0x2c9bd0 _Erase_tree, 0x2e57d0 list-node allocate, 0x2cbbb0 the
+  0xb3d240 block's string tidy (Blob4<0x50>), 0x2cb650 vector<Blob<108>>::_Tidy, 0x2c9c50 vector<char> resize,
+  0x2941e0 (DoMessage's ambient-map resize), 0x2e59d0 (an inlined strcmp returning bool, 55 bytes: a library string
+  compare), 0x2c90d0 (destroy a range of cSkySample; library-shaped, called by Shutdown), 0x2cb550 / 0x2cb5d0 /
+  0x2cb6c0 (the destructor's tree / list tidies). Not library and not ours: 0xb3cfb0 cLightSet ctor (466),
+  0xb3d240 (130, the settings block ctor: words 4, 1.0, 3.0, 0.2, 3.0, 0.2, 0.5, 0, 0, 1.0, 1.0, 0, a cRZString at
+  +0x30), 0xb3ce50 (30), 0xb3ce70 (310), 0x2e29f0 (118, below), 0x2dfe10 (178, below), 0x2ca590 (165), 0x1d4ab0 (84),
+  0x3aab80 (831), 0x3ab990 (687), 0xaeb5b0 (238, find a named extension), 0x20e0b2 (43).
+- LG3c recipe.
+  - Checked against the disassembly by lane 261110q. Notation: "offset 0x4c" is the vtable byte offset, "slot 19" the
+    index (offset / 4). The image's operator new / delete are 0x824632 / 0x824624 (sized delete; the test patches them
+    as tests/sg_lighting_select.cpp does).
+  - Slot 5 0x2df8a0 LoadLightingFiles (thiscall, ret 0). The receivers, in order:
+    1. A std::list of strings (node 0x20 bytes, the string at node+8) made by AllocateListNodes 0x1e7190 (this = &head,
+       stdcall (1, 0); the allocator service's).
+    2. CommonImplSlot5 0x1d0c60 (cdecl: 0x6c9f7a1f, &list, 1, 0, ~0xb39360()), where 0xb39360 is a 6-byte game helper
+       answering 0x20000 (so the mask is 0xfffdffff). The list is walked from the last node to the first (the reverse
+       iterator: start at head->prev, stop when the node reached is head->next). For each string: a cRZString on the
+       stack (game vtable 0xd9b470, std::string built from the text) goes to cRZFile::PathExists 0x1c1242 (cdecl,
+       &rzstring; al); when true, the parser (+0x30) offset 0x18 (slot 6) (const char *path, 5). The string's heap
+       buffer is freed with the sized delete.
+    3. The same call again with the mask 0x20000, onto the same list without clearing it first (what the list holds the
+       second time is the forwarder's doing: `StandPaths` appends, so the second walk sees both batches), walked the
+       same way.
+    4. The parser offset 0x1c (slot 7) (no arguments).
+    5. The resource service: getter 0xb390c0 (CachedServiceGetter<0x10faf6c, 0x056b906e, 0x9af5e924>), its offset 0xc
+       (slot 3) gives the resource manager; manager offset 0x4c (slot 19) (&vector, 0xadee8d84) fills a 12-byte
+       {begin, end, capacity} vector of 16-byte keys.
+    6. 0x2d0ae0 (this, &vector).
+    7. The vector's storage (when begin is non-null) freed through the allocator service (GetAllocatorService 0x1be693,
+       cached in the static 0x10c95d4 behind the thread-safe init guard 0x10c95d8) offset 0x10 (slot 4) (begin), then
+       the vector zeroed; DestroyStringListNodes 0x1d5ea0 (cdecl: &head, head) and FreeThroughAllocatorService 0x197100
+       (this = &head; head, 1).
+    Fakes: `PathServices` (0x1d0c60, 0x1c1242) exists, and `StandPaths` pushes GZStrings (the allocator service's): a
+    std::list can't be reserved, so either keep the list's nodes out of the AllocationCounter count on both sides
+    alike or have the fake allocator hand out preallocated nodes. New: the resource service and manager (slot 3 of the
+    service; offset 0x4c filling the vector from the fake allocator service, so that the slot-4 free matches), the
+    parser's offsets 0x18 / 0x1c (log path text and the 5; slot 7 logs). The allocator service the list and the vector
+    use must be one fake, given to both sides through 0x10c95d4 and the AllocateListNodes / FreeThroughAllocatorService
+    path. 0x2d0ae0 is ours once the lane does it: stand it in (log the vector's begin / end) for slot 5's test.
+  - 0x2d0ae0 ReadLightingResources (thiscall, ret 4: the key vector). The receivers, in order:
+    1. The resource manager as above (0xb390c0, offset 0xc), held in a local.
+    2. The parser: (+0x30) offset 0x24 (slot 9) gives an object reached through a virtual base: AddRef is the virtual
+       base's offset 4 (slot 1): ecx = p + 4 + vbtable[1] (the vbtable pointer at p+4, its second entry); the final
+       Release the same way, offset 8 (slot 2). A null parser skips the loop.
+    3. The key count is (end - begin) >> 4, read once; the keys are re-read from begin + 16 i each pass. Keys whose
+       first word is not 0xadee8d84 are skipped.
+    4. Manager offset 0x9c (slot 39) (key, &obj, 0) answers al (the out word is zeroed first); false skips to the
+       release of obj (step 9).
+    5. obj offset 0x28 (slot 10) answers the size n. The local std::vector<char> (operator new memory) is resized to
+       n + 1, new bytes 0: grows through _Resize_reallocate 0x2c9c50 (library) or, within capacity, memset 0x17bd90;
+       shrinks by moving end.
+    6. obj offset 0x20 (slot 8) (begin, n) answers al; false skips to step 8.
+    7. Manager offset 0x88 (slot 34) (key, &nameObj) (the out word zeroed first; its answer is ignored); a null nameObj
+       skips to step 8. Else nameObj offset 0x2c (slot 11) (&rzstring) fills an empty cRZString (game vtable 0xd9b470,
+       in place); the parser's own offset 0x38 (slot 14) (begin, n, name text) (on the parser pointer, not the
+       virtual base); the name's heap buffer freed; nameObj offset 8 (slot 2).
+    8. obj offset 0x18 (slot 6) closes (whenever the open succeeded, read or not), then the vector is cleared (end =
+       begin, the capacity kept for the next key).
+    9. obj (when non-null) offset 8 (slot 2).
+    After the loop: the parser's virtual-base Release, the vector's storage freed with the sized delete.
+    Buffer sizes: the read buffer holds n + 1 bytes (the fake's slot 10 answer plus the 0 terminator; slot 8 must
+    write at most n). Reserve nothing in the fake: the vector is the function's own (operator new, patched), so the
+    heap compare covers it; make the fake's sizes include values past the previous capacity (growth), within it, and
+    0. The name is a cRZString the fake assigns (in place and heap-sized names). New fakes: the resource manager
+    (offsets 0xc on the service, 0x4c, 0x88, 0x9c), the resource object (offsets 8, 0x18, 0x20, 0x28), the name
+    object (offsets 8, 0x2c), the parser with a virtual base (offset 0x24 on +0x30 answering it; offsets 4 / 8 at the
+    vbtable-adjusted address, offset 0x38 on the primary). The answers the original reads before and after a call
+    (the open and read results, the size) change per call.
+  - Done by lane 261110q (0x2e10a0, 0x2e4480, 0x2e29f0, 0x2dfe10; the notes below are kept for reference). Found
+    there: 0x2e59d0 is a 55-byte game helper (strings equal: strcmp == 0), not library, and not ours yet (ours uses
+    strcmp; a candidate for a later lane); 0x2e10a0's second lookup destroys its temporary before storing mCurrentSet
+    and assigns mName from the argument; 0x2dfe10's object from the definition's slot 7 is not null-checked before
+    slot 13.
+  - 0x2e10a0 SelectHoodLightSet (const char *name; ret 4, bool in al): inlined strcmps against "day" (0xdb60cc),
+    "neighbourhoodImposter", "neighbourhood", "overcast"; then 0x2e59d0 (game helper, strings equal) against spring / autumn
+    (0xdb60fc) / winter -> 0x2e29f0(1); night / demoNight / neighborhoodnight / vacationNight -> 0x2e29f0(3); morning
+    -> 0; evening -> 2. 0x2e29f0 (118 bytes, not ours: take it here) stores its argument at +0x48 and sets two
+    options through 0xb39000's slot 0x7c (index, value): 0 -> (0,0),(1,1); 1 -> (0,1),(1,0); 2 -> (0,1),(1,1);
+    3 -> (0,0),(1,0). Then the "lotSkirtReflectionSkybox" environment cube through 0x2dfe10 (178, not ours: the
+    cached queried object's slot 0x7c test, slot 0x84 get, the material's slot 0x34 "skyboxCubeTexture", slot 0x5c
+    set) for the day / night skymaps, or g_SgSystemCell slot 0x7c. If the switch byte 0xffde40 is clear, name +
+    "NoPortals" through FindLightSet first, else the name; when found, mCurrentSet (+0xd0) = the index and mName
+    (+0xb4) assigned. Trap: Ghidra garbles the `assign` target (read the disassembly).
+  - 0x2e4480 SelectTimeOfDayLightSet (ret 0): only when +0x14 (initialised) and +0x4c are set. 0x20df9a's slot 0x3c(4)
+    gives the hour kind (a short), switched 0-3 into day / evening / night / morning (morning and evening only with
+    the flag +0x6c); vacationNight through the 0x20ddfb singleton's slot 0x18 -> slot 0x3c -> slot 0x7c; the season
+    through BitMask(7) with HasOptionBits 0xb39490 and the season slots 0x48 / 0x44 / 0x8c (spring / autumn / winter /
+    overcast); FindLightSet, falling back to "day". Then a cRZString copy of +0xb0, SelectHoodLightSet, and if the
+    name changed: ApplyLightSet (ours), +0x80 = 1, +0x83 = 1. Trap: many inlined small-string reallocations; compare
+    the strings by content and capacity class (in place or heap), not by pointer.
+  - Slot 6 0x2d10b0 SetupLot (sceneManager; thiscall, ret 4). Checked by lane 261110q; the receivers, in order:
+    1. Terrain (+0x1c) offset 0x15c (slot 87): an x87 float r, then fld1 / fdivrp: +0x200 = (float)(1 / r) (test r
+       0, negative, NaN, huge).
+    2. Terrain offset 0x14c (slot 83) and 0x150 (slot 84): integers in eax, stored as they are at +0x20c / +0x210;
+       +0x204 = +0x20c + 1, +0x208 = +0x210 + 1. No int64 truncation here (the older note's "as slot 8" was wrong for
+       these two): no x87-to-integer inputs in this function.
+    3. Terrain offset 0x9c (slot 39) -> +0x20, the ref-pointer assignment: skipped when equal; the new one's offset 4
+       (AddRef), stored, then the old one's offset 8 (Release).
+    4. The system 0x20defb offset 0xc0 (slot 48) -> +0x24, the same assignment.
+    5. When the byte 0xffde34 (g_NoFlatLights) is non-zero: the lit object (+0x18) offset 0x14 (slot 5), no arguments.
+    6. +0x40 = 1 (dword); the word at +0x69 = 0x100; the argument -> +0x28 (the same assignment, offsets 4 / 8).
+    7. operator new(0x1c) 0x824632, cLerpLightSet::cLerpLightSet 0x3c0ec0 on it (null skips it), assigned into +0x228.
+       Trap: cLerpLightSet is a cRZRefCount (slot 0 the destructor, slot 1 Release 0x1b94af, slot 2 AddRef), so this
+       assignment calls the new one's offset 8 and the old one's offset 4, the other way round from steps 3-6.
+    8. SkySampleKey 0x3a97d0 (cdecl, 0) and cLerpLightSet::SetKeys 0x3c2e30 (this = +0x228; key, 0).
+    9. BuildSunHeightMapLights 0x2cfd60; the word at +0x80 = 1, the byte +0x83 = 1; SelectTimeOfDayLightSet 0x2e4480
+       (ours now: stand it in).
+    10. Terrain offset 0x18c (slot 99) (&rzstring: an empty in-place cRZString, game vtable 0xd9b470) answers al; when
+       true, this's own offset 0x58 (slot 22, FindLightingFile, ours) (its text). The string's heap buffer freed.
+    Fakes: `LerpConstruct` / `LerpSetKeys` (tests/sg_lighting_fakes.h) and `BuildSunHeightMapLightsStand` exist; the
+    terrain view and the system 0x20defb (`lightfx::StandSystem`) are in sg_lighting_lifecycle.cpp's world (move it
+    into a header to reuse it). New: terrain offsets 0x14c / 0x150 / 0x15c / 0x18c (the last filling the string in
+    place and heap-sized), ref objects for +0x20 / +0x24 / +0x28 with counted AddRef / Release that log, the old
+    cLerpLightSet at +0x228 (null and set) with its Release logged, and stand-ins for 0x2e4480 and slot 22 that log
+    the members steps 6-9 set. 0x3a97d0 can be the game's on both sides (as sg_lighting_portals.cpp does).
+- LG3d recipe. 0x2e3710 ReadRoomSettings (parser; ret 4): named reads through 0xaf7190 (float), 0xaf7210 (int), 0xaf7110
+  (bool), each (parser, name, &member, &found), the found flags or'd; sections through parser slot 0x50 (enter) and
+  0x54 (leave): 0xda4e10, "object", 0xda8b58. Members written: +0x1d4, +0x1cc, +0x1d0, +0x12c-+0x158 and +0xdc-+0x108
+  and +0x17c-+0x1a8 (the three 0xb3d240 blocks), +0x1d8-+0x1e8 (portalCorner defaults to +0x1e0 when not found),
+  +0x240, +0x244, +0x2ac, +0x60, +0x64, +0x1ec, +0x1f0, +0x6b, +0x6c, +0x70, +0x74, +0x78, +0x7c, +0x2bc, +0x2c0, +0x87,
+  +0x508, +0x54, +0x58. Then "lightRangeCutoff" (default 0x3e800000, 0.25) set as the AnyFloat32 option
+  "lightRadianceRangeCutoff" through the framework object 0xac1887e / 0x4bb0d269, slot 3. Test: stand-ins for the
+  three readers answering from a drawn table (found or not, per name); log each name hashed. Sonnet.
+- LG3e recipe.
+  - DoMessage 0x2d44b0 (on the +4 subobject: every member offset in the decompile is 4 less than the manager's).
+    Switch on the message id: 0x2bf18d56, 0xfe3cf23, 0xfb96150, 0x8d, 0xfb96149, 0x4b3bc675 (room settings: swaps the
+    light-set vector, resizes the ambient maps through 0x2941e0 (library) and 0xb409f0 (513, ours since lane 261111n)), 0xd23b7d7c,
+    0xb23b7d66, 0xeb425393, and the others in the decompile. Opus.
+    Corrections (lane 261110s, from the disassembly): 0x2941e0 is a counted-vector growth (the ambient maps'), written
+    as our own; the ids are also 0x2df90c05 (the message's object's lighting resources, QI 0x656b8f0c, slot 19 with a
+    key filter of type 0xadee8d84) and the option range 0x2bf18d58 + 0..9 (rows 0xffde40 + 0xc * i, value byte 4 of
+    the message's data 2) plus 0x2bf18d56 (the byte 0xffde34). The image's ServiceBlockVector::FreeBlock 0x195720
+    frees through the allocator service (cell 0x10c95d4, slot 4) while ours calls RZMemory::Free: a test needs a fake
+    service whose slots 3 / 4 go to the same RZMemory stand-ins (tests/sg_lighting_messages.cpp, `msgfx`).
+  - Slot 10 0x2df430 Update: Ghidra types `this` as cRZMessage2Standard (wrong). If parser (+0x30) slot 10 (0x28): parser
+    slot 7; if +0x524's path is set and exists, parser slot 9's result slot 12 (path, 0). Then message 0x4b3bc675 with
+    SetObject (slot 33) posted through the server's slot 3 (`StandServer` exists); the resource reload through 0x2d0ae0;
+    scene manager (+0x28) slot 17 -> own slot 25's result slot 9; +0x80 = 1. The +0x80 / +0x81 / +0x84 / +0x88 state
+    machine over RebuildAll(1) / RebuildStep; the stopwatch +0x4e8 (0x1c95cf IsRunning, ElapsedAsFloat, Stop; the
+    `Watch*` fakes exist); Lerp 0x2dfc80 at (t - +0x504) / (+0x500 - +0x504); then the lit object's slots 0x54 / 0x50
+    under 0xffde88 and g_NoFlatLights, SetSceneFlags 0xaeeea0 (scene, 0xc) with +0x86, and 0x20ddfb's slot 0x58 ->
+    slot 0x50 -> slot 6.
+    Corrections (lane 261110s): "path set" is the +0x524 string's slot 7 and the path its slot 5; the try/catch covers
+    only the file run and skips the message; +0x500 is cleared; SetSceneFlags is gated by +0x85.
+- LG3f recipe. Constructor 0x2ca6f0 (thiscall, ret 0; Ghidra shows edx passed on to 0x1c02fb: check the disassembly
+  for whether it is live): vtables at +0 and +4 (cIGZMessageTarget2 first, then the manager's two), +8 = 0,
+  +0xc std::set<unsigned> (0x1c02fb), +0x14 = 0, +0x18-+0x30 = 0, +0x34 invalid index (0x18bf80), +0x38-+0x40 = 0,
+  +0x44 = 0x100, +0x48 = 3, the word at +0x4c = 0x101, +0x50 = 1.0, +0x54 / +0x58 = 0, the word at +0x5c = 0x100,
+  +0x5e = 1, +0x60 = 0.12, +0x64 = 0.9, +0x68 = 0x10000, +0x6c = 1, +0x70 / +0x74 = 0, +0x78 = 0.3, +0x7c = 1.0,
+  +0x80 = 0x1000000, +0x84-+0xac = 0, a cRZString at +0xb0, +0xd0 = -1, a list head at +0xd4 (new 0x14 bytes, the
+  node pointing at itself, word +0xc = 0x101), three 0xb3d240 blocks (+0xdc, +0x12c, +0x17c), +0x1cc-+0x210 constants
+  (0.25, 1.0, 1.0, 0, 1.0, 0, 0, 1, 1.0, 1.0, 0, 0, 0, 1.0, 0x41, 0x41, 0x40, 0x40), +0x214 another list head (0x2e57d0,
+  library), +0x21c-+0x23c = 0, +0x240 / +0x244 = 1.0, cSunHeightMap at +0x248 (ours), +0x2ac = 1.0 ... +0x2cc = 1.0,
+  cLightSet at +0x2d0 (0xb3cfb0), cRZStopwatch(4) at +0x4e8, +0x500 = 0, +0x508 = 0.5, a cRZString at +0x524 (its std::string +0x528, size +0x538,
+  capacity +0x53c), and the
+  default light set pushed through LightSets_EmplaceReallocate / CopyLightSet. The destructor undoes it through the
+  13 helpers listed above. Create 0x2d83a0: operator new(0x548) + constructor. Test: both sides construct into the
+  same drawn bytes and are compared word by word (vtables and heap blocks as ids), then destroyed. Opus.
+  Corrections (lane 261110t): edx into 0x1c02fb is not live; +0xd4 and +0x214 are std::set trees, not lists;
+  0x2cb200 is LightingState's member-wise copy (the name built from its characters and length), a game struct's, not
+  library-shaped (0x2c9590, the vector growth, is); +0x504 is cleared too and +0x518 is left unwritten; the default
+  set is pushed while +0xd0 is -1, and 0 is stored after the push (0x2cac4c). The destructor's release order and the
+  +0x2c member's release through its vbptr (+8, offset in entry 1) are in src/sg/cLightingManagerCreate.cpp. The
+  test's heap identity (aligned big strings, end pointers, reused blocks) is in tests/sg_lighting_construct.cpp.
+- LG3g recipe.
+  - Init slot 3 0x2d98c0 (ret 0): only when +0x14 is clear (sets it). The message ids registered on the +4 target
+    through the KeyMapSlot5Walker at +0xc; +0x18 (the lit object) and +0x1c made and slot 3 called; +0x2c the
+    cDiffusionManager (0x3c4140, held through its virtual base); +0x30 the parser from the framework
+    (0x5cf9459a / 0x1cf94583), its slot 5 (diffusion, 0); the texture manager's slot 0x50 (key, "nhoodLightMap", 1)
+    into a cTextureHandle; +0x238 (0x253d2018 / 0x53d200a) and +0x23c (0xac06a66f / 0xc069ed0) from the COM maker,
+    +0x238 slot 0x174(+0x23c); eleven commands 0x2bf18d56, 0x2bf18d58-0x2bf18d61 registered on the framework object
+    0xac1887e / 0x6bb22f38 slot 4 (target +4, id, a temporary string, the command vtables 0xffde30-0xffdea8, 12
+    bytes apart); the render-group masks +0x50c-+0x520 from RenderGroupRegistry slot 3 (names 0xda63d4, "Props",
+    "Portals", 0xdb6074, "LotSkirt", "Shade", "Walls", "Floors", "Ground"; +0x520 also or's the four before it); two
+    new cLerpLightSets into +0x22c and +0x230 (SetKeys).
+  - CORRECTIONS (lane 261110u, from the disassembly): the "eleven commands" are property-manager notifications, not
+    commands. The registry is cIGZPropertyManagerString (framework slot 5 GetSystemService 0x0ac1887e / 0x6bb22f38);
+    Init calls its slot 4 (AddNotification: target +4, message id, a temporary string, a default word) and Shutdown
+    its slot 5 (RemoveNotification: target, id, string). The strings come from the name-pointer cells at .data
+    0xffde38 + 12*i (read as `const char *`; the "vtables 0xffde30-0xffdea8" are AnyBoolean rows, the default word
+    passed is the row address 0xffde30 + 12*i); ids 0x2bf18d56 for i = 0, 0x2bf18d57 + i after.
+  - Shutdown slot 4 0x2e2b60: VERIFIED (lane 261110u, src/sg/cLightingManagerInit.cpp, tests/sg_lighting_init.cpp).
+    Real order: guard (+0x14 clear: return true, nothing else; every other value runs it); clear +0x14 and +0x69;
+    framework GetSystemService into a ScopedRef; eleven RemoveNotification (cell read fresh each iteration); texture
+    Reset; parser +0x30 slot 4 (NOT null-checked) then release; +0x2c release through its virtual base; +0x1c, +0x20,
+    +0x24; +0x18 slot 4 then release (the member is re-read after the call); CallSlot6ForEachKey over +0xc; the +0x28
+    block (RemoveSampleLights, RemoveBuiltLights, release, re-read); +0x238, +0x23c; sky samples cleared (0x2c90d0,
+    never hooked); path cleared; +0x22c / +0x230 slot 1; the settings ref released; always returns true.
+  - Init slot 3 0x2d98c0: VERIFIED (lane 261110v, src/sg/cLightingManagerInit.cpp; tests/sg_lighting_init.cpp
+    sg_lighting_init_init). The recipe above is wrong where this list says; the real order, from the disassembly:
+    - guard: +0x14 set returns true (not 0) and does nothing else; else set it. Init always returns true.
+    - CallSlot5ForEachKey (0x1c0458) over the set at +0xc with the target this ? this + 4 : 0.
+    - Only when byte 0xffde34 is set: new 0x94, cDiffusionManager's constructor 0x3c4140 (its return used), assigned
+      to +0x18 (AddRef 1 new, store, Release 2 old; nothing when equal), then +0x18 re-read for its slot 3 Init (inside
+      the branch; nothing is made at +0x1c here).
+    - +0x1c: the world DB from 0x20e0b2 (GetCachedWorldDB: cell 0x10cc298, filled once through 0x20dd6f
+      AcquireWorldDBRef, framework slot 5 0x4a037ee3 / 0x49ff7d6f), assigned the same way. Still the game's.
+    - +0x2c: a nTSSG::cLightingParserState (0x43c bytes, built inline: vbptrs and virtual-base tables, then
+      cTSLightingParserState's constructor 0xb3ce70 with flag 0, its own vtables 0xdb5f60 / 0xdb5f7c / 0xdb5f8c, zero
+      vtordisps, +0x404 0, an empty cRZString at +0x408). Not the cDiffusionManager. Assigned through its virtual
+      base cIGZUnknown (+8 + vbtable[1]; AddRef 1, Release 2).
+    - +0x30, the cFileParser (0x5cf9459a / 0x1cf94583): old one nulled and released, the COM maker into it, then its
+      slot 3 Init, then slot 5 SetParser(+0x2c's cIBaseParser face (+8 + vbtable[2], null for null), 0). Neither
+      checked for null (a maker that writes nothing crashes the original, 0x2d9af0).
+    - The shade texture: a COM local made from 0x2a956dad / 0x2a956da8 (missing from the recipe), the texture
+      manager's slot 20 Add(image, "nhoodLightMap" at 0xdb60ac, 1), its id through a temporary cTextureHandle
+      (0xae8260 InitFromId, 0xae82e0 Assign into +0x34, 0xae82b0 Destroy); the local is released at the very end
+      (after the settings ref), not nulled.
+    - +0x238 (cILightRefNode: kLightRefNodeClass / 0x53d200a) then +0x23c (cILinearFogLight, 0xac06a66f / 0xc069ed0),
+      each remade as +0x30; then +0x238's slot 93 SetLight(+0x23c), unchecked (0x2d9c0b).
+    - Settings: as the CORRECTIONS above (eleven AddNotification; nothing when the framework or the service is null).
+    - Groups: +0x50c-+0x520 zeroed, then each or'd with its bit (1 << (slot 3 answer & 31)) read after the call:
+      +0x50c/+0x510/+0x514 (0xda63d4, 0xdb076c, 0xdb0764), +0x518 twice (0xdb6074 and 0xdb607c), +0x51c Shade
+      (0xdb34ec), and between Shade's call and its store +0x520 |= the four words +0x514, +0x518, +0x510, +0x50c as
+      they are in memory; then +0x520 |= the bits of 0xdb606c, 0xdb2b1c, 0xdb2b24.
+    - +0x22c and +0x230: new 0x1c cLerpLightSet (0x3c0ec0), assigned with slot 2 as AddRef and slot 1 as Release
+      (cRZRefCount), each followed by SetKeys(SkySampleKey(0), 0) and (…, 1) on the member re-read.
+    - Not testable: the +0x30 / +0x238 makers writing nothing, a null texture manager, operator new failing.
+- LG7f notes (lane 261110y; cTSLightingParserState 0x418 bytes and nTSSG::cLightingParserState 0x43c bytes, layouts
+  in src/sg/cLightingParserState.h).
+  - The image's cBaseParser bodies take the cIBaseParser face (part + 0x1b8; QueryInterface takes + 0x1b0), ours take
+    the part: a test standing in for one patches each side separately (BaseStandIn in the test).
+  - cBaseParser::Initialise 0xb02880 returns at once when its once flag (part + 0x10) is set, and calls face slots 8
+    and 24; the base Initialise 0xb3eea0 ignores its result, the derived 0x2da270 returns false on false.
+  - Call tables (callee: ours or the game's):
+    - 0xb3d510 LightingState::operator= (814): 0x144402 string assign (library); the values copied inline.
+    - 0x2da270 derived Initialise (320): 0xb3eea0 (ours), 0x824632 new (library), 0x3c6a30 cLightSettings'
+      constructor (ours), 0xaf7820 cCommand::Construct (ours), 0xaf7750 cBlockCommandBase::Construct (ours).
+    - 0xb3ea80 cTimeOfDayCommand::Execute (307): 0x173790 / 0x144402 string (library), 0xb3c7f0 the times vector's
+      push_back growth (library-shaped), 0x824624 delete; face slot 31 EvalFloat (ours).
+    - 0xb3d3e0 Destruct (301): 0x2cb5d0 (LightingState vector tidy), 0xb3d300 / 0xb3d380 vector _Tidy (library),
+      0xafe1b0 cBaseParser's destructor (ours).
+    - 0xb3d8a0 Reset (270): 0xaff120 cBaseParser::Reset (ours), 0x2c9160 / 0xb3c780 / 0xb3c9d0 / 0xb3cd00 vector
+      clear and insert (library), 0xb3d240 / 0x2cbbb0 the settings block (ours, lane 261110t).
+    - 0xb3eda0 FindState (243): 0xb3d510 (ours).
+    - 0xb3eea0 base Initialise (233): 0xb02880 (ours), 0x824632 new, 0xaf7750 (ours); face slots 2 and 4.
+  - Not this class in 0xb3cd00-0xb40a00: 0xb3d840 (shared_vf); library STL 0xb3cd00, 0xb3d300, 0xb3d380, 0xb40120,
+    0xb3c7f0, 0xb3c9d0, 0xb3c780; cLightingManager's 0xb3f770 / 0xb3f7f0 (caller 0x2cfd60); the imposter-side
+    0xb401c0, 0xb40540, 0xb402a0, 0xb40970; 0xb409f0 (the ambient map load, called by DoMessage 0x2d44b0);
+    0xb3ce70 (the constructor, lane 261110v).
+  - Found: cp::cBlockCommandBase::Construct (ours, src/gz/CommandParser.cpp, 0xaf7750) is not exception-safe: the
+    original frees the list head node and the bucket vector when FillBuckets 0x15fdc0 or NamePool::Construct 0xaf66b0
+    throws; ours leaks one or two blocks. The lane's test stands in for the command constructors, so it does not
+    cover this.
+- LG3h recipe.
+  - Slot 13 0x2e4c40 ApplyObjectLighting (node, kind; ret 8). Ghidra reads `this` as a stack local (local_18): read
+    the disassembly for every member use. 0xaeb5b0 (node, "ObjectLighting", 0) finds the extension; its slot 0x3c
+    ("Strength", &value) with value 1.0 first; the strength times cRZRandom::RandomDoubleRangeUniform(1 - +0x70,
+    1 + +0x70); zero without g_NoFlatLights; SkySampleKey(0); a branch-node filter 0xaea7c0 (0xf, 0x53d200a) over
+    the node's slot 0xb0 iterator (slots 0x10 next, 0x14 current); each node's name (t_ObjectDisplayName), lowered,
+    tested for the suffix "_designmodelight" (kind 0 only), cut with Left; 0x3aab80 / 0x3ab990 (not ours) per light;
+    events 0xe9d24d51, 0x49e37821, 0x8a561e23 (cIEventHeader, 0x2ca590 / 0xb3ce50); the filter destroyed (0xaea7f0,
+    ours). Opus.
+  - Slot 11 0x2d14b0 (334): kinds 8 / 9 run the 0xaea7c0 filter over the node's slot 44 iterator and send event
+    0xe9d24d51; others 0xaead10 / 0xaeb3f0 "ObjectLighting".
+
+LG3h notes (lane 261110w, 2026-11-10). Done: 0x2e59d0 StringsEqual (55), 0x2ca590 cExtensionSearch::Construct (165),
+slot 11 0x2d14b0 PrepareObjectLighting (334), slot 13 0x2e4c40 ApplyObjectLighting (2632), in
+src/sg/cLightingManagerObjects.cpp, tested in tests/sg_lighting_objects.cpp (hand-written vtable fakes in namespace
+sgobjfx: slot 120 is past ts_services_fixture's 96 slots, so the fixture was not raised). The cLightingManager row is
+complete with LG3h.
+- Recipe corrections (from the disassembly, then the tests):
+  - Slot 13's second argument is a light name (const char*, or null), not a kind. With a name, a light is picked when
+    `_stricmp(tag, name) == 0` (the tag is not null-checked on that path; the test draws no null tags with a name).
+    Without one: a null tag is picked; else the tag lowered is tested for "_designmodelight" (0xdb08c0, 16, case flag
+    1); no suffix is picked; with it the stem (Left, strlen - 16) is compared (`_stricmp`) with the design mode's
+    slot 53 answer for the object's first and third design-mode names (0x3aab80 fills four strings).
+  - 0x3aab80 and 0x3ab990 take the object, not the light: cdecl 0x3aab80(object, four cRZString*), cdecl
+    0x3ab990(object, cRZString *name) -> a design mode or null (slot 53: name -> const char* light stem). Called once
+    per suffixed light per name, an empty name skipped.
+  - "Strength" is read through the "ObjectLighting" extension's slot 15 (name, &float), not slot 0x3c (that's its byte
+    offset). The draw is RandomDoubleRangeUniform(1 - +0x70, +0x70 + 1) (subss / addss in float, then the double
+    product with mulsd: a NaN strength wins), zeroed while 0xffde34 is clear.
+  - 0x2ca590 is not an event: it is a search holder {mObject, mNode} constructed on the stack, the first extension
+    (slot 21, slot 20 next) answering QI(iid 0x8a561e23) on the node, else on its parents (slot 34); an extension that
+    writes its out and answers no is released before the next is asked. Slot 13 then releases the holder's reference
+    through the virtual base and AddRefs its own (the net count is unchanged).
+  - The modifiers are the current set's [5] when the light's slot 86 layer word ([ret + 4]) equals SkySampleKey(0),
+    else [4]: intensity * strength * m.c * +0x50 (set through slots 0, 23, 3), falloff (slot 26) * m.d (slot 6),
+    then DropLightCopy (92); when GetLight (95) answers, attribute 0xe9d24d51 = m.a * strength * +0x50 * its value and
+    0x49e37821 = value * m.b, each read with GetAttribute (10) into a ScalarEvent whose value the original leaves unset.
+    A light not picked: when GetLight answers, 0xe9d24d51 set to 0 and the diffusion extension's intensity to 0.
+  - 0x2e59d0 is not called by slots 11 / 13 (other callers use it: DoMessage's season names). It is game code (an
+    inline strcmp loop ending `sete al`; the equal path returns eax = 1, the other junk upper bytes: compare al).
+  - 0xffde34 is the diffusion-lighting option byte (message 0x2bf18d56), now annotated g_DiffusionLighting (was
+    g_NoFlatLights): set, Init makes the cDiffusionManager and slot 10 adds no flat outdoor light; clear, slot 13
+    lights objects at 0.
+- Not ours, called through OriginalFunction (src/sg/cLightingManagerObjects.cpp): 0xaeb5b0 (find a named extension),
+  0xaead10 (the object wants lighting), 0xaeb3f0 (find or make a named extension), 0x3aab80
+  (GetObjectDesignModeNames, 831) and 0x3ab990 (FindObjectDesignMode, 687, recursive over the object's children). The
+  last two belong to the design-mode module 0x3aa260-0x3ac250, not to lighting: a row of their own there (with the
+  design-mode class slot 53 answers from); the first three to the scene-graph extension helpers (0xae7900-0xaeb5b0).
+- Call tables (receivers as in the source's hints):
+  - Slot 11: object 120 -> owner 98 (movzx ax; 8 / 9). Kinds 8 / 9: filter ctor, object 44 (range, 0, filter), per
+    node IsEqual 4 / Get 5 / SetAttribute 7 (0xe9d24d51, 0, event 0) / Next 6; the range released end, begin,
+    cursor; the filter dtor. Else 0xaead10(object, 2) and, when it answers, 0xaeb3f0(object, "ObjectLighting", 1).
+  - Slot 13: 0xaeb5b0(object, "ObjectLighting", 0) (null: return); ext 15 ("Strength"); the random draw; 0xffde34;
+    SkySampleKey(0); filter ctor; object 44; per node: Get 5, QI 0 (0x53d200a, no null check of the answer), GetTag
+    26, the pick (above); picked: 86, 0x2ca590 walk (21, 0, 20, 34), base Release / AddRef, diff 0, 23, 3, 26, 6,
+    light 92, 95, 10 / 7 for each attribute, base Release; not picked: 95, 7, 0x2ca590 walk, base Release / AddRef,
+    diff 3 (0), base Release; then light Release 2, Next 6, IsEqual 4; the range released end, begin, cursor; the
+    filter dtor.
+
+LG4 split (lane 261109j, 2026-11-09). LG4 (47 KB) became LG4a-d, bottom-up. LG3b's builders are in LG4a (0x2dff00,
+0x2dffd0) and LG4d (0x2cfd60, 0x2d2a70). About 3 KB of LG4's old range is library code (the vector / set instances
+listed in the rows) and stays the toolchain's.
+
+LG4a notes (lane 261109j, 2026-11-09). The sky samples are cSkySample (0x8c bytes: six vectors and weights, the
+counts +0x60..+0x68, a std::vector of light refs +0x6c, lerp sets +0x78 / +0x88, a std::vector of 0xcc-byte
+cPortalRecord +0x7c; src/sg/cLightingManager.h); the manager keeps them as raw pointers (mSkySamplesBegin / End) until
+the sampler's resize (0x2e5a10, library) is ours. The record and light vectors are std::vector: clear() matches the
+original's destroy range 0x2c9060 (each record's mOther, then mObject, released). cSkySample::Clear also zeroes the
+three counts (the first test run caught it). The portal objects' interface 0x8a561e23 and the scene objects' flag
+0xfa1c39ed belong to classes not identified yet. The manager fields found: mSceneManager +0x28 (nTSSG::cSceneManager:
+slot 9 removes a node, slot 17 the scene), mSunMapDirty +0x6a, mPortalScale +0x1d0, mBuiltLights +0x21c, the lerp
+sets +0x228 / +0x22c / +0x230, mBlendScale240.
+
+LG4b notes (lane 261109k, 2026-11-09). Split: the three functions the portal sampler and LightWallShaded reached
+(3.3 KB) are done; the four edge builders are LG4e. SampleRoomTiles and SampleWallPortals grow the sky samples with
+std::vector::resize (library 0x2e5a10 is the toolchain's); the room set is std::set<short> and the wall set
+SegmentSet, both on the service allocator. mField1CC (+0x1cc) scales the light into vector 5, mField1D4 (+0x1d4) moves
+the floor / wall colour towards the game's grey (0xffd994, data, 1.0 per component in the image). ORIGINAL-BUG: the room
+pass adds 0.25 to the sample's tile count (+0x60) and truncates, so it never grows. WallCorners rounds the wall's
+height span half up with the 1.5 * 2^23 trick, one less where that equals the span exactly; roofs come from the world
+DB's slot 36 (0x20e0b2's object, still original) and sit 0.25 below the roof height. Room ids above the current sample
+count reallocate the samples (not tested: the fixture's samples have capacity 4) and room -1 as the largest room
+resizes them to none.
+
+LG4e notes (lane 261109n, 2026-11-09). Split: the lot-edge blend and ShadePortals (4.4 KB) are done; 0x2e0480,
+0x2d6c10 and 0x2e1c30 (7.7 KB, cLerpLightSet, Sprintf and random work) are LG4f. cPortalRecord +0xc is the portal's 2D
+normal (AddPortalRecords weighs the sides by its x and y), +0x14 the shade ShadePortals leaves, +0x18 its segment
+{x0, y0, level, x1, y1, level}; the manager's +0x1dc is mPortalReach, +0x1e0 / +0x1e4 the shades for aligned and
+crossed normals. The curved pool's edge object (world DB slot 38, its slot 11 the ids and slot 10 an edge) has its
+tile at +4 and direction at +0x10; the class is not identified. ORIGINAL-BUG (BlendLotEdges): an edge whose a or b
+rectangle is missing or empty ends the whole pass, and rows of c or d past the columns read past them (the test keeps
+them within). The blend rounds with the 49152.0 trick and clamps to [0, 255]; the texture is fetched only when the
+index changes, carried from edge to edge.
+
+LG4f notes (lane 261109o, 2026-11-09). The whole row is done (no split). 0x2d6c10 is PortalColors: one record's
+direct and sky factors (the set's modifiers +0xf8, four floats each of six types: types 1 / 3 for records of sample 0,
+else 0 / 2), colours and weights; mPortalSky (+0x45) adds the sky, mShadePortalColors (+0x1e8) scales by the shade,
+the record's +0x3c byte scales the direct weight by +0x54. The set's +0x1b4 below 1 draws the colours towards the
+ambient (EvaluateAmbientScaled). The lit object (+0x18, slot 24) answers a colour for the segment in its buffer or
+elsewhere: the sample-0 branch reads the buffer, the other the returned pointer. 0x2e0480 (BuildPortalLights) makes each
+sample's missing lerp set, adds an AddExisting (with a light) and an AddPoint per record named "LM_PortalDirect" to the
+record's sample's set, with a jitter 1 -/+ +0x74 drawn per record before the sample bound check, and appends two
+cPortalLight copies (+0x60 of the record, 0x6c bytes) unless within 32 ulps of the zero vector 0x10d9424. 0x2e1c30
+(ApplyPortalLights) recomputes the colours inline (same maths, some operand orders differ; debug colours by sample
+with +0x47 or the set's bit 11) and sets them on the nodes directly: attributes one / colour / value
+(0xe9d24d51 / 0x29de3049 / 0x49e37821) through cScalarEvent / cVectorEvent, the diffusion extension's source, and the
+other node's standard light. The original leaves 0x2e0480's two weights and 0x2e1c30's scalar events unset before
+their first write (ours zero them; the tests don't log those inputs). For LG4d: 0x2e0480 and 0x2e1c30 are ours now,
+call them (BuildPortalLights takes the std::vector<cPortalLight> by pointer).
+
+LG4d notes (lane 261109p, 2026-11-09). Split: the three builders (4.2 KB) are done; 0x2d2a70, 0x2d50f0, 0x2d5430 and the
+two Rebuilds (10.3 KB) are LG4g, which calls our three builders. What each builder does is in src/sg/cLightingManager.h
+(new fields: mSunMode +0x40, mFlatSunFraction +0x58, mSunHMLight +0x5e, mSunLightValue +0x60, mField64 +0x64, the
+render groups mOtherGroup / mShadeGroup / mEnvironmentGroup +0x518-0x520; cLightSet's flat scales +0x1a8-0x1b0).
+0xb3f770 (tentatively BuildLightSetNodes, 117 B over 0xb3f7f0) rebuilds mBuiltLights from the set and gives each light's
+kind; 0x2cfd60 calls it with the original. The byte 0xffde34 (g_NoFlatLights, tentative) turns 0x2e1560's lights off.
+BuildRenderGroupLights 0x3c2120 gets mField64 as a fifth argument it never reads. The builders' tests stand in the
+lerp-set calls, the light constructors, Sprintf, CreateConfigLight, 0xb3f770 and 0xae78f0 on both sides.
+
+LG4g notes (lane 261109r, 2026-11-09). Split: the rooms' portals (4 functions, 4.8 KB, plus the 17-byte sample key) are done; 0x2d2a70 and the two
+Rebuilds (5.9 KB) are LG4h. BuildRoomPortals 0x2d50f0 walks the walls whose rooms both have room value 100 (manager
+slot 36, compared as 16 bits), takes the wall side's object (0x7e37b0) and asks its slot 9 for the portal
+(0xfa1c39ed / 0xfa1c39f7), then calls AddRoomPortal for each side order. AddRoomPortal 0x2d5430 walks the portal's
+light-reference nodes (class 0x253d2018), places each on the portal's edge, finds its level from the ground heights
+(climbing and descending levels), picks the facing room (0x7f2340) and its sky sample by the 2D dot product (0x19d250),
+and makes a 0xcc-byte cPortalRecord (0x2cada0, with its 0x6c-byte cPortalLight at +0x60, 0x3c37b0) in that sample;
+a node that makes no record gets layer tag 0x3ffffffe. Two ORIGINAL-BUGs kept (in the source): the light is named
+without a null test when allocation fails, and a *sample* room of 0x8000 and up becomes a negative sample index. The
+facing picks two different rooms: the sample room (the index) and the tag room (the record's mSample, the node's layer
+tag, the spill's tag through the key). Only the sample room hits the bug; the tag room can be anything, and the test
+draws tag rooms 0x7fff, 0x8000, 0x8001, 0xa5c3 and 0xffff (on the side the facing makes the tag, sample side 0..9).
+The sample key 0x3a97d0 (now ours, nTSSG::SkySampleKey, verified over all 65536 low words) maps a non-negative int16 to
+itself and a negative one to 0x8000; the lighting manager's other replaced callers (0x2cfd60, 0x2d0250, 0x2e0480)
+still call the original and list it in original_calls. 0xaea7c0 (the filter constructor, 25 B) is built inline as an aggregate.
+
+LG4h notes (lane 261110a, 2026-11-10). All three verified and hooked; Refresh 0x2d8370 calls our RebuildAll. What
+each does is in src/sg/cLightingManager.h. The rest of the lighting manager's builders are done with this row; what
+still calls these as originals is outside the manager (slot 9 0x2df430, 0x2d1300, LG3b's slot 7).
+- BuildSunShadowTexture 0x2d2a70: one ORIGINAL-BUG kept (a sample rectangle's exclusive ends are clamped to the last
+  cell, so the grid's last column and row are never raised). The rounding is the x87 bias trick (subtract 0.5, add
+  1.5 * 2^23, take the low word) at both precisions; a sqrt taken through double and rounded to float equals the float
+  sqrt (no mutant possible). The test draws texture pitches that are not whole words (kJunk 1, 2, 6).
+- RebuildStep 0x2d3a50: the budget watch's Elapsed is compared unsigned, `>= 10` ends the round loop (readings
+  0x80000000 and 0xffffffff kill a signed compare, 9 / 10 kill `>`); under 10 the phase runs. After a budget exit with
+  rounds left the watch is read once more; when the 100th round has run mRebuildStep becomes 0. Phase 20 reads
+  Switch88 && !mFlag83 again after RebuildSunHeights (a hoisted read fails when a builder flips the switch).
+- RebuildAll 0x2d4010: `lerp`'s low byte picks the refresh path and goes to BuildFlatOutdoorLights; the whole word goes
+  to mRef24's slot 9. Stopwatches are mode 5 (total) and mode 4 (phases).
+- 0xaeeea0 (1.1 KB) is cdecl (scene, flags); the Rebuilds pass the scene manager's slot 17 and 0xc or 0. Ours since
+  lane 261111c: nGZSceneGraph::RebuildLightBounds (verified).
+
+LT1 notes (lane 261108d, 2026-11-08). Owner check: cBlurBrush (1,704 B) and cOverlayNode (2,765 B in 20 functions) are
+all their own; the bytes around cOverlayNode belong to the overlay geometries (cTerrainOverlayGeometryBase and its
+cLotSkirtOverlayGeometry, cFloorOverlayGeometry, cTerrainOverlayGeometry) and to cFloor helpers (0x3ae5d0, 0x3ae6d0,
+0x3aea20, 0x3afe20), not LT1. cLotSkirt's ~26 KB and cWaterGeometryBuilder are left (LT1a, LT1b).
+- cBlurBrush (src/sg/cBlurBrush.{h,cpp}, tests/sg_blur_brush.cpp): standalone, ctor and dtor hooked, cDraw2D callees
+  original. 18/18 mutants.
+- cOverlayNode (src/sg/cOverlayNode.{h,cpp}, tests/sg_overlay_node.cpp): 0x19c bytes, a cGeometryNode-style node with
+  vtables at +0 (node), +8 (interface) and +0x7c (the cIOverlayNode face: Init, Shutdown, SetGenerator, SetGeometry,
+  Update, SetMaterial, GetEntryCount, GetEntry, GetNode, GetMode). Entries are 184 bytes (vector at +0xb0), a list at
+  +0xbc, the default entry at +0xc4, eight named material handles, the per-entry material vector at +0x180 (rebuilt when
+  the display list's frame changes), item slots at +0x190. Draw (vf82) frustum-tests the geometry's bound (all six planes
+  in the mask skip the test) and hands the node to the display list (slot 25); vf83 adds the geometry's subsets (slot 28,
+  flags 0x81). Ctor and dtor hooked, the slots in effect through callers; GetMode is the folded shared_vf_1cc660 (verified
+  through our vtable only). 40/40 mutants. ORIGINAL-BUG: SetGeometry 0x3afdb0 attaches the geometry unconditionally (null
+  is dereferenced). Once the ctor/dtor hooks are in, the template copies 0xbb48e0-0xbb4a20, 0xbb5120-0xbb51f0 and
+  0xbb5770-0xbb5810 that only the original ctor/dtor reached are unreachable.
+
+LT1b notes (lane 261108f, 2026-11-08). Owner check (`--group nTSSG::cWaterGeometryBuilder`): 1,630 B executed, 2,890 B
+in db in 0x3b5970-0x3b9630. Not the class's: Read is shared_vf_3b7bd0 (folded with cCompactorBuilder's), 0x3b58c0 is
+cTerrainGeometryData's GridHeight, 0x3b58e0 is not ours either, and 0x3b7c40 (4.4 KB, the row's old "Build") is
+cTerrain::ReadWaterRenderParameters, with Load 0x3b9360 / Unload 0x3b9380 and the flag 0x10da1b4 (LT1c). Done:
+src/sg/cWaterGeometryBuilder.{h,cpp}, tests/sg_water_geometry_builder.cpp, 54 entries (10 hooked, 44 through callers).
+- Layout: 0x150 bytes, cGeometryBuilder base with the cIGeometryBuilder virtual base face at +0x14c (vtordisp at
+  0x148), persist face at +0xc. Vectors at +0x14.. (positions, normals, texcoords, colours, depths, counted subsets),
+  the case-insensitive std::map<string, index> of subset names at +0x5c, a cRZRandom at +0x68 that is never drawn from
+  but seeded from the clock (cRZRandom::Construct(-1); the tests stand it in on both sides, ours goes through
+  ConstructAt), each triangle's subset at +0x80, the triangle-corner (12 ints, +0x90) and tile-corner (4, +0xc0)
+  tables for the stride, the refit set at +0xd0, the rebuild/collision flags at 0xd8/0xd9, the grid size and stride,
+  the bounds, the painter's subdivisions and step, the dirty rectangle at +0x10c and its flag, the three layer indices
+  at +0x12c, and the shape, placement service, painter, terrain and grid references at +0x130..+0x140. The constructor leaves the tables, the rectangle and the layers uninitialised (Setup sets them), so
+  the test dumps those only after Setup.
+- A grid of W x H tiles has four triangles per tile around a centre vertex (stride 2H + 2: corners at even indices,
+  centres at odd); SetVertexHeight moves the centres to the corners' mean, grows the dirty rectangle and, when
+  collision is on and not rebuilding, adds the triangles to the refit set; Build rebuilds (cTriangleSet 0x196300) or
+  refits (0x1970f0) the collision tree, adds four vertex elements and one triangle-list group per non-empty subset.
+- Update repaints the seabed and beach layers (terrain painter slots 23 and 27) from the depth ramps; the thresholds
+  are image statics at 0x10da1b8..0x10da1e8 and the .data constants 0.6 (0x100d138), 0.5 (0x100d13c), 1.2 (0x100d140)
+  and the normal {0, 0, 1} (0x100d168): owned statics with no image-free definition yet. The layer names are image
+  strings too. The lot's wet triangles go to cTerrain 0x297ad0 (stood in by the test; it calls the side's
+  SetTriangleSubset), the depth curve 0xc0a6a1 is stood in.
+- ORIGINAL-BUG: Setup with a width or height of 0 never ends (the test leaves it out).
+- Most callees are original code no lane has done: cTerrain 0x298710 / 0x297ad0, cTerrainGeometryData 0x3b58c0, the
+  depth curve 0xc0a6a1, the placement-service getter 0x20e0b2.
+
+LT2 notes (lane 261108f, owner check only). `coverage.py queue --group nTSSG::<class>` (the namespace is needed):
+cLotImposterDisplay 21,031 B executed in 43 functions (16,877 B owner-inferred; rounds hood-load and lot-load, vf8_9
+and vf8_8 every round), cLotImposter 7,139 B in 24 (5,437 inferred, most of it the file 0x3f5360-0x3f8a10),
+cLotImposterManager 1,884 B in 7 of a 44 KB file, cLotImposterDesc 363 B. The constructors and destructors are named
+on the Ghidra server (tentative where only the vtable store says so). Too big for the rest of this lane, so split
+into LT2a-LT2c, bottom-up (the desc and imposter are the manager's callees; the display uses both).
+
+TS1b notes (lane 261108g, 2026-11-08). Owner check: the class is 75% done by db size; the 14.5 KB executed and
+still the original's (47 functions, mostly owner-inferred) is the draw path behind Render, Clear and primary slot 6 and is
+row TS1c. Seven small bodies in the queue (0x36ee00 map constructor, 0x376c10, 0x376b90, 0x36f130, 0x36e2c0, 0x18b860,
+0x146090) look like STL or RZ container code and have no entry.
+- The class (src/sg/cDisplayListDynamicRenderStrategy.{h,cpp}, tests/sg_display_list_dynamic.cpp, DIFF_TEST
+  SG_DynamicStrategyLife): 0x194 bytes, vtables 0xdbbadc (primary: QI, deleting destructor, slot 6) and 0xdbbafc (+8, the
+  cITSDisplayListRenderStrategy face). The constructor 0x36e400 and the COM factory 0x372190 (class 0x0bf07804) are hooked;
+  everything else is in effect through callers. The face's slots 4 (Render 0x374930) and 5 (Clear 0x373920) and primary slot
+  6 (0x374dd0) are the original's, called through OriginalFunction from our vtables until TS1c. The test runs a life per
+  seed (create, slot 8 under random settings and device answers, register/unregister, passes, release through the
+  destructor) on both sides with the 261108c fakes, poisoned heaps and CheckSides; the multisample switch fake
+  re-enters slot 8. 6000 cases; 48 mutants, 43 killed, 5 equivalent (the status notes say which).
+- Slot 8 0x375b00 builds the surfaces on first use (back buffer, two dirty-rect targets and textures, the pool and ocean
+  reflections, the censor texture, the +0x130 texture) and resizes them to the device; UpdateSurfaces 0x372a50 reads the
+  antialiasing, debugRenderRes and water options to pick the current surfaces. It hands the censor texture's pointer to the
+  censor strategy's +0x28 word (mUnused28 in the censor header, which nothing reads).
+- ORIGINAL-BUG: UpdateSurfaces checks the current surface's validity on the second dirty-rect texture (+0x110), whichever
+  surface is current.
+- The scissor and viewport states the constructor builds hold 1.0f's bits (0x3f800000) in integer fields (scissor right,
+  viewport height); kept as bits.
+- Invalidate (slot 6) sets +0x2c and forwards to the censor's Invalidate, which is the folded `ret 0`; the forward is not
+  observable.
+- ReleaseSurfaceResources 0x373d70 has one caller, the destructor; it leaves the targets without a device target, so slot 8
+  after it would dereference a null target (+0x6c in the target surface). The test reaches it only through the destructor.
+- The censor group's QueryInterface entry (0x373cd0, folded with the dynamic strategy's) was updated at the merge: since
+  0x36e400 is ours, the dynamic strategy's objects use our vtable's QI too.
+
+LG5 notes (lane 261108i, 2026-11-08). cSunHeightMap (src/sg/cSunHeightMap.{h,cpp}, tests/sg_sun_height_map.cpp, the
+struct moved out of cLightingManager.h): 0x64 bytes, no vtable; three float vectors (mValues +0x00, mGround +0x0c,
+mHeights +0x18), width/height +0x24/+0x28, cell +0x2c, scale 1/cell +0x30, fill +0x34, the flat flag +0x38, the changed
+box mChanged[4] +0x3c, blend scale +0x4c (1), +0x50 (0.7), +0x54 (50), the sweep's per-row run vector +0x58. The grid
+builders are __cdecl (map, db, n cells per tile[, sun dir]); the sweeps are thiscall with ret 4.
+- Callees: the tile box and diamond iterators, CornerTile/CornerPosition, the catalog kinds, PartitionValue,
+  ProductFlag10 and the ground height (0x7e4680) are ours (world lanes). Four stay original (`original_calls`): 0x7e1d90
+  (roof kind == 15, skipped), 0x7e17e0 (the diagonal roof kinds), 0x7df5a0 (orders a roof's corners by whether
+  |dy| > |dx|; pure), 0x7e2050 (a wall is raised: both its ends have a corner tile with DB slot 71 set and a quadrant
+  whose deck foundation, slot 58, is 4; through 0x7dddf0 / 0x7e2630). They are the order check: a small world-roof lane
+  should take them before LG3b goes standalone.
+- AddAwnings keeps its awning tiles in an allocator-service vector (ours uses `GZServiceAllocator`); its test needs
+  `svcfx::AllocatorScope`, or the original's static service cache reaches atexit and corrupts the heap.
+- AddWalls adds the elevation, the partition height and the 0.75 raise of a raised fence in that order at the thread's
+  precision (it shows at 24 bits); every float it adds from memory came back in st0 from a call, so never a signalling NaN.
+- ORIGINAL-BUG: SweepX with no rows (SweepY with no columns) and a positive shear runs its unsigned count away; ours skips.
+- The ground height 0x7e4680 (lane RZ, WorldHeights.cpp) keeps a different NaN than the original's when two corners are
+  NaN (a probe found 2 in 3000 points; backlog). BuildGround's test therefore has no NaN elevations.
+- Fakes (worldfx): DB slots 49 floor visible, 52 floor or ground, 58 deck foundation, 59 awning, 62 elevation, 85/86 lot
+  width/height, 87 tile size, 36 roofs, 39 partitions; roofs 28 ids (allocator-service vector), 25 record, 30 height,
+  37 over a point, 22 underside (x87); partitions 55 count, 56 copy (24-byte wall), 50 catalog id, 84 height.
+- 33 mutants killed; two equivalent in AddAwnings (CornerTile corners 3 and 2 take the same branch; floor and round
+  agree on its whole-number corners).
+
+TS1c notes (lane 261108k, 2026-11-08). Owner check: after TS1c the class's queue is 11.3 KB executed in 40 functions,
+10.9 KB owner-inferred (row TS1d); 0x3743e0, 0x376840 and 0x3752d0 did not run in the reference set.
+- The draw entry points (src/sg/cDisplayListDynamicRenderStrategy.{h,cpp}, tests/sg_display_list_dynamic_draw.cpp,
+  DIFF_TESTs SG_DynamicStrategyDraw and SG_DynamicMatricesDiffer): Render 0x374930 takes the viewer's frame state (slot
+  116; made through COM class 0x6d548978 when there is none), runs Prepare 0x371b10 and Draw 0x373e20 (which ends in
+  Finish 0x376460); Clear 0x373920 and SetUpTarget 0x374dd0 are the other two vtable slots. Our vtables carry no
+  OriginalFunction slot any more. DisableScissor 0x3714b0 is hooked because the original drawing paths call it; the rest
+  is in effect through callers (callers.py clean).
+- Still the original's, called through OriginalFunction (row TS1d): the drawing paths 0x3743e0 / 0x374670 from Draw,
+  the overlay 0x376840 and the outlines 0x371670 from Finish; MarkOpaqueUI hands the original callback 0x3752d0 to the
+  main window's slot 37 as data.
+- The test stands in for those four on both sides (each side's paths call its own SetUpTarget through the object's
+  vtable and add rectangles), so replacing one in TS1d means dropping its stand-in. Before the checked seeds it makes one
+  original run and drops its log: the original's first run keeps one 0x20-byte block for good (a one-time
+  initialisation that no later run repeats).
+- The final surface classes (cTSRenderBackbufferSurface, cTSRenderTextureSurface) are called through
+  cITSRenderSurface* locals so the compiler keeps the virtual calls (the test's surface fakes replace the vtables).
+- MatricesDiffer 0x36d3c0 maps each float's bits to a signed order and reports a difference at 32 or more
+  representable floats apart; NaN and infinities follow the bits.
+
+LG5b notes (lane 261108l, 2026-11-08). cLerpLightSet (src/sg/cLerpLightSet.{h,cpp}, tests/sg_lerp_light_set.cpp): a
+cRZRefCount of 0x1c bytes (layer tag +0x08 = 0, light flag +0x0c = 2, std::vector<Entry> +0x10); our constructor stores
+our compiled vtable (5 slots, rz::cRZRefCount's 1-4), the game's 0xdbea94 has cRZRefCount's (0xda2fa8) 1-4. Entry is
+0x38 bytes (kind, render-group bits, node / standard light / texture light counted, three fade flags, target colour,
+direction, value, active, reusable). The lighting manager's builders call ClearActive, the creators, then FadeOutUnused;
+Evaluate (from 0x2dfc80) steps each active entry and drops the dark ones.
+- Names: db had 0x3c1030 as the constructor (it is the destructor) and 0x3c2120 under cLightingManager (it is a
+  __cdecl over a light set and a cLerpLightSet; its status entry moved to db/status/cLerpLightSet.jsonl). Both renamed.
+- cLightSet: BuildRenderGroupLights reads seven directional records from mLights (+0x24, 0x2c each; the header's array
+  names four) and the environment colour mVector174; ours reaches them by offset. Its "objects" mask starts with bit 0
+  set; indoor sets (any of bits 4-6) light the Sims with lights 4-6 and the objects with 0-3. The render-group bits go
+  through `bts`, so a bit of 32 or more wraps (mod 32). The bitset check 0x232e30 is library code and unreachable.
+- Entry's default constructor leaves the group and the value; AddLight / AddDirectional never set the value, so a new
+  entry's value is what the stack held (the test compares it only where the creator sets it). The vector grows by copying
+  (Entry has no move), and Evaluate moves entries down by the inlined assignment (per reference: the new one counted
+  before the old one is let go): ours has the same counting order.
+- Entry::Evaluate tests `t > 0.95` in double (0.95f is below it, so t = 0.95f still steps; no float lies between 0.95f
+  and 0.95, so `t > 0.95f` is the same test, an equivalent mutant); its direction step and
+  length are SSE (sqrtsd), so nothing depends on the x87 precision; the falloff comes back in st0 and is stored as is.
+- ORIGINAL-BUG (both reproduced): every creator uses the node the director made without a null test (the test after
+  AddLight's and AddDirectional's switch only catches a kind they don't make), and FindPoint and a kExisting entry's step
+  use the entry's node untested; LerpLightEvents doesn't clear the value's event, so a node without attribute 49e37821
+  steps from stack garbage. The test's nodes always answer that attribute, entries always have nodes, and only the
+  standard lights' class objects fail.
+- Still original (`original_calls`): the service getter 0x20defb (slots 48 / 49: the shade lights' source), the
+  light-node registry getter 0x20df51 (slot 7 adds, slot 9 removes), the node's name and direction setters 0xae78f0 /
+  0xaeee30, and the nTSSG light constructors 0x3c7d30 (cAmbientFromLightMapLight), 0x3c80b0 (cShadeLight), 0x3c8120
+  (cTerrainShadeLight), 0x3c7fd0 and 0x3c7e80 (the directional shadow lights), 0x3c7de0 (cHalfspacePointLight): those
+  are the next file's (LG7a, lane 261108n, made them ours: the creators now call our constructors). Library code (no entries): the
+  vector instances 0x3c08b0, 0x3c08e0, 0x3c0ab0, 0x3c0c80, 0x3c0cf0, 0x3c0f30, 0x3c3700, operator new / delete, 0x232e30.
+- Mutants: 38, 37 killed, 1 equivalent (the 0.95 threshold as a float compare). The 1e-6 length cut in Entry::Evaluate
+  survived the first run: the drawn directions never lerped near zero, so the test now takes a third of its single-entry
+  cases there (the node unturned, the entry's direction where the step lands 1e-7 to 3e-4 from the origin).
+
+LG7a notes (lane 261108n, 2026-11-08). The nTSSG lights (src/sg/nTSSGLights.{h,cpp}, tests/sg_nTSSG_lights.cpp,
+db/status/nTSSGLights.jsonl, hooks in src/hook/tables/nTSSGLights.cpp): four on lane VW's standard lights (ambient,
+directional x2, point) and two on the shade level cLightT<cILight, 4000> (lane TL's cShadeLightLevel). Each keeps its
+base's faces and puts its fields after the base's, then the vtordisp and the virtual base; MSVC gives that layout from
+the declarations (static_asserts in the .cpp).
+- The switch: the six constructors are hooked to our compiler's own (C names by /alternatename, as cStandardLight.cpp),
+  and cLerpLightSet's creators call ours directly. The 139 other bodies (destructors, deleting destructors, own slots,
+  the class-specific vtordisp thunks, the shade level's destructor 0x3c81c0 and its four level-only bodies) are in
+  effect through callers (callers.py clean; 0x3c81c0 handles the destructor <-> deleting destructor cycle and the unwind
+  funclet 0xd36de0 of the terrain constructor 0x3c8120, named only by its unwind map at 0xf6a0f0).
+- The level cLightT<cILight, 4000> (vtables 0xdbf530 / 0xdbf568 / 0xdbf610 / 0xdbf630) is abstract (Clone and
+  GetLightType are _purecall); its own bodies (deleting 0x3c8240 / 0x3c8202, the thunks 0x3c9af6 / 0x3c9d73) run only
+  while its constructor or destructor runs on a shade light. The test reaches them by AsLevel: the four vtable words
+  and the vtordisp set as they are then (the level's thunks subtract 0x1c after the vtordisp: its virtual base sits at
+  +0x50; the shade's subtract 0x2c, vbase +0x60; the terrain's 0x20, vbase +0x54). Setting only the vtordisp is not
+  enough: the body's own virtual calls then go through the derived thunks with the changed word.
+- GetParams' second argument (cIStandardLight slot 50, `unused` in our header) is the cShaderApplyItem being lit: the
+  light-map ambient and the height-map shadow read its draw record (+0x2c: object +0, render groups +4, box +0x44) and
+  its bones (+0xc source, +0x14 set). Unknown receivers (called raw, named in the source): the record object's slots 54
+  (placement) and 48 (a one-word query, 0x17), the bone source's slot 5.
+- TileUnder 0x3c9bd0 is a cdecl helper (the tile under a point, its level from the world's elevations), here because
+  only the ambient light calls it; it uses the inlined 1.5 * 2^23 floor.
+- ORIGINAL-BUG (reproduced): both shade lights' Clone ignore iid and out, so the clone leaks at count 0 and *out keeps
+  what it held. cHeightMapShadowLight's second constructor argument (+0x6c) is read by no body.
+- Lane VW's cStandardLightBase copy 0xa47eb0 now rests on three of these constructor hooks too (traps.py --sync rewrote
+  its trap). Stale for follow-up: cPointLight.h's switch note (cHalfspacePointLight now derives from our cPointLight, so
+  the game's point-light constructor 0xa46060 and slot bodies may be in effect through callers now), and VW's kept
+  standard-light bodies (0xa48ce0, 0xa4a610, 0xa4ad50, 0x3a59c0, 0xa47440, 0xa4a170) for the same reason.
+- Mutants: 21 on src/sg/nTSSGLights.cpp, 20 killed, 1 equivalent (the shade clone's mode passed to CopyTo: 0x3a57a0 ignores it). The shade lights' Clones leak their clone, so the test stands in for operator new on both sides during those calls (CloneCatch) and compares the caught clone's words.
+
+LG7b notes (lane 261108v, 2026-11-08). cLightSettings (src/sg/cLightSettings.{h,cpp}, tests/sg_light_settings.cpp,
+db/status/cLightSettings.jsonl, hook in src/hook/tables/cLightSettings.cpp) holds the lighting script's settings:
+per settings key ("name:tag" or the tag alone, compared with _stricmp) a vector of 0x28-byte attribute records, one map
+for the standard-light attributes and one for the diffusion ones; Apply walks a node tree and sets them on each light
+node whose tag has settings (the standard light's setters 41-48, the diffusion extension's defaults 11-20).
+- The switch: the constructor is hooked (its only caller is cLightingParserState's 0x2da270, LG7f); the other 14
+  bodies are in effect through callers (callers.py clean). SetName 0x3c7ca0 is a folded shared_vf (with
+  cTSTreeConstant's): verified without a hook. Init / Shutdown are the shared return-true 0x144910 (no entries).
+- The diffusion face is src/sg/cIDiffusionLightExtension.h (iid 0x8a561e23, class 0xaa561e2e, 31 slots, virtual
+  cIExtension): Apply finds it with FindExtension (slot 24) or makes it through the COM director (GetClassObject) and
+  adds it (slot 22), releasing a face a missed FindExtension still wrote. LG7e implements it.
+- ORIGINAL-BUG (reproduced): no null check on a director-made face before the diffusion setters (0x3c73d0).
+- The original's lookups keep a thread-safe static empty vector (0x10da42c) whose first build calls the image's
+  atexit: the test stands 0x824cbe in with a no-op (the harness has no CRT exit table).
+- Mutants: 31 on src/sg/cLightSettings.cpp, all killed (build/lg7b_mutants.json in the lane).
+
+LG7c notes (lane 261109b, 2026-11-09). cLightRigManager (src/sg/cLightRigManager.{h,cpp}, tests/sg_light_rig_manager.cpp,
+db/status/cLightRigManager.jsonl, hooks in src/hook/tables/cLightRigManager.cpp): the named light rigs (LightRig, 0x80
+bytes: root node, named nodes, resource name, root tag, auto-rig name, animations by key, three flags) that the rig file's
+commands fill through the manager's parser state, and Load 0x2c3340, which makes a rig's root (class 0x65246462), hangs
+the resource's tagged node under it (shape refs stripped), looks the "_anim" resources up, and gives a rig whose node is
+missing a default light (unless it is an auto rig).
+- The switch: the factory 0x2c2af0 (the constructor 0x2c1ab0's only caller) and the record constructor
+  0x2c19b0 are hooked; the other 22 are in effect through callers (trap Hooks.nTSSG_cLightRigManager_Create=1). The
+  record constructor is hooked because the unreplaced rig file parser 0x2c21a0 (cLightRigCommand slot 9) inserts records
+  into our map itself, with the image's operator new; ours is reached by its /alternatename name.
+- No entries: slot 8 0x2c23b0 (a 5-byte jump to Load), the parser state's destructor 0x2c1cb0 (its own class, vtable
+  0xdb5880), and the row's 0x2c1590 / 0x2c14f0 / 0x2c1540 (library map instances). AddRef 0x148fb0 and Release
+  shared_vf_2c4080 (with cRenderTargetTexture) are shared bodies: overridden in ours, not hooked.
+- Still original, called through OriginalFunction: the parser state's constructor 0x2c1800 (until LG7g, below), the scene extension finder 0xae1ed0, the resource and animation finders 0x20defb /
+  0x20deb5, the tag finder 0xae7820 and the named-node finder 0xae7490.
+- ORIGINAL-BUGs reproduced (each checked in the disassembly): Init and Shutdown call the parser without a null check; the
+  scene extension and a tagged node's shape-ref face are used unchecked; a name with no rig reads the map head node's
+  value (FindOrHead); mAutoRig is read uninitialised for a rig Load made (the record constructor sets only mLoaded). The
+  test keeps clear of the crashing ones and never compares the uninitialised flag.
+- The test stands in the COM director, operator new / delete / free, atexit 0x824cbe and the original finders on both
+  sides, and runs ParserRun as the rig file's commands would (0-3 records per run, names with case variants, an empty
+  one and one past the small-string buffer).
+- Mutants: 82 on src/sg/cLightRigManager.cpp and .h, all killed (build/lrm_mutants.json in the lane).
+- Since LG7g (lane 261109d) the parser state's constructor, destructor and AddRig are ours: Init 0x2c2d30 calls our
+  Construct (its original_calls are empty), and the records AddRig makes come from our map's own insert. The record
+  constructor 0x2c19b0 stays hooked (nothing original reaches it now, so the hook is harmless).
+
+LG7g notes (lane 261109d, 2026-11-09). nTSSG::cLightRigAndCameraParserState (src/sg/cLightRigAndCameraParserState.{h,cpp},
+tests/sg_light_rig_parser.cpp, db/status/cLightRigAndCameraParserState.jsonl, hooks in
+src/hook/tables/cLightRigAndCameraParserState.cpp): the cBaseParser subclass (0x248 bytes) that the manager's Init
+makes for the rig file, holding the open rig's name, resource, root tag, auto-rig flag and name and its animations, and
+the five commands that fill them.
+- Shape: the cTSEffectsParser pattern. Our own vtable, unknown and parser face vtables and vbtables; the face thunks'
+  bodies are hooked to cBaseParser's adapters (LightRigShiftedThunk for the 14-byte `sub ecx,[ecx-4]; sub ecx,0x88`
+  thunks, cp::VtordispThunk for the two 8-byte own thunks, Initialise 0x2c2b56 and ResetBlocks 0x2c3b8e). Two face
+  slots land on folded bodies (11: the no-op 0x140fe0, 45: the getter 0x9d6630): their thunks are hooked, the bodies not.
+- The commands are anonymous-namespace classes in the image (`.?AUcLightRigCommand@?A0x5a038c03@@` and so on); ours keep
+  the game's vtables (registered by Initialise with GameAddress) and hook the Execute / EndBlock / GetName bodies.
+- The state's (and LightRig's) animation map is case-insensitive: its less compares with `_stricmp`
+  (nTSSG::AnimationKeyLess in cLightRigManager.h), so `anim Key x` then `anim key y` overwrites. LG7c's map had
+  std::less; the tests did not notice because their keys never differed only by case. 0x2c15f0 is that map's
+  try_emplace (the key moved into the new node), 0x2c1310 its structural copy (AddRig's assignment): STL instances with
+  the custom comparator, not matched by tools/libmatch.py's probes, so they have no status entries (library code).
+- AddRig 0x2c21a0 is not a slot: cLightRigCommand::EndBlock 0x2c3b20 calls it when a name is open, and AddRig always
+  returns true, so EndBlock's "failed to add" throw only fires when no name is open.
+- Initialise ignores the base Initialise's result and registers the commands unchecked (`operator new` result tested,
+  never null in practice).
+- Mutants: 41 on the state's source and the key compare, all killed (local/lane/mutants.json in the lane).
+
+LG7e notes (lane 261109c, 2026-11-09). nTSSG::cDiffusionLightExtension (src/sg/cDiffusionLightExtension.{h,cpp},
+.size.cpp for the 31 face slots; tests/sg_diffusion_light_extension.cpp; db/status/cDiffusionLightExtension.jsonl) is
+a cExtension with a virtual cIDiffusionLightExtension base (0xbc bytes, face at +0xb4): ten overrides with their flags,
+ten defaults, the getters answering the override while its flag is set. The old flat hook-shaped functions are gone.
+- The switch: the factory 0x2ea3b0 is hooked (registered by the cDllCOMDirector constructor 0x244e30; it is the
+  constructor 0x2ea080's only caller); the other bodies are in effect through callers (trap
+  Hooks.nTSSG_cDiffusionLightExtension_Create=1). The 15 slot bodies an earlier lane verified through hooks keep
+  their status through the class now.
+- Every face slot is a vtordisp thunk (`sub ecx, [ecx-4]`) into its body; the entries start at the thunks. Slots 16,
+  17 (and its body 0x2ea790), 19, 20 and GetTypeName 0x2ea380 (with an anonymous cLightCommand's slot 5) are folded
+  shared_vf bodies only this class defines: verified, no hook. No entries: slot 13 0x2b6a8a and slot 18 0x2748ea
+  (shared_vf bodies other classes define), the vtordisp adjustor thunks 0x2ea58a and 0x2ea386 (VtordispThunks group).
+- The 0xaea7c0-0xaeb3f0 range the LG7e and LG3b rows cited holds nRZSceneGraph::cBranchNodesIIDFilter /
+  cBranchNodesMaskBitAndIIDFilter vf0/vf1 (0xaea800, 0xaea820, 0xaeacb0, 0xaeacd0) and std::codecvt_base 0xaea7a0:
+  unrelated to this class.
+- Read and Write are declared void as cExtension's are; arity.py calls their eax "weak" (a call's result left there).
+- Mutants: 23 on the three sources, all killed (build/dle_mutants.json in the lane). Constant branches left out: the
+  `info.mName` null checks in Read and Write (the type info always has a name).
+
+LG7d notes (lane 261109e, 2026-11-09). cShadow (src/sg/cShadow.{h,cpp}, tests/sg_shadow.cpp, db/status/cShadow.jsonl,
+hooks in src/hook/tables/cShadow.cpp): one object's shadow (0x150 bytes, cIShadow), made by the COM director's factory
+0x355700 for an object, which the shadow manager (LG6, ours) hands a shadow index and texture in mode 2. Update 0x355d20
+is the frame update: the mode chosen from the option bits and the object's owner kind, resources made, mode 2's shadow
+placed from the manager's matrix (the root bone's relative transform matched over 32 float steps, the footprint of the
+projection, the object's bounds), the camera followed in modes 1 / 4, the floor projector on only at the ground level.
+- The switch: the factory is hooked; the constructor, destructors, slots and private helpers are in effect through it
+  (trap Hooks.cShadow_Create=1). ClipPlanesMeet 0x3ad380 is reached only from ShadowFootprint (trap
+  Hooks.ShadowFootprint=1). Hooked for original callers: ShadowFootprint 0x3aced0 and FindSubsetMaterial 0x3acd30
+  (other original code calls them), ObjectVisible 0x355bd0 and UpdateLevel 0x357750 (row LG7d2's originals called them; both hooks since dropped, by
+  LG7d2 and LG7d3).
+- No entries: AddRef 0x148fb0, Release shared_vf_356910 and slot 14 0x140fe0 (shared bodies), and the getters at slots
+  18-21 (0x355bc0, 0x1b7090, 0x148ba0, 0x147d00: shared or under 5 bytes); ours override them. Slot 17 0x355ce0 is a
+  5-byte jump to slot 15: an entry, in effect through callers, not hooked.
+- The getters return the raw byte (uint8_t), not a bool: SetEnabled stores its argument's low byte unnormalised, so
+  slot 19 answers 2 after SetEnabled(2). The test found it.
+- Singleton B's slot 28 (cell 0x10cc28c, as cTSSGSystemCinematicPlay's Call<28>) takes no argument. In ApplyMaterials
+  the visible byte pushed just before the call is BindSubset's third argument, not slot 28's: a first draft passed it
+  to slot 28, and only the original side's stack coming apart (eip 0xc) showed it, because ours matched the fake.
+- Still original, through OriginalFunction: row LG7d2's CreateResources 0x354790, PlaceProjectors 0x357810,
+  UpdateSettings 0x356e40 and ShadowFloorTest 0x3554b0; the getters 0x20defb / 0x20e0b2 / 0x211ce1, the subset binder
+  0x3ad4a0, the relative transform 0xaeb2c0, the terrain query 0x7e2cc0 and the quadrant test 0x7e0920 (a byte, widened
+  by movzx). FitShadowCamera 0x3ad080 and FindRootBone 0x3ace40 are LG6d's (ours, called directly).
+- Preconditions the test keeps (the original doesn't check): an object whenever ApplyMaterials reads its visibility; a
+  null owner only where nothing after SelectMode reads it (materials not bound).
+- The test stands in, on both sides, the getters, the binder, the transform, the terrain and quadrant queries, the
+  animated-face and named-node finders FitShadowCamera reaches, LG7d2's four functions (CreateResources fills the
+  resources, sometimes not) and operator new / delete / free; the life test runs 6000 cases of random table calls with
+  world changes between them.
+- Mutants: 72 on src/sg/cShadow.cpp and .h, all killed after one test fix (no one-letter material name was generated,
+  so "HasMaterial > 1" survived until the names gained "s"); one more dropped as equivalent (QuadrantTest's byte masked).
+
+LG7d2 notes (lane 261109g, 2026-11-09). UpdateSettings 0x356e40, PlaceProjectors 0x357810, FloorTest 0x3554b0 and its
+helpers TileSpan 0x355770, SubsetWorldBounds 0x355990, SubsetBounds 0xae7f00, and PointInView 0x3ad430: all ours, in
+effect through LG7d's members (trap Hooks.cShadow_Create=1); sg_shadow_life now runs them on both sides (only
+CreateResources is still a stand-in), sg_shadow_floor calls the FloorTest group directly.
+- ObjectVisible 0x355bd0's hook is gone (CreateResources doesn't call it; callers.py clean). UpdateLevel 0x357750 stays
+  hooked for LG7d3's CreateResources. FitShadowCamera 0x3ad080 (cShadowManager's table) has no original caller left
+  (UpdateSettings was the last), so its hook can go; ShadowBounds 0x3ad230's trap then needs `traps.py --sync --group
+  cShadowManager` (already stale: its check now rests on cShadowManager_Create and cShadow_Create). FindRootBone
+  0x3ace40 stays hooked (0x25f740 calls it).
+- Still original: CreateResources 0x354790 (LG7d3), QuaternionAngles 0x1a77c0 (a quaternion's Euler angles through its
+  matrix; PlaceProjectors takes [2], the yaw) and the quadrant test 0x7e0920.
+- The viewer's slots PlaceProjectors reaches: 139 GetEntry(index) (the projection at +0x74), 140 GetView(out, index)
+  (the rigid transform it returns may not be the out). The projector's slot 10 takes the rectangle, the view-projection
+  and 0 (3 arguments, unlike slot 9's 5).
+- NaN operand order bit ShadowFootprint and ClipPlanesMeet (LG7d's, verified with single NaNs): once PlaceProjectors ran,
+  a NaN pair in the projection's offsets came out with the other payload. The original adds row 3 first in the x sum
+  only, and ClipPlanesMeet's two outputs both keep -a[3]'s NaN (ours had let the compiler commute and fold the
+  negations). Both now use convex::MulS / AddS / SubS / Negated; sg_shadow_footprint plants NaN pairs of different
+  payloads, and the object boxes the fakes return sometimes carry a pair on one axis. The settings' NaNs carry their own
+  payloads (often in W0 or H0, the only ones SettingsExtent passes on), so mode 1's centre + extent sums meet a box's
+  NaN; at first that never happened (mode 1 is about 200 of 6000 cases).
+
+LG7d3 notes (lane 261109h, 2026-11-09). CreateResources 0x354790, SwapLayerBitsDeep 0x354630, AddShadowMaterial
+0x3546b0 and cObjectShadowFilter (Accept 0x356a70, the deleting destructor 0x354580 and its +4 thunk 0x3545a3, the last
+only in our vtable): all ours, in effect through LG7d's members (trap Hooks.cShadow_Create=1). UpdateLevel 0x357750's
+hook is gone (CreateResources was its last original caller; callers.py clean). cShadow is now wholly ours but for the
+service getters and the original helpers listed in src/sg/cShadow.cpp's header comment (0x20defb, 0x20e0b2, 0x211ce1,
+0x3ad4a0, 0xaeb2c0, 0x7e2cc0, 0x7e0920, 0x1a77c0), and the render target's constructor 0x3c9ed0 (the quad maker 0xaf16f0 is ours since lane 261111c).
+- The filter: cIVisibilityQueryFilter at +0 (Accept slot 3), cRZUnknown at +4 (its QueryInterface / AddRef / Release
+  shared bodies, no entries), mOwnerId (a uint16 at +0xc: the object's owner's slot 47, low half) and the group's bit
+  at +0x10. Accept tests flag 5 and the layer state on the node it was given at every step of the parent walk, not on the
+  parent reached (as the original; the same answer every time, so in effect a test of the node alone).
+- SwapLayerBitsDeep's recursion passes (add, remove): the masks swap at every level (`// ORIGINAL-BUG:`, reproduced). The
+  viewer gets the group's bit alone; its children lose the bit and gain every other.
+- The test runs the real body on both sides now: the render target's constructor and the quad maker stand in (the
+  target's texture index set by its slot 6, -1 one time in six); the director's creates, the render group registry
+  (bits 0-37 and -1), the material manager and the viewer's filter slot 103 (Accept tried, the filter held and
+  released) are fakes. The filter's Embed in the target stand-in is wrapped in difftest::NotCounted (the fakes' own
+  vector growing counted as a heap difference). sg_shadow_helpers calls the swap, the material and the filter directly.
+- Mutants: 24 on src/sg/cShadow.cpp and .h; 23 killed, and "Accept compares the whole word" survived the first run: the
+  owner's slot 47 had a handler written but never registered, so every id was 0. Registered (0-2 under junk high halves)
+  and the five Accept mutants rerun: all killed.
+
+LD1 notes (lane 261109f, 2026-11-09). nTSSG::cDiffusionManager (src/sg/cDiffusionManager.{h,cpp},
+tests/sg_diffusion_manager.cpp, db/status/cDiffusionManager.jsonl, the hook in src/hook/tables/cDiffusionManager.cpp):
+the lighting manager's diffusion director. It holds one floor colour grid per level (std::vector of 0x84-byte
+cFloorColorGrid, made and copied by LD2's 0x4056d0 / 0x3c42c0), the wall diffusion manager (0x60 bytes, 0x40be50, a
+cRZRefCount), the world and its partitions, twelve settings and the message ids it listens to (kLevels 0x2b4d1900,
+the world-loaded 0x4b3bc675, kChanged 0xeb425393).
+- Shape: three vtables (the director at +0, cRZUnknown at +8, the message target at +0x10). The constructor is hooked
+  (its only caller is cLightingManager::Init 0x2d98c0), so every object carries our vtables; QueryInterface is our
+  override (0x2c7db0 is folded with cLightMapManager's, not hooked). Slots 8-11 are ours since row LD1b.
+- Order: almost every callee is LD2's engine (0x405200-0x412600), so the class is a director over originals today:
+  82 OriginalFunction sites. The test stands the whole engine in (CodePatches noting receiver and arguments), so the
+  test checks this class's own logic; when LD2 replaces a callee, our call goes to ours and its stand-in must follow.
+- ApplySettings calls the folded setter 0x20c6f0 (shared_vf; cGZSndSys's SetServiceID is ours and verified, but a
+  different class's override), 0x4099f0, 0x229f60 and 0x239840 as originals: folded trivial setters on LD2's types,
+  so status.py's "switch to it" note on 0x20c6f0 is expected until those types are ours.
+- Debug switches 0x100eb20-23 and 0x10da3dc-df (TS2_OWNED_STATIC, shared with the image) choose Diffuse's and
+  DiffuseUnlit's passes; the test flips them alike on both sides.
+- ORIGINAL-BUGs kept: the grids are given the wall propagation steps (+0x60; +0x64 is never read); DoMessage reads a
+  world-loaded message's object without a null check; ReadSettings uses its posted message even when RZMemory's
+  allocation failed. GetFloorColor reads the level from position[2] as an int, unchecked against the grid count.
+- Mutants: 42 by hand, all killed. Constant branches left out: Start's nothrow new failing, ReadSettings's allocation
+  failing, DoMessage's null object, DiffusionRef::Assign with the object it already holds.
+
+LD2a notes (lane 261109i, 2026-11-09). nTSSG::cFloorColorGrid's storage and leaves (src/sg/cFloorColorGrid.{h,cpp},
+tests/sg_floor_color_grid.cpp; 14 hooked, 4 STL instantiations in effect through SetSize; 3.6 KB).
+- Test model: both grids built from one seed through our constructor plus direct member writes (cells, links, light
+  cells with far-out positions, levels set, NaN colours in a quarter of Mark's cases); the dump turns vectors into
+  size, capacity and elements and the std::set into its tree walk. MSVC 14.40's std::vector and std::set<short> match
+  the image's (node value at +0xe), so the members are real std containers.
+- Padding is not data: the collectors' 16-byte DiffusionTile (+0xd..0xf) and FloorColorLink (+2, +5..7) are never
+  written by the original (its push writes fields into the free slot, its reallocation 0x30d610 moves records field by
+  field, the link constructor 0x4058b0 writes m0, m4 and the cells alone). The tests mask them; any later test that
+  compares these records word by word (LD1's NoteList, once real collectors run under it) needs the same mask.
+- The folded setters 0x409890, 0x4098a0, 0x4099f0, 0x239840 stay originals, never hooked.
+- HX's deleting destructor 0x3c4870 (src/misc/DeletingDestructors.cpp) still calls OriginalFunction 0x4058e0, now ours:
+  status.py flags it; it should call the destructor.
+- LD1's test now patches LD2a's members over ours as well (shape::StandIn).
+- Mutants: 30 by hand plus 2 reruns, all killed but one equivalent: Mark's `half + color` swapped to `color + half`
+  (MSVC 14.40 /O2 emits the same `addss xmm(half), [cell]` for both orders, checked on a probe compile).
+
+LD2b notes (lane 261109l, 2026-11-09). cFloorColorGrid's light cells and light passes, 9 verified, about 9.1 KB, no split:
+FloorBlob::Key 0x3c3a50 (added; TakeBlobs is its only caller), NeighbourSample 0x4087e0, FloorLightHalf::ShadeQuad
+0x4080c0 / ShadeTriangle 0x4072a0, FloorLightCell::Shade 0x4085e0, PrepareLight 0x4077a0, ShadeLights 0x4060d0,
+ShadeChangedLights 0x406300, TakeBlobs 0x4065b0 (src/sg/cFloorColorGrid.cpp, all hooked).
+- LD1 calls ours now (both test sides stand them in). DiffusionBlob44 and FloorBlob are the same 0x44-byte record;
+  `AsFloorBlobs` reinterprets between them, and a later lane can merge the two types.
+- Argument widths: NeighbourSample's `first` and the shaders' `levelZero` / `side` are bytes, while Shade's kind is a
+  dword. The tests feed junk upper bytes and call ours through `shape::MemberCode` with the original's signature.
+- The light passes call Stopwatch Restart 0x1c95ec through OriginalFunction (it is still original). The test stands it in
+  and counts the calls; the fake light map manager answers slots 19 and 22, and the fake images slots 9, 27 and 28.
+- ORIGINAL-BUG: TakeBlobs walks a 4x4 window of wall cells whose results are never used. We keep only what the walk leaves.
+- LD2a's Fill grew lightable shapes: cells are tiles*4, m18 bits that point outside the grid are cleared, link kinds
+  include 0..3 and 0xff, and m40 / m1a are each zero half the time.
+- Mutants: 40, 39 killed. The one equivalent is Channel's 0xff bound as 0xfe (v = 0xff gives 0xff either way).
+
+LD2c notes (lane 261109q, 2026-11-09). cFloorColorGrid's step, GetColor and the rebuild's leaves: 11 functions verified,
+7.0 KB, all hooked (src/sg/cFloorColorGrid.cpp; tests/sg_floor_color_grid_step.cpp).
+- LD1 calls ours now: Step from both its passes and GetColor from GetFloorColor. LD1's test stands them in at their RVAs.
+- The shared test helpers moved to tests/sg_floor_color_grid.h (namespace floorfx), so LD2a/LD2b's tests and these share
+  one generator.
+- The world DB comes from 0x20e0b2, which is still original. The tests patch it to a worldfx fake whose floor and inside
+  answers come from a tile hash, with junk in the upper bytes. LevelAt asks the partitions (slot 39, then slot 80).
+- ORIGINAL-BUG (Propagate): the third sweep takes any lit neighbour, without the m1c test the other three make
+  (0x4095bc). The copy loop that turns this pass's m1d into the next pass's m1c leaves out the box's last row and
+  column (0x4097e7-0x409840).
+- PruneCorner reads its direction table at dir - 1 as a whole byte, so direction 0 reads before the table; its callers
+  pass 1..7. The original works out both sides of the corner without short-circuiting. Ours stops at the first closed
+  side, which is equivalent because the sides only read.
+- The tests call LightReaches and ApplyLight through bool function types and compare the results as bools, because only al is defined.
+- Mutants: 36, 34 killed. Two are equivalent: Propagate without the stop on a zero count (that pass leaves an empty box, so later passes do nothing) and Toward's constant & 7 dropped.
+
+LD2g notes (lane 261110b, 2026-11-10). cFloorColorGrid's BuildCells and Rebuild: 7 functions verified, 4.1 KB.
+- The world fake moved to tests/sg_floor_color_world.h (namespace floorworld): LD2c's World unchanged (same case counts),
+  plus CellWorld for what BuildCells asks: the tile box (slots 81-84) through the cached world DB cell, the partitions'
+  43 (a partition on a tile side) and 50 (the side's catalog id), the catalog entries' slot 38 (worldfx::Catalog) and
+  the answer table 0x7e37e0 (behind 0x7defd0 and Lookup9) as a stand-in. Answers vary with the question count.
+- BuildCells compares the catalog id as a whole dword (0x1d, at 0x409c15) and the level id from the partitions' 80 as
+  16 bits; the wall answer from 0x7defd0 is tested as a whole pointer.
+- Rebuild leaves the quadrant bytes (+2, +3) of links BuildCells skips as stack garbage; the test compares them for lit
+  links only. Ours zeroes the blank cell by value-initialisation and drops the original's redundant memsets
+  (0x40addf, 0x40adf4) and mActive store (0x40ae02).
+- 0x4051c0 (std::set<short> insert, used for mLevels) stays original: callers.py finds 24 references outside this class.
+- Mutants: 39, 37 killed. Two equivalent: BuildCells' prune loop without direction 7, or with only 1 and 7. A diagonal
+  link is held at both ends after the link pass, and PruneCorner decides it on orthogonal links alone and clears both
+  ends, so one direction of each opposite pair is enough (dropping the 3/7 pair, or every direction, is killed).
+
+LD2d notes (lane 261110c, 2026-11-10). cWallDiffusionManager's records and storage: 32 functions verified, 1.7 KB.
+- Shape (src/sg/cWallDiffusionManager.h): the manager is 0x60 bytes on cRZRefCount (vtable 0xdc24f4; ours carries our
+  compiler's, and wallfx::Dump compares the vtable word by class). Runs are 0x1c bytes (a vector of segments, prev /
+  next run indices, angle, diagonal and three flag bytes); segments 0x178 bytes. The segment's +0x15c and +0x168 are
+  WallSegmentRef {level, run, segment} int triples ({-1, -1, -1} for none, the folded library constructor 0x40be30;
+  0x40f960 builds them), not floats. The location's word 2 is the level. Fixed16 rounds by the SSE magic add (to
+  nearest even).
+- Every original in this row is SSE except WallOctant's fmod (x87 _CIfmod 0x82fd60, exact, so precision control can't
+  change it); the both-precision loop is kept anyway.
+- SetAngle's bounds are doubles: pi/8 is the double of a float, but 3pi/8, 5pi/8 and 7pi/8 are 3, 5 and 7 times that
+  float, with bits below a float's. No float lies on them, so closed and open ends there are equivalent for every input
+  (the angle arrives as cvtps2pd of a float, 0x411966); the pi/8 ends and a bound moved by one float ulp are killed.
+- The other four setters (0x20c6f0 shared_vf, 0x229f60, 0x4099f0, 0x411b70) are bodies folded with unrelated classes:
+  never hooked; LD1's ApplySettings calls ours, and sg_wall_diffusion_settings checks ours against those bodies. Not
+  hooked either: the folded getters 0x410160 / 0x410230 / 0x411b90 and the 4-byte 0x410220 / 0x410240.
+- Library by shape (not in db/library-matches.jsonl yet; an stlprobe for vector<WallDiffusionRun> (0x1c),
+  vector<WallDiffusionSegment> (0x178) and the set would confirm): 0x40aed0, 0x40b100, 0x40b2c0, 0x40b440, 0x40b770,
+  0x40b8c0, 0x40b940, 0x40b9d0, 0x40bad0, 0x40bb20, 0x40be30, 0x40bf50, 0x4122a0, 0x412350, 0x4123d0, 0x412450 (the
+  segment vector's _Tidy: element 0x178; Ghidra had it as the run vector's), 0x4124c0, 0x412510; 3.5 KB.
+- Fixture for LD2e / LD2f: tests/sg_wall_diffusion.h (namespace wallfx). Fill(manager, seed, Shape) builds a whole
+  manager (runs with linked or random indices, segments with every field drawn incl. NaNs and padding, the set, both
+  change lists, the settings); FillRun / FillSegment / FillChange / Ref for pieces; Dump / DumpRun / DumpSegment /
+  FirstDiff / Compare for comparison; Pair builds two managers alike; StandCellQuery stands in for the world's
+  0x7f2260; the Fixture patches the game's new / delete / free to ours.
+- Mutants: 25, 21 killed (see notes/feedback/261110c.md; two first survived and were killed after the tests gained
+  inputs: Length at counts 9, 13, ... where the double sqrt(2) rounds differently, and falloffs found by search where a
+  float division crosses a half of 1/65536). Four equivalent: the SetAngle ends at 3pi/8 and 7pi/8 and the 5pi/8 bound
+  moved within its float gap (above), and WallOctant's fmod taken on floats: fmod is exact and its result fits the operands' format, and the original
+  subtracts in float (subss 0x41017b) before widening.
+
+LD2h notes (lane 261110d, 2026-11-10). The bottom of cWallDiffusionManager's methods: 17 functions verified, 4.3 KB.
+- Packed colours (nTSSG::PackWallColor): per channel v = bits(c + 49152.0f) - 0x47400000 (round to nearest even of
+  c * 256), then ((~(v >> 31) & v) | ((255 - v) >> 31)) & 0xff with arithmetic shifts; alpha 0xff. Beyond the plain
+  clamp: c < -49152 gives 255 (the sum's sign bit flips the mask), and c in about [-98304.99, -98304] gives 255 (v in
+  0x80000000..0x800000ff, 255 - v overflows). MergeMax 0x40d260 builds the same value another way; it and IsValid
+  return in al only (the rest of eax is junk). wallfx::Channel draws the rounding points, these edges, zeros,
+  infinities and NaNs.
+- NaN pairs decide outputs here (a NaN colour packs to 255 or 0 by its sign): PointAlong and AmbientFor spell out the
+  original's operand order with _mm_*_ss helpers (MulSs / AddSs / DivSs / NegSs in the .cpp); plain * and + were
+  swapped by our compiler, and (-dx) / len folded into -(dx / len).
+- FillBlock 0x40da80 never reads its second argument (only [esp + 0x14] at 0x40da84; ret 8): BorderPass's choice of
+  mChanges / mChanges2 by the cell query has no effect beyond the query itself.
+- Neighbours and the corner fallbacks index runs and segments unchecked (SegmentAt / RunAt): the tests keep references
+  in range, or for Neighbours one past a run's last segment or into an empty run (its count - 1 bound is unsigned,
+  0x40ff1e / 0x410006; pointers compared as {run, index}, never dereferenced).
+- Walk 0x4119f0 has no cycle guard of its own; the references climb (down) a level, so the game's graph has none. The
+  walk test draws references to later runs only.
+- Test helpers that bit: wallfx::StandCellQuery was `inline` while gLog is one per test file, so the runner logged into
+  one file's gLog only (now `static`); SegmentId is ambiguous when two runs' blocks lie a whole number of segments apart
+  (wallfx::SeparateRuns before comparing pointers). Equivalent mutants (7, addresses in notes/feedback/261110d.md): the
+  packer's sum in double, the gradient step and PointAlong's count and root in double vs float, the length sum's order,
+  BorderPass's list.
+- For LD2e / LD2f: wallfx's Channel / Channels, ValidRefs, InvalidRef, SegmentId / SeparateRuns, and StandCellQuery's gQueryWords /
+  gQueryZeroLow (location words logged instead of offsets, both answers of the callers' ax test); QueryModes and
+  Manager in tests/sg_wall_diffusion_colors.cpp are small enough to copy into wallfx if a second file needs them.
+  Ours to call: PackWallColor, SetPacked / SetSidePacked / SetRow / MergeMax (LD2f's Step and the blends write packed
+  colours), AmbientFor (Reset and the blends), Neighbours / FillBlock, PointAlong (GetColor 0x410320's callers).
+
+LD2i notes (lane 261110e, 2026-11-10). The propagation under DiffuseMarked 0x40f0f0: 9 functions verified, 3.1 KB.
+- mPacked as a 2x6 grid: word [a][h] = mPacked[6a + h], a along the run (two halves), h up the wall (h 0 the top,
+  tentative). The spread of one word (SpreadWords 0x411380, MMX; SpreadAcross / SpreadWithin inline the same code):
+  per byte, s = pmulhw(b << 4, w) = (16 b w) >> 16 signed, with w the falloff Fixed16's low 16 bits; the byte becomes
+  max(s, old) saturated to 0..255; the call "rose" when any s > old (compared before the saturation). Falloff word w =
+  4096 / (1 + d) (straight) or 4096 / (1 + 1.4 d) (diagonal, Fixed16::SetFalloff). At d >= 0 w <= 4096, nothing rises
+  above its source and the step loop settles; for d in (-1, 0) w > 4096 and a byte at 255 rises every step forever (the
+  loop runs to its count); d < -1 gives negative words; a NaN d gives its payload's low 16 bits.
+- SpreadWords is thiscall-shaped but never reads ecx (ret 0x10): ours is static __stdcall. It leaves MMX state set (no
+  emms; its callers 0x410c10 / 0x410d50 / 0x411160 empty it): a test calling it directly calls _mm_empty().
+- SpreadAlong 0x410c10: from prev's second half into this one's first (straight h to h, diagonal h to h + 1 and h + 1 to
+  h), from next's first half into this one's second. SpreadAcross 0x410d50: up exchanges this one's h 0 with the other's
+  h 5, down h 5 with h 0, per half first theirs into this, then this (new) back. SpreadWithin 0x411160: in place, the
+  eight neighbours of 0xdc2508 ({dh, da}: even straight, odd diagonal) in order, h ascending.
+- The walks DiffuseWithin 0x410fe0 and DiffuseBetween 0x4108d0 (up byte: mAbove or mBelow; apply byte) first clear
+  every referenced run's mFlag1A, then recurse (apply 1) into each referenced run whose flag is 0 and set it after. No
+  cycle guard: a cycle recurses until the stack runs out; real references are acyclic (above climbs a level, below
+  descends, and each walk follows one kind). A run two paths reach is walked once per path (each walk re-clears its own
+  targets). DiffuseBetween with apply and 2+ segments spreads the first, the last, then the middle segments along the
+  run, then across every valid reference (apply not tested), then recurses. DiffuseStep 0x411300: Within(up, apply)
+  (1, 1), (0, 0), Between (1, 1), (0, 0). Diffuse 0x410890: up to `steps` (unsigned) steps, stops at the first that
+  raised nothing; returns whether any did. DiffuseMarked: Diffuse(mPropagationSteps, mThreshold) on each run of the
+  set at +0x40 (renamed mMarkedRuns; indexed unchecked), then clears the set.
+- Every bool here is al only; the up / apply arguments are tested by their low byte (ours take uint8_t).
+- No libm and only one drawn float per operation, so no NaN-order or library question in LD2i.
+- For LD2e / LD2f: tests/sg_wall_propagate.cpp's Distance (the falloff's regimes) and Steps (unbounded counts only where
+  the loop settles), PackedWord / Packs (uniform words: nothing rises), Refs (climbing or chained references, DAG
+  revisits); they are local to the file, move them into wallfx if a second file needs them. Ours to call:
+  DiffuseMarked (LD1 calls it now), Fixed16::SetFalloff.
+- LD2j, read and left: 0x40c040 calls the image's _libm_sse2_cos_precise 0x8309c0, _libm_sse2_sin_precise 0x830b80,
+  _libm_sse2_pow_precise 0x8380c0 and the x87 dot product 0x19d250 (21 bytes, returns st0); 0x40d5a0 calls
+  _libm_sse2_sqrt_precise 0x82fc60 only for a negative argument. Whether our CRT's precise sin / cos / pow are
+  bit-identical to the image's is LD2j's first question.
+
+LD2j notes (lane 261110f, 2026-11-10). Step's maths: Light 0x40c040 over Project 0x40d5a0, PaintBack 0x411500 and
+PaintAhead 0x411700, 4 functions verified and hooked, 2.4 KB. Step 0x40c2e0 (LD2f) is the only caller.
+- libm: the image's _libm_sse2_cos_precise 0x8309c0, _sin_precise 0x830b80, _pow_precise 0x8380c0 and _sqrt_precise
+  0x82fc60 are byte-identical library matches of our CRT's (db/library-matches.jsonl). They take xmm0 (and xmm1) and
+  return xmm0, with no CPU dispatch (the x87 fallbacks force CW 0x27f; the fast flag 0x10e0384 is 0 in the game and the
+  harness). Our compiled Light calls __libm_sse2_cos/sin/pow_precise with the same conversions (cvtps2pd before,
+  cvtsd2ss after); Project uses sqrtsd inline with the CRT sqrt only for a negative argument, as the original does.
+  tests/sg_wall_step.cpp's sg_wall_step_libm_cos / _sin (every 509th float, both x87 precisions, result bits and errno)
+  and _pow (6.6M pairs: edges, Light's own bases and exponents, random patterns, negative bases with integer and half
+  exponents) pass. A one-off sweep of all 2^32 floats through cos and sin at both precisions also matched (stride 1,
+  8,589,934,592 cases each, results and errno; not committed: 21 minutes wall at --jobs 3). Precedent: tests/crt_equivalents.cpp (CRT_sin, CRT_pow).
+- The game runs the x87 at 24 bits; Light's only x87 work is the dot product 0x19d250 (still the game's, called through
+  OriginalFunction as cLightingManagerEdges.cpp does), so its result depends on the precision; the tests run both.
+- Project: u the first segment's unit direction, d the point less its start; across = u.y d.x - u.x d.y, along =
+  (u.y d.y + u.x d.x) / Length(). Before the start (along < 0) or past the end (along >= 1, or NaN): distance = the
+  point's distance to the start signed by across, nearest = that end, side 0 / 2n - 1. Inside: distance = across,
+  nearest on the line, side = floor(2n along) by the magic sum (round(x - 0.5) to even, one up when that lands on x),
+  clamped to 2n - 1. t is written when non-null; distance must be non-null inside (written unchecked).
+- The painters: the colour packed as PackWallColor, as 16-bit words (MMX); each side's words 1..4 take the per-word
+  maximum (signed compare) of the colour and the stored byte; a side that raised nothing stops the walk; after each
+  painted side the colour is scaled by pmulhw(c << 4, w) (w the falloff Fixed16's low word, 0.0625 / (1 + d (x1.4
+  diagonal))) and stored saturated in the side's words 0 and 5. PaintBack goes from `side` down to 0 (al: any side
+  painted), PaintAhead from side + 1 up, its colour scaled once first (al: any side painted). Both end in emms.
+- Light: false when Project's distance is <= 0 (a NaN distance goes on). A directional light (+0x24) farther than 1e-4
+  faces the unit vector to the nearest point against (cos, sin)(angle +0x30): factor = (6 - 2f) / (2f + 6), intensity
+  times the focus (+0x34, clamped to 0..1) blend of (f + 1) / 2. Then base = 1 / (spread + 1), exponent = max(1, 2 d
+  factor), colour = mColor (+0) times pow(base, exponent) times intensity, reach = spread (directional: (2 spread /
+  exponent - spread) * max(f, 0) + spread), at least 0; PaintBack then PaintAhead from Project's side.
+- NaN operand order: MSVC commuted `_mm_mul_ss(_mm_set_ss(power), _mm_set_ss(intensity))` into mulss intensity, power
+  (lane 261110f): with two NaNs the other payload won. The file's MulSs / AddSs now return a NaN first operand (quieted)
+  before the operation, as compgeom's AddInOrder does; DivSs and the subtractions don't commute.
+- For LD2f (Step 0x40c2e0): ours to call are Light, Project, PaintBack, PaintAhead. tests/sg_wall_step.cpp's StepRun
+  (a seeded run of 1 to 6 segments, a tile step in one of 8 directions, packed modes), Point (points on the line at
+  side boundaries +/- ulps, off it, wide, NaN), FillLight, Spread and Intensity are local to the file: move them into
+  wallfx if Step's test needs them. For LD2e: nothing new beyond the MulSs / AddSs rule above.
+
+LD2e notes (lane 261110g, 2026-11-10). The entry points cDiffusionManager calls, all hooked and verified (tests/sg_wall_entry.cpp):
+CollectWalls2 0x40c620 (appends mChanges) and CollectWalls 0x40c650 (mChanges2) through the library vector range insert
+0x40b590 (ours the toolchain's); Reset 0x40eff0 (each segment's 0x80-byte current colours over its previous, then both
+change lists cleared, capacity kept); Mark 0x40c800; FindSegment 0x40f960; GetColor 0x410320. cDiffusionManager's
+slots 17/19 (collect), Reset, Mark and GetWallColor now call ours.
+- Mark (level, rgb): a run counts when the low 16 bits of the world's answer for its first segment's location equal the
+  level's (`cmp ax, word`), junk above ignored. Every word of each segment's current block: R into byte 2, G byte 1, B
+  byte 0, alpha kept; a channel adds round(c * 256) (magic add 1.5 * 2^15, addss) less itself >> 8, low byte, to the
+  stored byte, clamped at 255. Inputs outside 0..1 wrap in the low byte (ORIGINAL-BUG marked in src).
+- FindSegment (out, location, copy): the run count read once; a run is searched only if its first segment's word 2
+  (the level) equals location[2], so a segment whose own word 2 differs from its run's front is never found. The first
+  run and segment whose five words match gives {front word 2, run, segment}, else {-1, -1, -1} (0x40be30); *copy = *out
+  when copy isn't null; returns out.
+- GetColor (out, wall piece of two float triples): the cell from worldrect::CellOfRect, FindSegment; none gives the
+  static zero vector 0x10da730 (zero in .data, never written: out[0..2] = 0). Else packed word 9 of the referenced
+  segment, out = (R, G, B) / 255 (divss), and when m38 != 0 and the run's answer's low half is 0 (outside), each less
+  mOutsideAmbientColor[k] * mOutsideWallAmbient (mulss in that order; no clamp, so it can go negative). out[3] untouched.
+- For LD2k / LD2f / LD1b: tests/sg_wall_entry.cpp's ShareLocations (copies whole locations or only word 2 between
+  segments), Target (a segment's location, one word off, a level word only, junk) and the plant-a-cell approach (a wall
+  piece's CellOfRect cell copied into a segment, the run's front word 2 set to match) reach FindSegment's matches;
+  QueryModes switches StandCellQuery to log words and zero half the answers' low halves. LD2k's 0x40d850 can call ours
+  FindSegment. Collect / Reset / Mark / GetColor need nothing new from wallfx.
+
+LD2k notes (lane 261110h, 2026-11-10). Rebuild's side, all hooked and verified (tests/sg_wall_rebuild.cpp); our
+cDiffusionManager's Diffuse / DiffuseUnlit call our Rebuild:
+- Rebuild 0x412240: mRuns.clear() (capacity kept), BuildAll, then LinkLevels (a tail call).
+- BuildAll 0x4120d0: the partitions service 0x20de97 (cPartitionManager, not ours: raw slot calls). For each layer
+  kind of the table 0xdc25a0 {3, 8, 0xa, 0xb}: slot 40 (kind) gives a layer, AddRef'd when not null; layer slot 14
+  (result unused, null not checked), slot 15 the section count (signed), BuildRuns(slot 11 (i)) for each, Release.
+  Then layer kind 0 the same way, and for i below the service's slot 55 (re-read each time): slot 56 (8-byte record, i),
+  and when slot 50 (record) is 0x1d (wall segments), BuildRuns(layer slot 12 (record)) if not null.
+- BuildRuns 0x411ca0 (section): for sides 0 and 2 of EdgeAtC, skipped when the edge's Flag is set. Walks back over
+  RotOnextInvRotC while WallAnglesNear(the back edge's angle, the side edge's angle), then forward over SymOnextC until
+  back at the start: each edge's cell (CellOfRect of origin and destination positions), its level (low half of the cell
+  query 0x7f2260 (cell, 0)), a new run when the angle or the level (the first edge against itself) differs, the segment
+  appended from the ground-height positions (WithGroundHeight, origin then destination) and the cell, the edge's flag
+  set to 1. Runs pushed within a side are chained (prev / next indices), and the side's chain closed into a ring when it
+  has two or more runs. No run is ever empty (FindSegment relies on that).
+- AddSegment 0x40c680 (run; start, end, location): calls 0x20de97 (answer unused), appends a segment record.
+- LinkLevels 0x40d850: the world (0x20e0b2) slots 89 (max level) then 88 (min). For every segment of every run: up =
+  its location with word 2 + 1; when up[2] <= max and the world's slot 52 HasFloorOrGround(CellToQuadrants(up)) is false,
+  SetAboveAt(i, FindSegment(up)). Down = word 2 - 1; when down[2] >= min and HasFloorOrGround(CellToQuadrants(the
+  segment's own location)) is false (not down's: the original's), SetBelowAt(i, FindSegment(down)). One copy buffer
+  serves both searches.
+- STL: the run vector's growth (0x40b100, an _Emplace_reallocate: cap + cap / 2, else size + 1) copy-constructs the new
+  run (0x40bb20) and then moves the old ones (0x40b940: segment vectors' blocks change hands, capacities kept, the
+  source's words zeroed). WallDiffusionRun now has a defaulted noexcept move (its user-declared copy had suppressed it),
+  so ours keeps the old runs' segment capacities as the image does. Segment growth is 0x40b2c0.
+- For LD2f / LD1b: tests/sg_wall_rebuild.cpp builds real nTSWorld wall graphs (Graph, Splice, Attach, AddSection,
+  Build: n x n lattices with jittered angles, sides, uprights, a diagonal, preset edge flags) so BuildRuns runs on our
+  quad-edge objects; StandLevel (0x7f2260 with junk above the level), a partitions fake (PartsPlan / StandPartitions:
+  layers by kind, segment records with catalog ids, every slot logged) and StandWorld (0x20e0b2 over worldgrid's world
+  db with slot 52 FloorOrGround logging its arguments). Rig installs all three. Avoid zero-length edges (angle pi both
+  ways: the walk-back never ends).
+
+LD2f notes (lane 261110i, 2026-11-10). Step, the blob pass and CollectBlobs, all hooked and verified
+(tests/sg_wall_passes.cpp); our cDiffusionManager calls ours for the three:
+- WallLight (0x6c, the light map's wall light records; src/sg/cWallDiffusionManager.h, offsets asserted): level +0x14
+  (signed), directional +0x24, angle / focus / spread / intensity / scale / falloff +0x30-+0x44, the box min +0x58 /
+  max +0x60, level id +0x68 (int16). WallBlob (0x2c): back / front locations, octant +0x28, one-segment byte +0x29;
+  +0x2a/+0x2b are the original's stack junk (not written by its in-place append), masked in the test.
+- Step 0x40c2e0: reads the cached world DB 0x10cc45c (worldsvc::CachedWorldDB). For each light and each run: skipped
+  when the run's front word 2 > the light's level (signed) or the low 16 bits of FrontCellQuery differ from the level id.
+  AmbientFor is called with its colour unused. The light's point is the box's centre. The level loop walks down from
+  the light's level while level > word 2: PositionToTileQuadrant, then world slot 52 HasFloorOrGround (tile, quadrant,
+  1) stops it; each level multiplies the intensity by 1 - falloff in doubles. Then Light(spread * mThreshold), and when
+  lit, Walk(&mRuns, 1, 1) and the run's index into the key set. The image's set compares keys as signed ints; ours
+  unsigned: equal for run indices (the test keeps its keys below 2^31).
+- BlobPass 0x40edb0: runs with mFlag19 set and a neighbour a quarter apart whose mFlag19 differs get the ambient blended
+  into rows 0, 1 at 0.8 and 2, 4 (3 for one segment) at 0.4 from that end. BlendRowAt 0x4104a0 is segment k >> 2,
+  row k & 3; BlendRow 0x4104e0 is MMX (pmulhw / psubw / packuswb, the weight's low half signed).
+- CollectBlobs 0x40fa40: clears the vector (capacity kept) and every run's 0x1a / 0x1b flags, then one blob per corner
+  a quarter apart (not both runs mFlag19), marking 0x1b on the first run and 0x1a on the second. Vector growth: the
+  image's 0x40aed0 against our push_back, capacities compared.
+- For LD2l / LD2m / LD1b: tests/sg_wall_passes.cpp's CornerShape (runs linked with quarter-apart corners, NaN angles
+  every fifth seed), StepRig (worldfx Scope with the cached world DB cell, slot 52 FloorOrGround logging its
+  arguments, 0x7f2260 StandLevelId with junk above the level) and StepLight (a light boxed around a run's start);
+  FillLight in tests/sg_wall_diffusion.h. tests/sg_diffusion_manager.cpp stands in for our three passes with
+  shape::StandIn on both sides.
+- Buffers filled by game callees: none in this row. Step's out-records go to ours (AmbientFor 0x40c720,
+  PositionToTileQuadrant 0x7dd6c0); cWorldDB slot 52 (ours) and 0x7f2260 (original, through FrontCellQuery) only read
+  theirs (0x7f2260 passes the location as the source of CellToQuadrants 0x7eec60 and CellToSegment 0x7ef1d0). LD2l
+  (the light map's slot 23, 0x20defb's object) and LD2m (0x148bb0, 0x2e5870, 0x256950, 0x257cf0 and the rest) will
+  have such buffers: size each from the callee's stores (checklist), with a fake writing the full size and a
+  buffer-shrink mutant.
+
+LD2l notes (lane 261110j, 2026-11-10). The blends, all hooked and verified (tests/sg_wall_blend.cpp); our
+cDiffusionManager's Diffuse / DiffuseUnlit call ours (BlendUnlit gets the manager's `this` as the floors:
+cIDiffusionManager is its first base):
+- Blend 0x40f6a0 / BlendUnlit 0x40f800: per run, the weight is bright if mFlag19 else dark; an ordered zero test (lahf /
+  test ah, 0x44 / jnp) skips 0 and -0 but not NaN; when the per-run blend returns true (al), the run's index goes into
+  mMarkedRuns (std::set<int32_t>; the insert 0x1d5d80 / 0x148bb0 and its 0x14-byte node are library).
+- BlendLightMap 0x40f390 / BlendFloors 0x40f1c0: the sampler is the scene graph system's (0x20defb, original) slot 48,
+  the light map manager, with its slot 16 GetFloorLight (ours, 0x2c76a0), AddRef / Release around it when not null;
+  BlendFloors uses the cIDiffusionManager argument's slot 23 GetFloorColor (ours, 0x3c5d60). The row's plan called this
+  "the light map's slot 23": it is the floors' slot 23 and the light map's slot 16. Both read the first segment's level
+  word before testing the count (ORIGINAL-BUG: an empty run's first segment), and BlendLightMap calls slot 16 on a null
+  light map (ORIGINAL-BUG). For each segment whose below reference is not valid, two samples (k = 0, 1) at
+  PointAlong(((2i + k) + 0.5) * (double)(1 / (float)(2n)), 0.125) and the level word, each channel times weight * 0.5
+  (mulss, the sample first), MergeMax'd into side k; the result is the or of the merges.
+- Out-buffers: both slot bodies store out+0, +4, +8 only; the original frames hold 12 bytes (BlendLightMap ebp-0x48 with
+  the step's double at -0x3c; BlendFloors frame+0x38 between the step +0x30 and the position +0x44). The test's fakes
+  write 12 and log FillOut's size; the colour-shrunk-to-8 mutant is killed.
+- For LD2m: tests/sg_wall_blend.cpp's Fakes (a system fake behind a CodePatch on 0x20defb whose slot 48 returns a light
+  map fake: slots 1, 2, 16 logging; tests/sg_lighting_fakes.h's gSystemVT is too short for slot 48) and Saturate (packed
+  words high, so MergeMax returns false now and then: random words almost always change). 0x148bb0 in LD2m's callee
+  list is the std::set insert (library, as here), not a game callee.
+
+LD2m notes (lane 261110k, 2026-11-10). ApplyLights 0x40dd30, its wrappers ApplyAllLights 0x40ed70 (changedOnly 0) /
+ApplyChangedLights 0x40ed90 (1) and PackLightColor 0x4106a0, all hooked and verified (tests/sg_wall_lights.cpp); our
+cDiffusionManager calls ours (Diffuse and ReadLightMaps the first, ReadLightMapsAndCollect the second), and
+tests/sg_diffusion_manager.cpp stands in for them with shape::StandIns.
+- The callee list resolved: 0x148bb0 / 0x144162 the std::set insert / _Xlength, 0x40b440 / 0x412510 vector code,
+  0x256950 the set's lower-bound walk (library); 0x2e5870 the node allocation through the allocator service and 0x2c9bd0
+  the tree's recursive erase (its 0x197100 FreeThroughAllocatorService); 0x257cf0 is cLightingManager::SegmentLess,
+  0x7ef1d0 worldrect::CellToSegment, 0x411460 FrontCellQuery, 0x40bc60 Fixed16::SetFromFloat (all ours). Only the
+  partitions getter 0x20de97 stays original.
+- The set is a local std::set of CellToSegment's six words (0x28-byte nodes from the allocator service), not
+  mMarkedRuns: it skips a segment whose location was already lit this call. 0x10da730 is read (0x40de50 / 0x40de5b) as
+  the zero colour of inside runs (m38 clear or level not 0); outside runs use mOutsideAmbientColor times
+  mOutsideWallAmbient, multiplied once before the runs.
+- Per segment: with changedOnly, mPrevious == mCurrent (0x80 bytes) skips it, else the six words are pushed on mChanges
+  (run level not 0) or mChanges2; then the set; GetWallRect (the light map's slot 21; false skips) and the image cached
+  by atlas (slot 22, then the image's slots 9 / 28 / 27; rows from data + (h - 1) * pitch, the pitch negated, pitch / 4
+  unsigned). Shapes: 4 x 8 (mCurrent's packed words times the Fixed16 word of scale / 16, per channel
+  as the original's MMX does; ScaleWord in the source), h = 3w (bilinear fill: u from 0.5 by 2 / (w - 1), v from 6.5 down by 6 / (h - 1)), h a multiple of w
+  (slot 50 of the partitions gives the kind; min(h, 3w) bilinear rows, then each row the one above times
+  0.0625 / (0.4 t + 1); kind 3 on an inside run masks those rows to 0, and with changedOnly skips the segment), other
+  heights nothing. Floor / ceiling of u and v: magic-number rounding of x -/+ 0.5 then a correction at integers
+  (0x40e44f-0x40e462, 0x40e481-0x40e496; ucomiss / lahf / test ah, 0x44 / jp or cmovnp).
+- ORIGINAL-BUGs reproduced: an atlas of -1 matches the empty cache (rows from address 0); the image is not null-checked;
+  a width of 0 with a height other than 0 faults the idiv. The tests avoid all three.
+- Out-buffers: GetWallRect's real body (ours, cLightMapManager.cpp) stores all four sides whole (zeros when false) and the
+  atlas when true; the original's frame slots are 4 bytes each; the fake writes 4 and logs FillOut capped at 4 (the
+  harness can't analyse 0x40dd30's frame, and its scan down then met a stale return address after
+  sg_wall_blend_light_map and measured 6); the outs-shrunk-to-2-bytes mutant is killed.
+- For LD1b: tests/sg_wall_lights.cpp's image / light-map / partitions fakes (Image, WallRect, GetImage, Catalog,
+  StandPartitions) and wallfx::QueryModes / FakeObject (now in tests/sg_wall_diffusion.h) cover any LD1b body that
+  reaches the light maps; tests/sg_diffusion_manager.cpp's StandIns for 0x40ed70 / 0x40ed90 show the pattern.
+
+LD1b notes (lanes 261110l and 261110m, 2026-11-10). cDiffusionManager's slots 8-11 and the portal light's helpers
+(src/sg/cDiffusionManagerPortals.cpp, src/sg/cLightingManagerPortalLight.cpp, tests/sg_diffusion_slots.cpp), all
+verified and in effect through our vtable (the constructor is hooked). Slot 11 0x3c4b30 (ret 0xc, al;
+`Slot11(cICompositionTreeNode *node, cILightRefNode *ref, cPortalLight *light)`):
+- The light's colour is set to the .data preset 0x10da3d0 (12 bytes, zero at load, only slot 11 reads it), then
+  FillFromExtension(ref); when all three axes are within 32 ulps of the preset (re-read; the CompGeom NearlyEqual
+  form, colour minus preset) the answer is false.
+- Placement: the ref's world transform (slot 54, 0x1c bytes), its translation into WithLevelOfGround 0x7ddd90 (the
+  level is read through the returned pointer); +0x0c/+0x10 the x, y; +0x18/+0x1c the truncated x, y (cvttss2si);
+  +0x14 and +0x20 the level. The world's IsInside (slot 71) gets light+0x18 as a WorldTile (so the segments byte is
+  the +0x24 directional flag); false answers false.
+- Facing: (0, 0, 1) at 0x100e7d8 negated by sign flips (xorps, no quieting), turned by RotateVector 0x19c800 with the
+  ref's transform. When (double)z < -0.99 or > 0.99 (0xdbed48 / 0xdbed38; a NaN takes neither) the node's own world
+  transform (slot 54) turns (0, 1, 0) from 0x100e7cc instead, through the pointer slot 54 answers. +0x28/+0x2c the
+  facing's x, y; +0x30 = (float)fmod((double)(float)atan2(y, x), (double)6.28318548f) (CRT 0x831270 / 0x82fd60, x87,
+  library code; 0xdbed40 is the float 2 pi widened).
+- Reach: s = max(+0x4c, 0) (maxss: NaN and -0 give +0) / (y*y + x*x); the point (x s + px, y s + py, s 0 + pz) into a
+  second WithLevelOfGround (its answer unused), whose out buffer goes to the partitions' slot 80 (0, 0); the low word
+  into +0x68. Then PlaceCorners 0x3c3a70; true.
+- Names: the slots keep their Slot8-11 names; no caller of slots 8 and 9 was found in our source or a named original,
+  so descriptive names would rest on the bodies alone.
+
+Receivers the lighting code calls by slot (LD1b, checked in the image; `ret` the callee's pop; a hidden pointer is the
+one argument of a by-value return):
+
+| Receiver | Slot | Body RVA | Arguments, ret | Returns / stores |
+|---|---|---|---|---|
+| nTSSG::cTSSGSystem | 33 | 0x254bb0 (folded) | none, ret | +0x68, the scene manager |
+| nTSSG::cTSSGSystem | 49 | 0x155e40 (folded) | none, ret | +0xa4, the lighting manager |
+| nTSSG::cSceneManager (vtable 0xdb5344) | 17 | 0x46390 | none, ret | +8, the scene |
+| nTSSG::cObject's portal face (iid 0xfa1c39ed, vtable 0xdb0534) | 120 | 0x2675ca (shared_vf_2675ca: `sub ecx,[ecx-4]`, then 0x2675e0) | none, ret | the owner object ([ecx-0xbc] after the adjustment) |
+| the same face | 54 | 0x25cce5 (adjustor) -> 0x25cd00 | hidden out, ret 4 | 0x1c bytes (cRigidTransform: translation, quaternion), answers out; refreshed through 0xa39b70 when flag bit 12 is set |
+| nGZSceneGraph::cLightRefNode's cILightRefNode face (vtable 0xe70334) | 54 | 0xa4bca0 (shared_vf_a4bca0) | hidden out, ret 4 | 0x1c bytes from +0x50..+0x6b, answers out |
+| the same face | 21 | 0x145770 | none, ret | +0xc, the first extension |
+| the same face | 34 | 0x149d00 | none, ret | +0x14, the parent |
+| nTSSG::cTSObject (the portal node's owner) | 42 | 0x546a80 | hidden out, ret 4 | 12 bytes (the position; the third word the level's bits), answers out |
+| nTSSG::cTSObject | 101 | 0x542660 | out, ret 4 | 3 bytes (the tile: +0x1d6, +0x1d2, +0x1d8), answers out |
+| nTSWorld::cWorldDB (manager +0x20) | 69 | 0xd0f7f0 IsInWorldPoint | WorldPoint*, ret 4 | bool (al) |
+| nTSWorld::cWorldDB | 71 | 0xd0f850 IsInside | WorldTile* (0x10 bytes), ret 4 | bool (al) |
+| nTSWorld::cPartitionManager (manager +0x24) | 80 | 0x818640 | position, a, b; ret 0xc | eax: a partition chosen by 0x818680(a), its slot 14 with b at the position's quadrant (0x7dd6c0); slot 11 keeps the low word |
+
+Typed calls: cICompositionTreeNode (GetWorldTransform, MakeIterator44, the extension walk), cIWorldDB (69, 71). The
+others stay RawSlot: no typed header declares those slots (cTSSGSystem and cSceneManager carry the game's vtables;
+cTSObject's 42 / 101 and the partitions' 80 have no interface header).
+
+LT2a notes (lane 261108j; src/sg/cLotImposter.*, cLotImposterDesignModes.*, cLotImposterResources.cpp;
+db/status/cLotImposter.jsonl; tests sg_lot_imposter, sg_lot_imposter_modes, sg_lot_imposter_resources):
+- The file 0x3f5360-0x3f8a10 is the design modes: cDesignModes (the "DesignModes" data list of a `_cres` model: material
+  subset -> material name) and cDesignModeNode, plus FindLod / StripLod (an "SWX" tag and two digits),
+  MakeShapesUnique, BindDesignModeInTree. They are the original's layouts, built inline by their users (the season
+  manager 0x335ce0 keeps one), so every member is hooked at its RVA rather than given our vtable. 0xae7af0
+  (MakeMaterialsUnique) and 0xb40560 (LoadImposterResources) looked shared but only the imposter reaches them;
+  0x401790 is GetLotGroup.
+- The desc and imposter are in effect through their factories (the COM director's class table); 0x36d100 (6 bytes,
+  returns 0x4d892b0b) is the imposter's class-id getter, referenced only by our cDllCOMDirector constructor.
+- RewriteForLod 0x3f5550 keeps an original bug (`// ORIGINAL-BUG:`): with "lod90" in a value whose second '_' is
+  fewer than five characters in, the insert position falls before the start and cRZString::Insert throws.
+- 59 mutants, 58 killed, one argued equivalent (the desc stored as null rather than released after ReleaseResources
+  already left it null). guard.py flagged a statement reorder in the modes test as a weakening; it was the patch
+  heuristic (commit c05c409a reorders it back).
+
+### Design-mode module (0x3aa260-0x3ac250, lane 261111o)
+
+Free cdecl helpers over an object's composition tree, its shapes (cIShape, slot 50 the geometry) and three data lists
+on each geometry: "tsDesignModeEnabled" (the subsets a player may recolour, item names), "tsMaterialsMeshName" (subset
+-> mesh name, GetString) and "tsDesignModeSlaveSubsets" (subset -> subsets that follow it, a delimited list). A
+geometry's slot 42 fills a range of three counted iterators {cur, mid, end} over its subset names (slot 4 IsEqual(end),
+5 Get text, 6 Next), released end, mid, cur. "Name range" below is that walk; each name is copied into a local
+cRZString first. Names are the lane's (tentative in Ghidra).
+
+| RVA | Bytes | Name | Signature, behaviour | Callers |
+|---|---|---|---|---|
+| 0x3abe70 | 26 | ObjectById | (short id) -> the singleton 0x20ddfb's slot 26 table, its slot 29 (sign-extended id) | user tools (vf92) |
+| 0x3aa260 | 444 | CollectChildShapes | (node, list<counted cIShape>*): per child (42/38): skipped if QI 0xfa1c39ed (another object's portal face) answers; else QI shape-ref 0xa516cd10 by answer -> each slot 93 shape push_back; then recurse into the child either way | 0x3aa420, 0x3aab80, itself |
+| 0x3abe90 | 222 | IsDesignModeSubset | (shape, cIGZString* subset) -> bool: geometry's "tsDesignModeEnabled" list holds the subset (_stricmp, item before subset text) | 0x3aab80 |
+| 0x3ab850 | 312 | MaterialsMeshName | (shape, subset, cRZString* out) -> bool: "tsMaterialsMeshName" GetString(subset, out); found and out not ending "_cres" (case-sens.) -> append "_cres" | 0x3aab80 |
+| 0x3aab80 | 831 | GetObjectDesignModeNames | (node, primary, primaryMesh, secondary, secondaryMesh): all four emptied; null node -> done. Each collected shape's name range: enabled and no "shadow" (case-sens. Find) -> first such sets primary (+ its mesh); a later one not equal to primary (slot 11, case-sens.) sets secondary (+ mesh) and ends that shape's walk; once both are set nothing more changes | lighting 0x2e4c40 (ours), 0x3aaec0 |
+| 0x3aaec0 | 212 | GetPortalDesignModeNames | (object, four strings): object slot 9 (0xfa1c39f7, 0xfa1c39ed, &cell) answers -> 0x3aab80(cell, ...), else the four emptied; cell released through its virtual base | 0x3abf70, UI dialogs |
+| 0x3ab990 | 687 | FindObjectDesignMode | (node, subset) -> shape (uncounted): node's own shapes (QI answer, subset nonempty) by name range (_stricmp item, subset), then each child recursively | lighting 0x2e4c40 (ours), thumbnails 0x7cb6eb, itself |
+| 0x3ab2b0 | 697 | FindGeometryWithSubset | as 0x3ab990 but the empty-subset check comes before the QI, null shapes are not skipped, and it returns the geometry | thumbnails 0x7cb6eb, itself |
+| 0x3ab570 | 549 | FindListedGeometryWithSubset | (container, subset) -> geometry: container slot 15 count, slot 5 (i) shape; null container / empty subset -> 0 | 0x3ab1d0 |
+| 0x3abc40 | 549 | FindListedShapeWithSubset | as 0x3ab570, returning the shape | 0x25c920, 0x261c30, 0x3abf70 |
+| 0x3aafa0 | 559 | SlaveSubsets | (geometry, const char* subset, list<cRZString>* out): "tsDesignModeSlaveSubsets" GetString(subset) split by the list delimiter into out | 0x3ab1d0, thumbnails |
+| 0x3ab1d0 | 212 | ListedSlaveSubsets | (container, const char* subset, list<cRZString>*): 0x3ab570's geometry (AddRef'd) -> 0x3aafa0 | 0x261c30, 0x3f5b80 |
+| 0x3ab7a0 | 163 | FormatMaterialName | (cRZString* out, object, arg, bool cres) -> out: object slot 124 (arg) formatted (0xdbc340), "_cres" appended when cres | 0x3f7a50 |
+| 0x3aa420 | 758 | CollectSubsetNames | (node, set<cRZString>*): every collected shape's geometry (AddRef'd) name range inserted | 0x3f7f40 |
+| 0x3aa720 | 1111 | FindMaterialOverride | (?, cIGZString*, ?, ?) -> counted object: a framework service (0xac6965bc) query (slot 9 or 8 by whether the 2nd argument is empty) into a vector on the allocator service, searched by name | 0x3abf70 |
+| 0x3abf70 | 778 | ApplyDesignModeMaterials | (container, object): 0x3aaec0's names, per nonempty primary/secondary not already set (object slot 292), the listed shape, a material lookup (0x3aa720) given to object slot 290 | nTSSG::cObject vf5 0x263100 |
+
+Library inside: std::list / std::set node code (0x148bb0 tree insert, 0x1d98d0 list destructor, 0x144162 length
+error), std::string assign/_Construct, _stricmp, operator new/delete.
+
+Lane 261111o result (src/sg/DesignMode.*, src/hook/tables/DesignMode.cpp, db/status/DesignMode.jsonl, test
+sg_design_mode): the first ten rows (0x3abe70 to 0x3abc40, 4.5 KB) are verified and hooked; 43 mutants, all killed
+(per-function counts in the entries). The lighting caller 0x2e4c40 now calls ours (its original_calls dropped; the
+sg_lighting_objects stand-ins point at ours).
+- Corrections to the rows above: CollectChildShapes and the two tree finds walk the shape-ref range from its first
+  field ({first, current, end}), not the current one. FindObjectDesignMode AddRefs and Releases a child's result before
+  returning it (net uncounted). FindGeometryWithSubset does not skip null shapes and asks a null shape's geometry (the
+  test leaves null shapes and geometries out for it).
+- The test's world: a random tree of up to 8 nodes (portal / shape-ref QIs answer yes, no, or write a face and say no),
+  shapes, geometries with 0-6 subset names, data lists with counts -1, INT32_MIN and 0..6, a shape container, an object
+  with slot 9, and the app singleton at 0x10cc288 swapped for a fake; 0xaeb5b0 (FindDataList, ours) stood in by the
+  test's list lookup, the game's operator new / delete patched to ours so both sides allocate alike.
+
+Lane 261111p result (same files, tests sg_design_mode_slave_subsets, _listed_slave_subsets, _find_override,
+_apply_materials, _format_name, _collect_names): the remaining six rows (3.5 KB) are verified and hooked; 46 mutants
+killed, 4 equivalent survivors (named in the entries). No caller used OriginalFunction for them; the callers 0x3f7a50
+(of FormatMaterialName) and 0x3f7f40 (of CollectSubsetNames, and of 0x3f7a50) stay unnamed and unreimplemented.
+- SlaveSubsets reads the list name through the cell 0x100bd98 (gDesignModeSlaveSubsetsName, pointing at
+  "tsDesignModeSlaveSubsets"); ours uses the constant. An empty piece (a leading or doubled ',') takes the whole remaining
+  text, commas and all, as one name: kept, marked ORIGINAL-BUG.
+- FindMaterialOverride (key, cIGZString* mesh, cRZString* containerName, cRZString* subset): the framework service
+  (0xac6965bc) answers candidates by mesh (slot 8) or by key (slot 9) into a vector; the first usable (slot 7) whose name
+  (slot 6) equals the subset case-blind is returned uncounted, every candidate's ref released. The candidate name is
+  read into a local string whose 16-character boundary the test covers (15/16/17-character names).
+- ApplyDesignModeMaterials: the original crashes on a null geometry (FindListedShape) and on a null shape ref
+  (GetObjectDesignModeNames); the test leaves both out.
+- The test's additions: the game's allocator service at 0x10c95d4 wrapped to count live blocks, the strings' text,
+  length and compare slots logged, stack-addressed outputs named by first sight (SeenId).
+
+LT2b notes (lane 261108j; src/sg/cLotImposterManager.*, db/status/cLotImposterManager.jsonl, test
+sg_lot_imposter_manager):
+- The manager is 0x1c4 bytes; the factory is the constructor's only caller and the deleting destructor (slot 8) the
+  destructor's, so hooking those two makes every manager's construction and destruction ours. The object keeps the
+  image's vtables (slots 5-7 and 9 are LT2b2's and run the original on our object, same layout).
+- Fields only the generation path writes, typed from the destructor's element destructors: +0x74 a vector of
+  material handles (ShapeMaterialHandle, 0xae8870 each), +0x154 a vector of 0x20-byte slice entries (two words, then
+  vectors at +8 and +0x14; 0x14c410), +0x140 a vector of 0x50-byte elements (0x362d70), +0x1bc a map<int, 8 bytes>
+  (0x2076d0). +0x80 is a cRZString built inline, +0xb0 a cTSSliceImposterCreator (ctor 0xb51100 / dtor 0xb51300, not
+  ours yet), +0x1a4 the image extension ("jpg").
+- LoadDefinitions reads the app's file list for option 0xcc9a696d, walks it from the last file that exists, and runs
+  the command parser (class 0xeaaad987, iid 0x95035f4) with one cObjectImposterCommand (16 bytes, vtable 0xdbb480) per
+  file. The command's word at +0xc is left uninitialised by the original (the test doesn't compare it).
+- The definitions' map erase 0x362470 is also referenced from 0x363060 (the definitions' destructor), which only the
+  original constructor's unwind funclet 0xd30c0b reaches (callers_handled in the entry).
+- 24 mutants, all killed (see the entries' notes).
+
+LT2b2 scout (lane 261111q, 2026-11-11; the row is split into LT2b2a-LT2b2f in the table above):
+- Scope: 0x362950-0x36d8d0 plus the image writer 0xb401c0-0xb40970 (only the generation path calls it). 63 functions,
+  38.6 KB, not counting the library code they call: __chkstk 0x825300, memset 0x8281e0, the STL vector `_Tidy` 0x362d70
+  (Blob<80>, a library match) and the [L] callees the list tool flags (operator new 0x824632 / delete 0x824624, the EH
+  helpers 0x82a797 and friends): those stay the toolchain's.
+- Owner: the manager, unless noted. Every function is reached from its slots 5-7 and 9, from Shutdown or from the
+  command's vtable 0xdbb480. "manager?" marks the five whose callers lie outside the path or are data only: 0x363010,
+  0x365670, 0x363080 (0x60de2d), and 0x3677f0 / 0x36d100 (6 bytes each, from the verified 0x244e30). Check them at the
+  start of LT2b2a.
+- Reach: none of it ran in the reference set. DoMessage generates only on message 0xdc with +0x173 set, so the path
+  needs either a generation scenario or synthetic-only tests (the first batch is synthetic).
+- The file's tail: 0x36d3c0 lies after the desc and was not checked here.
+- The "stack" column is the `ret` immediate from a linear disassembly. The convention (this in ecx or not) is resolved
+  only for the functions done here; the others need `tools/arity.py` and a read when their lane starts.
+- "Callees not ours" lists the direct callees outside the range that have no status entry. Of these, the 0xb51440-0xb55570
+  ones (near cTSSliceImposterCreator's constructor 0xb51100; owners not checked) and the world/lot ones (0x1c8a65-0x1d4ab0, 0x2574c0, 0x2941e0) are the bulk. About 18.5 KB of
+  original callees stay `OriginalFunction`s unless their own classes go first.
+- Fakes already in tests: FakeImage (an image-data fake on slots 9/10/20/39, tests/sg_lot_imposter_raster.cpp); the
+  writer's raw file / codec / COM fakes and the gFileBlock fake (tests/sg_imposter_image_writer.cpp); the manager on
+  pattern bytes with our constructor, and the 0xb518a0 stand-in (tests/sg_lot_imposter_manager.cpp, LotImposterManager_Leaves);
+  cSliceImposterCreatorMember (src/sg/cLotImposterManager.h). symfind finds no cTSSliceImposterCreator fake; LT2b2c
+  writes one.
+
+| RVA | bytes | name | owner | stack | callees not ours | callers | state |
+|---|---|---|---|---|---|---|---|
+| 362950 | 182 | fn_362950 | manager | caller pops | - | 364cd0,364f40,365410 | lane a |
+| 362d70 | 102 | STL vector _Tidy | lib | caller pops | 824624 | 362de0[v],526930 | lib |
+| 363010 | 68 | fn_363010 | manager? | caller pops | - | - (data) | lane a |
+| 363080 | 94 | fn_363080 | manager? | caller pops | - | 60de2d | lane a |
+| 363120 | 299 | fn_363120 | manager | callee pops 8 | 144162,362580 | 363250 | lane a |
+| 363250 | 90 | fn_363250 | manager | callee pops 8 | - | 3661a0 | lane a |
+| 3632b0 | 472 | fn_3632b0 | manager | callee pops 4 | 3621a0,3625f0,362840,3628b0,3f6a30 | 365990,365d40 | lane a |
+| 363490 | 482 | FadeBorder | manager | caller pops | - | 367c20 | verified (q) |
+| 363680 | 335 | PaintFrame | manager | caller pops | - | 367c20 | verified (q) |
+| 3637d0 | 379 | PaintColumn | manager | caller pops | - | 363950 | verified (q) |
+| 363950 | 181 | PaintRect | manager | caller pops | - | 363680 | verified (q) |
+| 363a10 | 379 | PaintRow | manager | caller pops | - | 363950 | verified (q) |
+| 363b90 | 1502 | fn_363b90 | manager | caller pops | 144162,14c5b0,2919e0,362580,7ddea0,b544f0,b545f0,b546a0,b54d10,b55530,b55570 | 366180 | lane b |
+| 364170 | 1993 | fn_364170 | manager | caller pops | 1411c0,299470,29a350,400fb0,7df930,824624,b51c40 | 367800 | lane c |
+| 364940 | 535 | fn_364940 | manager | caller pops | - | 367800 | lane a |
+| 364b60 | 356 | fn_364b60 | manager | caller pops | 14323f,20df51,401210 | 367800 | lane b |
+| 364cd0 | 616 | fn_364cd0 | manager | caller pops | 20df51 | 367800 | lane c |
+| 364f40 | 1218 | mgr vf7 | manager | callee pops 0xc | 20deb5,824624 | - (data) | lane c |
+| 365410 | 185 | fn_365410 | manager | callee pops 8 | 3f5b80,3f7c80,3f7f40,3f83d0 | 364cd0 | lane a |
+| 3654d0 | 410 | fn_3654d0 | manager | caller pops | 400d60,824624 | 367800 | lane b |
+| 365670 | 789 | fn_365670 | manager? | caller pops | 2919e0 | - (data) | lane b |
+| 365990 | 928 | fn_365990 | manager | caller pops | 3f6610,3f6730,3f6a80,3f6d00,824624 | 3661a0 | lane b |
+| 365d40 | 1082 | fn_365d40 | manager | caller pops | 3f6610,3f6730,3f6a80,3f6d00,824624 | 3661a0 | lane b |
+| 366180 | 24 | fn_366180 | manager | jmp/tail | - | 367800 | lane b |
+| 3661a0 | 692 | fn_3661a0 | manager | caller pops | 824624 | 367800 | lane b |
+| 366460 | 512 | fn_366460 | manager | callee pops 4 | 20deb5,824624 | 369960,369a30 | lane a |
+| 366670 | 598 | fn_366670 | manager | caller pops | 20deb5,723ae0,824624 | 367800 | lane c |
+| 366980 | 1418 | fn_366980 | manager | caller pops | 1411c0,824624,b52950 | 367800 | lane d |
+| 366f10 | 154 | cmd vf4 | command | callee pops 4 | 3f76e0,3f7890 | - (data) | lane a |
+| 366fc0 | 24 | HasSliceBorder | manager | caller pops | - | 367c20 | verified (q) |
+| 366fe0 | 754 | fn_366fe0 | manager | callee pops 4 | - | 367c20 | lane a |
+| 3672e0 | 1192 | fn_3672e0 | manager | caller pops | 1411c0,400fb0,7e1d90,824624,b52b20 | 367800 | lane e |
+| 3677f0 | 6 | fn_3677f0 | manager? | caller pops | - | 244e30[v] | lane a |
+| 367800 | 1041 | mgr vf5 | manager | caller pops | 20defb,20df51,824624,b51ed0,b52300 | - (data) | lane f |
+| 367c20 | 4544 | fn_367c20 | manager | caller pops | 20defb,230120,2941e0,3f69e0,3f6a80,3f6aa0,b517a0,b517c0,b52e30 | 367800 | lane e |
+| 368de0 | 49 | fn_368de0 | manager | callee pops 4 | - | 366670,367800,369a30,36b3e0 | lane a |
+| 368e20 | 292 | fn_368e20 | manager | callee pops 0x10 | - | 364f40,366460,366670,369ae0,36b3e0 | lane a |
+| 368f50 | 24 | SliceCount | manager | caller pops | - | 365990,365d40 | verified (q) |
+| 368f70 | 38 | SliceCountF | manager | caller pops | - | 365990,365d40 | verified (q) |
+| 368fa0 | 177 | SnapshotName | manager | caller pops | - | 36b3e0 | verified (q) |
+| 369070 | 208 | fn_369070 | manager | callee pops 4 | - | 363250 | lane a |
+| 3691a0 | 642 | fn_3691a0 | manager | caller pops | 14323f,3f69c0,3f6b10,b51440,b51550,b518d0,b52ce0,b52d00,b52d20 | 367800 | lane c |
+| 369430 | 38 | fn_369430 | manager | caller pops | 3621a0 | 365990 | lane a |
+| 369460 | 155 | fn_369460 | manager | caller pops | - | 366180 | lane a |
+| 369500 | 6 | cmd vf5 | command | caller pops | - | - (data) | lane a |
+| 36957d | 8 | mgr QueryInterface | manager | jmp/tail | - | - (data) | lane f |
+| 3697f5 | 8 | mgr Release | manager | jmp/tail | - | - (data) | lane f |
+| 369800 | 224 | ReleaseGenerationState | manager | caller pops | b518a0 | 367800,36c630[v] | verified (q) |
+| 3698f0 | 110 | ReleaseGenerationServices | manager | caller pops | - | 367800,36c630[v] | verified (q) |
+| 369960 | 194 | mgr vf6 | manager | callee pops 4 | 824624 | - (data) | lane b |
+| 369a30 | 175 | mgr vf9 | manager | caller pops | 824624 | - (data) | lane b |
+| 369ae0 | 468 | fn_369ae0 | manager | callee pops 4 | 824624 | 367800 | lane d |
+| 369cc0 | 2592 | fn_369cc0 | manager | callee pops 8 | 1411c0,14147b,1d1370,1d4ab0,824624,b52950 | 369ae0 | lane d |
+| 36a6f0 | 2999 | fn_36a6f0 | manager | callee pops 8 | 1411c0,14147b,1d1370,1d4ab0,824624,b52950 | 369ae0 | lane d |
+| 36b2b0 | 297 | fn_36b2b0 | manager | caller pops | 1d1370 | 36a6f0 | lane a |
+| 36b3e0 | 4373 | fn_36b3e0 | manager | callee pops 8 | 14323f,1c8a65,1c8abb,1c8b12,20defb,20df51,2574c0,824624,b38ef0,b52d30 | 367800 | lane f |
+| 36c510 | 287 | fn_36c510 | manager | callee pops 4 | - | 367800 | lane a |
+| 36c690 | 269 | fn_36c690 | manager | caller pops | 20defb | 367c20 | lane a |
+| 36c7a0 | 494 | fn_36c7a0 | manager | caller pops | - | 367800 | lane a |
+| 36d100 | 6 | fn_36d100 | manager? | caller pops | - | 244e30[v] | lane a |
+| 825300 | 43 | __chkstk | lib | caller pops | - | 14aff[L],14e51[L],15ee9[L],26e29[L],26f5b[L],27251[L],464... | lib |
+| 8281e0 | 346 | memset | lib | caller pops | - | 144dd4[L],14b360[L],14b490[L],14f6f0[v],152c50[L],152e90[... | lib |
+| b401c0 | 213 | writer Construct | writer | caller pops | - | 366980,36b3e0 | verified (q) |
+| b402a0 | 644 | writer Write | writer | callee pops 0x10 | - | b40540 | verified (q) |
+| b40540 | 22 | writer WriteTop | writer | callee pops 0xc | - | 366980,36b3e0 | verified (q) |
+| b40970 | 93 | writer SetCodecFormat | writer | caller pops | - | b402a0 | verified (q) |
+
+The split, bottom-up. Each lane's callees within the path are in earlier lanes or the first batch.
+- LT2b2a (5.5 KB, 23 functions): the leaves and near-leaves, listed in the row. Dependencies: the first batch only.
+  - Recipe fit: 366fe0 (754 B, no callees), 36c690 and 369430 are recipe work.
+  - Structure work: 36c7a0, 368e20, 36c510, 368de0, 369460 and 369070 read an object the manager reaches through
+    +0x18 (slots 9/17/19/23/64/87 on it), which needs a fake and a layout before tests. 363120 / 363250 / 3632b0 /
+    362950 walk the manager's containers (+0x140, +0x154, the +0x1bc map).
+  - Risks: the five "manager?" owners; the command's Execute 0x366f10 calls the definitions' parse helpers
+    0x3f76e0 / 0x3f7890, which LT2a did not verify.
+- LT2b2b (6.2 KB): 0x363b90, 0x366180, 0x365670, 0x365990, 0x365d40, 0x3661a0, 0x364b60, 0x3654d0 and slots 6 / 9.
+  - Dependencies: LT2b2a (0x363250, 0x3632b0, 0x369430, 0x366460, 0x368de0) and the raster helpers.
+  - Fakes: FakeImage, plus slice-entry vectors.
+  - Recipe fit: the slots (194 and 175 B).
+  - Risks: 0x363b90 calls the 0xb544f0-0xb55570 family; 0x365670 has no code caller.
+- LT2b2c (5.1 KB): 0x364170, 0x364cd0, slot 7 0x364f40, 0x366670, 0x3691a0.
+  - Dependencies: LT2b2a (0x362950, 0x365410, 0x368e20, 0x368de0).
+  - Fakes: a cTSSliceImposterCreator fake (new), sgfx resources, material handles (0xae88xx are verified).
+  - Risks: original slice-creator callees.
+- LT2b2d (7.5 KB): 0x366980, 0x369ae0, 0x369cc0, 0x36a6f0.
+  - Dependencies: the writer (done), LT2b2a (0x368e20, 0x36b2b0).
+  - Fakes: the writer test's file / codec fakes; geometry callees 0x1d1370 / 0x1d4ab0 (original).
+  - Risks: two bodies of 2.6 and 3 KB; split 0x369cc0 / 0x36a6f0 across two lanes if the first runs long.
+- LT2b2e (5.7 KB): 0x367c20 (4.5 KB, 27 callees) and 0x3672e0.
+  - Dependencies: the raster helpers, 0x366fc0 / 0x366fe0 / 0x36c690 (LT2b2a).
+  - Fakes: sgfx (render to texture, the viewer / camera fakes).
+  - Risks: the largest body; structure work.
+- LT2b2f (5.4 KB): 0x36b3e0 (4.4 KB, about 50 callees, the writer's other caller) and slot 5 0x367800, which calls
+  every lane above. The two 8-byte adjustor thunks 0x36957d / 0x3697f5 go with it.
+  - Risks: last; the slot needs every callee ours or stood in.
+
+LT2b2a notes (lane 261111r, 2026-11-11):
+- The +0x18 object is the world database (nTSWorld::cIWorldDB, getter 0x20e0b2, src/world/cWorldDB.h), held while
+  initialised. Slots used: 62 (a tile's elevation, given {x, y, level}), 64 (ground elevation at x, y), 81-84 (lot
+  bounds), 87 (tile size), 88 / 89 (min / max level), 95 (wall height). The scout's "slots 9/17/19/23/64/87" mixed
+  objects: 5 / 9 / 6 are the cached slot-23 service's (kind, lot, current lot), 4 / 8 / 19 the lot's (view, name
+  string, name), 14 the view's (whether a side is shown), 17 the out string's.
+- Owners: 0x3677f0 is the manager's class id (0x0bc4a38d), 0x36d100 cLotImposter's (0x4d892b0b), 0x369500 the
+  definitions command's GetName ("objectImposter"). 0x363010 is not the manager's: it destroys a {ref, cDesignModes}
+  pair and nothing calls it (dead). 0x363080 is the nTSUI::cScreenGrabber local destructor (caller 0x60de2d).
+  0x362950 is cDesignModes' default constructor (both cMapStrings empty, +0x40 / +0x44 zeroed, a 0x50 head node
+  from operator new, linked to itself, word 0x101 at +0xc, size 0).
+- Conventions: 0x36c690 __cdecl (image, which); 0x368e20 __stdcall ret 0x10 (ecx unused; its second argument, a string
+  0x366460 builds, is never read); 0x368de0 __stdcall ret 4; 0x366fe0 / 0x3632b0 / 0x36c510 / 0x366460 / 0x369070
+  thiscall ret 4; 0x363120 / 0x363250 / 0x365410 thiscall ret 8.
+- 0x369460 (IsFlat) reads tiles (0..w-1, 0..h-1) from the world's corner, not the lot's (ORIGINAL-BUG in src).
+  0x366fe0 tests +0x199 where HasSliceBorder 0x366fc0 tests +0x19a. 0x36c690 multiplies channel first (a NaN
+  channel's payload wins). 0x366460 re-reads the key list's {begin, end} (slot 7) three times per key.
+- Left mapped for LT2b2b/c (no status entries):
+  - 0x365410 (thiscall ret 8; called by 0x364cd0): when target->0x3f7f40(a) holds, true; else two cDesignModes
+    built (0x362950), the first given `a` (0x3f5b80, result unused), the definitions (+0x18c) 0x3f83d0 maps the first
+    into the second, then target->0x3f7c80(second) when that found it; both destroyed (0x335a60). Its four callees are
+    design-mode code with no status (OriginalFunction until LT2a's file gets them). Goes with 0x362950 (a Construct in
+    src/sg/cLotImposterDesignModes.h).
+  - 0x364940, 0x36b2b0 and the command's Execute 0x366f10 (calls 0x3f7890 / 0x3f76e0) were not read: 0x364940 is a
+    run of director-framework object calls (GetDirectorFrameworkObject, slots 0x80 / 0xa4 / 0xb4 / 0x178), 0x36b2b0
+    the framework plus 0x1d1370 and the persist system's slot 17.
+- Tests: tests/sg_lot_imposter_world.cpp (LotImposterManager_World, LotImposterManager_ClassIds),
+  tests/sg_lot_imposter_slices.cpp (ImposterSlices_Scale / _Borders / _Place), tests/sg_lot_imposter_loading.cpp
+  (LotImposterManager_Resources). The world-DB fake there (its own vtable, floats in st0) serves LT2b2b-f.
+
+LT2b2a/b notes (lane 261111s, 2026-11-11):
+- Done (7 verified, 1.72 KB):
+  - 0x362950 (cDesignModes' constructor; thiscall);
+  - 0x365410 ApplyDefinition (thiscall ret 8; its four design-mode callees 0x3f7f40 / 0x3f5b80 / 0x3f83d0 / 0x3f7c80
+    stay OriginalFunction);
+  - 0x364940 CreateGenerationServices (makes +0x38 and the four +0x3c members through the director framework's slot 3,
+    then wires them: geometry AddPart 32, shape AddPart 41 with lod 0, shape-ref AddShape 94, tree AddChild 45);
+  - 0x36b2b0 AddImposterDesc (cdecl; returns the low byte of the persist system's slot 16);
+  - the definitions command's Execute 0x366f10 (two or six arguments to 0x3f7890 / 0x3f76e0; a cError is caught);
+  - the manager's slots 6 LoadNamedLot 0x369960 and 9 LoadCurrentLot 0x369a30 (thiscall; both build a string and call
+    0x366460).
+- Tests: tests/sg_lot_imposter_services.cpp (LotImposterServices_Construct / _Apply / _Create / _Desc / _Command, a
+  director-framework fake with per-class objects) and two more ops in LotImposterManager_Resources (_loading.cpp).
+- Lane r's tests strengthened on the coordinator's request (no source change: the original does what ours does):
+  - _world.cpp: the tile-size fake swaps the manager's world mid-call, and inputs where a double divide rounds
+    differently.
+  - _slices.cpp: a pixel fake shrinks +0x140's records and changes +0x150 mid-run.
+  - _loading.cpp: slot 34 logs the caller's group word; the resources stand-in logs the live heap blocks.
+  - _slices.cpp's Answer wrote four floats into GetPixelRGB's three-float buffer. The fourth landed on a register
+    0x36c690 saved, and crashed some builds. It now writes three (a fixture correction).
+- LT2b2b's remaining rows call much original code with no lane, so do those callees first (or stand in for them):
+  - 0x363b90 (1.5 KB): the 0xb544f0-0xb55570 family (six functions), 0x2919e0, 0x362580, 0x144162, 0x14c5b0,
+    0x7ddea0.
+  - 0x366180 (24 B): 0x363b90 only.
+  - 0x365670 (789 B): 0x2919e0.
+  - 0x365990 / 0x365d40 (0.9 / 1.1 KB): the wall-slice record class 0x3f6610 / 0x3f6730 / 0x3f6a80 / 0x3f6d00 (LT2a's
+    file; not done).
+  - 0x3661a0 (692 B): 0x365990 and 0x365d40.
+  - 0x364b60 (356 B): 0x401210 and 0x20df51.
+  - 0x3654d0 (410 B): 0x400d60.
+  A lane on the 0x3f66xx records, 0x400d60 / 0x401210 and 0x2919e0 would leave LT2b2b only the 0xb54xxx family to stand
+  in for.
+
+LT2a2 scout (lane 261111t, 2026-11-11). Every function of 0x3f5360-0x3f8a10 without a verified status, and the two
+outside callees LT2b2b needs, by cluster (sizes from db/functions.jsonl; "lib" = std:: instantiation, the toolchain's):
+
+| Cluster | RVAs (bytes) | Callers | Callees not ours | Row |
+|---|---|---|---|---|
+| Wall-slice record (0x50 bytes; vector<record> resize uses the lib 0x3f6470 / 0x3f65d0) | 0x3f6610 ctor (142), 0x3f66a0 segment init from a wall (144), 0x3f69c0 MinBottom (21), 0x3f6b10 MaxTop (21), 0x3f6a80 Height (27), 0x3f6a30 RowCount (73), 0x3f6e30 SameAngle (39), 0x3f69e0 Normal (75, sin/cos lib), 0x3f6aa0 Length (98, sqrt lib), 0x3f6b30 Begin from a wall (459), 0x3f6800 Extend by a neighbour (439), 0x3f6730 Build along a wall run (203), 0x3f6d00 Split into slices (302) | 0x365990, 0x365d40, 0x367c20, 0x3691a0, 0x3632b0 (ours) | none (GroundHeightAt 0x7e4680 / SegmentEndHeight 0x7e59c0 are ours) | LT2a2a |
+| Definitions command's helpers (cImposterDefinition copies and its std::map) | 0x3f76e0 (417), 0x3f7890 (362), 0x3f7110 (404), 0x3f72b0 (188), 0x3f73b0 (116), 0x3f7430 (199), 0x3f7500 (466), 0x3f6e60 (200), 0x3f6f30 (73); probably lib: 0x3f6f80 (226, tree copy), 0x3f7080 (130, lower bound) | 0x366f10 (ours) | 0x37eeb0, 0x257860, 0x2a4cb0 | LT2a2a |
+| ApplyDefinition's design-mode callees | 0x3f7a50 (190), 0x3f7b10 (357), 0x3f7c80 (523), 0x3f8300 (193), 0x3f83d0 (894), 0x3f7f40 (953), 0x3f5b80 (1902) | 0x365410 (ours), 0x335e50 (season manager) | 0x2b5d40, 0x37eeb0, 0x3ac300, 0x3ac3e0, 0x3ac840, 0x3f5220, 0x1603f0, 0x2567d0, 0x3354c0, 0x15dc50, 0x37ee60, 0x3a97f0, 0x20defb | LT2a2b (5 KB) |
+| 0x401210's family | 0x401210 (893), 0x400fe0 (556), 0x401590 (508) | 0x364b60 | 0x3bc4d0 (448, 7 callers), world-lot 0x7f29a0 TileEdgeQuery (385, its own undone 0x7f26a0-0x7f4200 callees), 0x7f2b50 (36) | LT2a2c, after world-lot's 0x7f29a0 |
+| 0x400d60 (draw one lot item by its kind +0x20 into a context) | 0x400d60 (500), 0x400350 (1324), 0x400880 (1237) and 17 callees 0x3f8bd0-0x3ffe20 (0.1-4.7 KB each, ~30 KB), 0x3feac0 (2659, also 0x6a5980's) | 0x3654d0 | 0x7f47b0-0x7f4b40, 0x800280, 0x800440, 0x6c4b50 | LT2a2d, its own campaign (several rows) |
+
+Bottom-up order: LT2a2a (leaves only; unblocks LT2b2b's 0x365990 / 0x365d40 / 0x3661a0), LT2a2b, then LT2a2c and
+LT2a2d whenever their outside callees are done; until then LT2b2b calls 0x400d60 and 0x401210 through
+OriginalFunction.
+
+LT2a2a progress (lane 261111t, 2026-11-11): the wall-slice record is done. cImposterSliceRecord and cImposterWallEnds
+(src/sg/cImposterSliceRecord.*), all 13 functions (2.04 KB) verified and hooked at their RVAs, tests/sg_lot_imposter_records.cpp.
+The wall graph's slots it calls: piece 5 SetMarked(bool), 21 Previous, 23 Next, 30 Angle (st0), 34 IsSkipped, 35 / 36
+start / end vertex; vertex slot 5 its position (x, y, level). Notes for the callers' lanes:
+- MSVC keeps a double result that comes from an st0-returning call on the x87 (Height's fsubr, Split's fdiv / fadd), so
+  x87::Rounded on it is a no-op in our build and its "not rounded" mutants are equivalent; it stays for an SSE2 build.
+- A ring of walls whose IsSkipped ignores the marks loops forever in Build (the original too): the test forces marks
+  to count on rings.
+LT2a2a and LT2a2b done (lane 261111u, 2026-11-11), both rows closed:
+- The definitions command's helpers (src/sg/cLotImposterManager.cpp, tests/sg_lot_imposter_definitions.cpp):
+  cImposterDefinition constructor 0x3f72b0, destructor 0x3f73b0, operator= 0x3f7430, AddEntry 0x3f7500, Find 0x3f8300;
+  cImposterDefinitions Define 0x3f7890 (name, model) / 0x3f76e0 (name, a, b, model, c, d) and Map 0x3f83d0. Verified
+  and hooked; Execute 0x366f10 and ApplyDefinition 0x365410 have no original_calls left.
+- ApplyDefinition's design-mode callees (src/sg/cLotImposterDesignModes.cpp, tests/sg_lot_imposter_design.cpp):
+  cDesignModes::LoadFromObject 0x3f5b80, cDesignModeNode::LoadForObject 0x3f7a50 / LoadByName 0x3f7b10 / Take 0x3f7c80 /
+  SetFromObject 0x3f7f40. Verified and hooked. Still originals: AcceptObject 0x3a97f0 (SetFromObject), the parts
+  builder 0x3ac300 / 0x3ac840 / 0x3ac3e0 (fastcall; LoadFromObject's slave joins), the scene graph system getter
+  0x20defb (LoadByName). ORIGINAL-BUG: Take and SetFromObject empty and fill the node's design-mode data list without a
+  null check (only the hold and release check it).
+- Library by shape (MSVC std::map / std::string instantiations, our toolchain's; no status entry, never hooked):
+  0x3f6e60, 0x3f6f30, 0x3f7110 (the definitions' map / string copies), 0x3f6f80 (tree copy), 0x3f7080 (lower bound),
+  0x37eeb0, 0x2a4cb0, 0x3354c0, 0x37ee60, 0x2567d0, 0x15dc50, 0x148bb0, 0x3f5220.
+
+TS1d notes (lane 261108m, 2026-11-08). Owner check: of the row's list, the outlines, the overlay, the callback and the
+frame state's functions are the class's own (callers in the strategy or the state only); 0x36fc40 and 0x36dde0 (hood
+load only) and the drawing paths moved to TS1e, which is the class's whole queue now (11.8 KB in 43 functions, 11.1 KB
+owner-inferred; the class is 90% done by db size).
+- New DIFF_TESTs in tests/sg_display_list_dynamic_draw.cpp: SG_DynamicOutlines (DrawOutlines 0x371670 alone),
+  SG_DynamicShowBuffer (DrawDebugOverlay 0x376840), SG_DynamicOpaqueUICallback (0x3752d0 with the property read 0x372670
+  and write 0x375660, on ten window fakes in a random tree) and SG_DynamicStateLife (the frame state's Create and
+  destructor). SG_DynamicStrategyDraw no longer stands in for the outlines and the overlay: Finish runs ours on a Draw2D
+  fake (stand-in for 0x18c000 on both sides) with the outline brush at +0x14.
+- How the untested paths are reached: 0x3743e0 from Draw for type 3 passes (the type 3 reflection; not in the reference
+  set); 0x376840 from Finish when debugRenderBuffer is 1, 2 or 4 and its surface is made; 0x3752d0 is held as data by
+  MarkOpaqueUI 0x375240 (from Clear, handed to the main window's slot 37, cGZWin 0x930cff) and by itself (each window's
+  children walk).
+- The outline drawer is a stack object in the original (constructors 0x375620 / 0x375550, inlined in ours); its sweep
+  for kind 0x40000000 ("every record") is two kind 2 record walks of opposite passes; Record's own 0x40000000 case is
+  unreachable. dirtyRectsDebug 2 draws with the two flag cells 0x10d9d1c / 0x10d9d20, which it sets only while the
+  byte cell 0x10091c8 is set (otherwise whatever they held).
+- The original's first DrawOutlines run keeps one 0x18-byte block for good (SG_DynamicOutlines warms it up once). The
+  table's records array (36000 bytes) is aligned to 32 bytes inside a larger block by both allocators, so the tests note
+  the records vector by size and capacity rather than its pointer words.
+- 69 mutants over the row (build/ts1d_mutants.json and three follow-up files), all killed. By function:
+  - DrawOutlines 10: frame count, clip depth, mode 1 kinds, the cells' enable, sweep flags and passes, PopClip.
+  - The drawer's set-up 3: scale, frame, pixels.
+  - Colour 5, Record 5, Records 2, MapValue 2, Map 1, the pass inversion 1, Kind 1, Draw 2, Rect 1.
+  - DrawDebugOverlay 11: setting default, size, multisampling and resolution checks, colour, targets, textures,
+    functions, fill.
+  - RestoreOverlayStates 3.
+  - The callback 8.
+  - The property read and its variant hold 2, the property write 3.
+  - The state's Create, constructor and destructor 5.
+  - The table's constructor and the records' 3, the table's destructor 1.
+
+  The first run hit the 30-minute background limit after 49; `mutate.py --restore`, then the rest ran as a second
+  file. The walk-stop mutant survived at first: a tree of callbacks alone never answers false, because a leaf answers
+  true. The walk fake now refuses by itself now and then, and the mutant is killed.
+- Follow-ups for other groups (not edited here): src/misc/ClassesRound3.cpp:260, the state's deleting destructor
+  0x36fbb0, still calls the destructor through OriginalFunction<.., 0x36f5c0> (status.py flags it: call ours,
+  nTSSG::DynamicStrategyState::~DynamicStrategyState, and drop the original_calls entry; ClassesRound3.h:219's comment
+  is stale too). src/rz/COMDirectorData.cpp:160 names the factory by its RVA 0x3721f0 (hooked, so ours runs) and could
+  point at nTSSG::cDisplayListDynamicRenderStrategyAdapters::CreateState.
+
+TS1e notes (lane 261108o, 2026-11-08). Owner check: the 0x401xxx functions are one class of their own,
+nTSSG::cIntervalTree (a cRZUnknown, vtable 0xdc20e0, only the trees member makes them), so they became row IT1; the
+vector code the trees' Build calls (0x36dde0 resize, 0x36e250, and the hood-load 0x36dc70 / 0x36e230) is
+std::vector<Node> library code by shape (not in db/library-matches.jsonl yet; an stlprobe would confirm, as for
+0xaa34c0). The rectangle intersection 0x373520 belongs to no single class (gz's cGZDrawContext and
+cGZDrawContextRenderToHardware, 0x92c6b0, 0x97d406 and the strategy call it): MarkRecords calls it through
+OriginalFunction, as gz does; it wants a row of its own (cGZRect intersection, 132 bytes). The rest of the row was
+too big for one lane and is split at two cluster boundaries: TS1f (the frame table's update, 0x3706a0's tree, with the
+hood-load 0x36fc40) and TS1g (the paths themselves and their drawing callees).
+- How the paths are reached: Draw 0x373e20 calls 0x3743e0 for type 3 passes (the screen pass that owns its target, the
+  type 3 reflection; it did not run in the reference set) and 0x374670 for every other type; 0x374670 calls 0x374bb0
+  (the general path) once per turbo-rect side. 0x3743e0 calls 0x374ad0, which calls MarkRecords on a local list.
+- cIntervalTree: a red-black tree keyed on each interval's low end (equal ends go right), every node keeping its
+  subtree's highest end; Query is the textbook overlap search over closed intervals, collecting into a std::set<Node *>
+  ordered by the node's data (the rectangle's number), so the trees' Overlaps answers by a sorted merge
+  (HitsShareRectangle 0x3735b0) of the x and y hits. The trees member's trees don't own their nodes (the member's node
+  vector does). The x and y trees hold each rectangle's [min, max] spans; the hits are closed intervals, so a record
+  touching a rectangle's edge counts, while the plain walk (dirtyRectsDisableIntervalTrees) uses strict edges.
+- MarkRecords reads its count from the +0x30 vector and the record pointers from the +0x3c vector (TS1d's mWords30 /
+  mWords3c; the table's records are what +0x3c points at). Its second argument (the pass) is not read. SetUpScissor
+  stores the bounds as float fractions of the pass's size in the scissor state's rectangle words.
+- New DIFF_TESTs: SG_IntervalTree, SG_DynamicTrees (tests/sg_interval_tree.cpp), SG_DynamicMarkRecords,
+  SG_DynamicComputeBounds, SG_DynamicSetUpScissor (tests/sg_display_list_dynamic_paths.cpp, strategy-shaped blocks from
+  the seed; ours through the hook adapters). The TS1c draw test's stand-ins for 0x3743e0 / 0x374670 stay (the paths
+  are TS1g's).
+- Mutants: 30 of 31 killed. The survivor is equivalent: Insert's left-right case without its first rotation (the fix-up
+  loop then meets the right-left case one level up, and its two rotations give the same tree). No original bugs
+  found in the row.
+
+TS1f notes (lane 261108p, 2026-11-08). Owner check: 0x377f50 / 0x378140 (and 0x378200, which 0x378370 also calls)
+work on the censor's boxes and the viewer's frame state, so they became row TS1h (0x3706a0 calls 0x377f50 through
+OriginalFunction meanwhile). Library code, no entries: 0x36dc70 / 0x36e230 / 0x36db60 / 0x36e1e0 / 0x36dfc0 /
+0x36d910 / 0x15ac20 / 0x377470 (std::vector by shape), and 0x376d40 / 0x3770d0 with 0x36fb20 / 0x376f80 / 0x377070
+(std::vector<bool>: the matched vector<bool>::erase, pop_back, _Insert_x and _Trim call the last three). The
+rectangle intersection 0x373520 is still called through OriginalFunction (its own row, TS1e notes).
+- How it is reached: the drawing paths (0x374670, and 0x3743e0) call UpdateDirtyRects 0x3706a0, which with two or
+  more dirty-rect frames calls the table's Update 0x372430 → Collect 0x36fc40, the helper's Collect 0x372480 and the
+  censor's 0x377f50, and merges what they give into mRects / mTurboRects by side with AddRect 0x370470. 0x36fc40 is
+  not strictly hood-load-only: in the reference runs it ran at hood load in all seven and at lot load / live in run 3.
+  The helper's functions (0x372480 and below) never ran in the reference set. The tests call each entry directly.
+- The table: one 0x24-byte record per display-list slot (resized to the owner's slot 41 count each frame; the
+  constructor makes 1000), a visible bitset per frame (this and last), and the dirty rectangles with a side bit each
+  (side 0 rectangles are pushed on both sides); Collect projects each item's box by its placement and the pass's
+  matrix 3 (DrawItemPixelRect, the projection 0xaf22d0 through OriginalFunction), picks its side by clear mode (0: sort
+  key above zero, or zero and changed; 1: odd key or changed; 2: side 0, and only mDebug's pushes), pushes changed or moved items' old and new rectangles, then
+  PushVanished pushes last frame's records not seen this frame. The helper keeps two std::maps (this frame's and
+  last frame's) of window id → rectangle, frame, dirty and opacity, filled by walking the main window's tree.
+- ORIGINAL-BUGs reproduced: Collect's clear mode outside 0..2 keeps the previous item's side (the first item's an
+  uninitialised stack byte; Prepare only sets 0..2, so the tests keep to those) and its item record index is not
+  checked; PushVanished reads last frame's bitset past this frame's record count; CollectWindows does not check for a
+  missing window manager; AddRect with a threshold of 0x80000000 and no element scoring above INT32_MIN reads and
+  writes the list sentinel's value storage (the tests note the sentinel's storage).
+- Record 0x375a20's map value has two pad bytes the game fills from the stack; ours writes zero and the tests mask them.
+- New DIFF_TESTs (tests/sg_display_list_dynamic_update.cpp): SG_DynamicTableUpdate, SG_DynamicAddRect,
+  SG_DynamicHelperCollect, SG_DynamicUpdateDirtyRects (through the hook adapter, with a real helper and frame state
+  and a censor-shaped block). The world is three fakes: the scene (owner, geometries, subsets, node records,
+  placements, pass), the window world (framework cell 0x10c9378, manager, windows) and the censor (viewer, frame state).
+- Mutants: 42 of 42 killed. AddRect's "last best kept on ties" first survived the random rectangles (equal scores
+  almost never happen with wide coordinates); the AddRect test's small-grid mode with repeated start elements kills it.
+
+TS1h and TS1g notes (lane 261108r, 2026-11-08). Owner check: 0x378370 and its callees 0x3782c0 / 0x378350 / 0x378400
+and the list fill 0x378020 are all the censor's (they read its boxes and +0x28 texture), so TS1h took them (8
+functions, 1.4 KB). TS1g was too big for the rest of the lane and is split at its leaves: the six item drawers and
+clears done here, the three paths with 0x373a70 / 0x372150 / 0x371150 / 0x371240 / 0x373f00 left as TS1i. The
+rectangle intersection 0x373520 stays an OriginalFunction call in UpdateDirtyRects and MarkRecords (no single owner;
+TS1e notes).
+- How they are reached: the paths call DrawCensor 0x374ad0 (0x3743e0, 0x374670), ClearRects 0x373b70 (0x3743e0,
+  0x374bb0), DrawReflectionItems 0x374270 (0x3743e0), DrawItemRun 0x374350 (0x374670) and DrawItemsBy 0x374100
+  (0x374bb0, 0x373f00); each is hooked, and DrawOneItem 0x3743a0 (called only by the three drawers) is hooked too.
+  The censor's ListBoxRects 0x378020 and RenderTexture 0x378370 are hooked (DrawCensor's, and the original 0x374670
+  calls 0x377f50 directly), the rest of TS1h in effect through them.
+- Sort keys: from 11000 on an item is late (DrawItemRun's byte, DrawItemsBy's mode 7); -9998 is the screen
+  reflection's (DrawReflectionItems; the censor's DrawItems skips -1 and, on pass type 3, +-9998). The marked-only
+  rule (records' +0x1d, set by MarkRecords) applies from the frame state's second dirty-rect frame: in mode 2 for
+  DrawReflectionItems without its byte, in modes 1 and 2 for DrawItemsBy's early picks.
+- DrawOneItem applies the kept scissor state only when the byte at 0x10d9d24 is set, and nothing in the image refers
+  to that byte but the read (xrefs.py; .data's zero-filled tail): in the game it never applies. ClearRects scales by
+  the target's scale times its aspect, rounded once to float (NaN takes the scaled path), each coordinate the
+  truncation of coordinate * scale + 0.5.
+- ORIGINAL-BUG reproduced: the viewer frame state getter 0x378200 AddRefs the state the director made without a null
+  check.
+- New DIFF_TESTs (tests/sg_censor_dirty_rects.cpp): SG_CensorDirtyRects (censor-shaped block, viewer, COM director,
+  frame states, texture, device state, variants) and SG_DynamicItemDraw (the same world with a strategy-shaped block,
+  its item and record vectors, the trees and two target surfaces; DrawCensor runs each side's MarkRecords, ListBoxRects
+  and RenderTexture). TS1i can reuse the strategy world.
+- Mutants: 29 of 29 killed (TS1h), 44 of 44 killed (TS1g, three of them the byte adapters with random upper bytes).
+
+LG6 notes (lane 261108q, 2026-11-08). cLightMapManager (src/sg/cLightMapManager.{h,cpp}, tests/sg_light_map_manager.cpp,
+db/status/cLightMapManager.jsonl): a COM director class (class id 0x896d0177, interface 0x696d015c) of 0x1a0 bytes,
+faces cILightMapManager +0 (24 slots, vtable 0xdb5ba0), cIGZMessageTarget2 +4 (0xdb5c04), cRZUnknown +8 (0xdb5c18).
+- Layout: the message ids std::set +0x14 ({0x4b3bc675}, the world-loaded message), started +0x38, the settings +0x39 to
+  +0x74 (lightMapDebug, floor / wall texture and tile sizes, border tile size, inset, scales, incidence map scale and
+  clamp), two image groups (+0x78 and +0xa8, four vectors of cIImageData each: [0] wall atlases, [1] floor images), the
+  sets +0xd8 / +0xe0, the texture handles, the floor map (FloorKey {x, y, level} -> FloorTile {x, y, image, flags}), the
+  free tiles, the wall map (WallKey of six words: two floats pairs and words 2 / 5 -> WallRegion {node, atlas, border,
+  count}), the atlases (cGZRect packers, 0x28-byte nodes), the counted +0x18c LG6b keeps, the transition settings +0x194.
+  The constructor leaves +0x1c, +0x184, +0x188, +0x19c and some padding unset (the test sets them alike after the
+  factory).
+- The wall map's equality takes each coordinate as equal within 32 units in the last place (the bits mapped to a
+  monotonic integer), and its hash rounds each coordinate to a byte: keys that are equal hash alike only while the
+  rounding agrees, so near-equal keys across a .5 boundary land in different buckets (the original's, reproduced).
+- Floors: level 0 is the tile itself in floor image 0 (made on first use); upper levels take a tile from the free list
+  (TakeFreeTile makes a new floor image when it is empty, and a second one when the list is still empty and only one
+  floor image exists: the first image's tiles are level 0's), keyed by the users' flag bits;
+  the tile goes back when the last user's bit is dropped. Walls: AcquireWall counts a held face, else sizes a region by
+  the face's partition type (catalog kinds 2 / 3 or the tall kind: the face height 0x2c6f20 rounded up, 1 to 4 wall
+  tiles; else the default), the border tiles for a 1-tile border face, first atlas with room or a new atlas.
+- QueryInterface 0x2c7db0 is folded with cDiffusionManager's: verified through our vtables only, never hooked.
+- The two maps' std code is library (no status entries; ours is std::unordered_map in our build). Library rows from
+  tools/stlprobe/probe_lmm.cpp (three units, stlprobe.ps1): _Find_last 0x2c43b0 (floor) and 0x2c4430 (wall),
+  _Forced_rehash 0x2c8b70 (floor, /O2 without /EH) and 0x2c8cd0 (wall: the functors defined in the unit but not inlined),
+  and the wall map's clear 0x2c8ea0. No probe matches the emplaces called from insert: the floor map's 0x2c44c0 (452 B)
+  and the wall map's 0x2c4690 (476 B). The closest units (/EHsc /O2 /GS-, the hashes, `_Find_last` and `_Forced_rehash`
+  kept out of line; one member or all per unit) are the same size for the floor (452 B) and 451 B for the wall, but
+  register allocation differs: the game keeps the key in ebx and stores the hash in the key's dead argument slot, ours
+  keeps the key in esi with an extra local. No flag set, noexcept choice or out-of-line knob tried changed that (about 750
+  units). 0x2c43b0 also has an older verified entry in db/status/StdHash.jsonl (StdHashTable::Find96, not this lane's).
+- ORIGINAL-BUG (all reproduced, none reached by the test): ReleaseWall on an unknown face reads through null;
+  FreeRegion's atlas bound is `<=`; DoMessage reads a world-loaded message's object without a null test; ReadSettings
+  uses a failed message allocation; AcquireWall on a held face with no atlas leaves the new region allocated.
+- In effect: the factory 0x2c73f0 is hooked; everything else through callers (callers.py clean, traps on
+  Hooks.cLightMapManager_Create). Slots 7-11 and the builders are ours since LG6b (lane 261108t).
+- The test stands in (CodePatch, both sides) for LG6b's routines, the face height, the border test 0x7f2340, the three
+  settings readers and the two services; LG6b's lane replaces those stand-ins with real image / texture fakes that keep
+  pixels. The texture manager cell 0x10f8f94 needs a fake: cTextureHandle's copy calls AddRefId even for id -1.
+- Mutants: 72, all killed. The first run's four survivors were gaps in the stand-ins: the tall kind 0x17, the light scales only the constructor writes, and image groups 2 and 3. Each was fixed on both sides, and all 63 first-run mutants were rerun against the final test. Details are in db/status/cLightMapManager.jsonl's notes.
+
+TS1i notes (lane 261108s, 2026-11-08). The row's callee closure held: every callee of the eight was already ours, so
+the lane was the eight and the rectangle intersection 0x373520 (cGZRect, src/gz/cGZRect.{h,cpp}, hooked; our
+cGZDrawContext, cGZDrawContextRenderToHardware, MarkRecords and UpdateDirtyRects now call GZRectIntersect instead of
+the original).
+- How they are reached: Draw 0x373e20 calls DrawOwnPath 0x3743e0 for pass type 3 and DrawPath 0x374670 otherwise; the
+  rest only from the paths. All eight are in effect through Draw (trap under the constructor's hook).
+- Frames: each path first sets a dirty-rect frame count of 2 or more back to 1 when its .data byte is set (0x10d9d18
+  DrawPath's, 0x10d9d19 DrawOwnPath's; zero-filled, nothing in the image writes them). Frame 0 is drawn whole (DrawPath
+  only when zeroFrameRectUpdate is off and the censor's CollectDirtyRects answers 0), frame 1 clears mRedraw, from
+  frame 2 the dirty-rect drawing (the counts compared unsigned).
+- Two intersections: 0x373520 is strict (touching rectangles miss, the output zeroed); DrawOwnPath clips its bounds
+  with cDraw2D's inclusive 0x150e20 instead.
+- DrawSide's side byte indexes the pair of rectangle lists (+0x48 + 8 * side); its callers pass only 0 and 1, and the
+  test draws only those.
+- ORIGINAL-BUG reproduced: DrawOwnPath leaves the whole viewport's depth range words as the stack held them (the
+  test skips those two words).
+- Test: SG_DynamicDrawPaths (tests/sg_display_list_dynamic_draw.cpp, 2000 seeds on the TS1c draw world, each function
+  alone on both sides; the TS1e-TS1g callees stood in on both sides, so our members the test stands in are
+  `__declspec(noinline)`: an inlined one escapes the stand). SG_GZRectIntersect (400000 cases, outputs aliasing the
+  inputs, canaries).
+- Mutants: 41 of 42 killed; the survivor (DrawSide's second-side early return without its turbo test) is equivalent.
+- Class check: every function of the class's range is verified (79 entries), library (std::vector / vector<bool> /
+  list / tree code by shape, TS1e notes), or not the class's: the two 6-byte class-id getters 0x372250 / 0x372260
+  (only the COM directors' 0x244e30 called them, and ours registers the ids from data), and the container bodies
+  0x36ee00 (map constructor), 0x36ef60, 0x36efa0, 0x36f010, 0x36f070, 0x36f130, 0x36f780, 0x376b90, 0x376c10, 0x376f90,
+  0x377130 (STL by shape; an stlprobe would confirm, as for 0xaa34c0).
+
+LG6b notes (lane 261108t, 2026-11-08). The rest of cLightMapManager, in the same files.
+- What they do: Update (slot 7) steps a transition under the transition clock (cTSGameStateController vf5), blending
+  the shown group (+0xa8) toward the lit one (+0x78) and uploading, or uploads the images the drawers dirtied (the sets
+  +0xd8 floors, +0xe0 walls). SetColor (8) fills every image opaque at its scale, or with the debug colours (index + 1's
+  three low bits) under lightMapDebug. SetTransition (9) starts a transition (a quarter of the steps at detail level 3,
+  none at 4 and up) or uploads now. UpdateIncidence (10) remakes the incidence maps (the half-size groups [2] / [3])
+  through the MMX kernel 0x2c6890 and its table 0x2c6950. Advance (11) blends by a step and uploads. The builders make
+  an image pair, its incidence pair and textures (MakeFloorImage also the free tiles, MakeWallAtlas a cGZRect atlas);
+  the drawers fill a floor tile (rows bottom up from the image's height) or a wall region (top down).
+- Class complete: every function in 0x2c43b0-0x2c8ea0 is verified, library, compiler-made or folded. Library matched
+  (db/library-matches.jsonl): 0x2c43b0, 0x2c4430, 0x2c4d90, 0x2c4e20, 0x2c8b70, 0x2c8cd0, 0x2c8e30, 0x2c8ea0. Library, no probe
+  match, noted (no status): the two maps' emplaces 0x2c44c0 / 0x2c4690 (261108q), std::set<int>'s insert 0x2c4870 (the
+  dirty sets; called across subsystems), and outside the range vector<cTextureHandle>::_Emplace_reallocate 0x245cf0 and
+  vector<cTextureAtlas>::_Emplace_reallocate 0x14ad00 (named tentatively in Ghidra). 0x2c50c0 (53 B) is the
+  compiler's EH vector destructor wrapper over 0x14c060 (`eh vector destructor iterator`, 12-byte elements, 4 of them:
+  the four image vectors of a group): compiler-made, and tools/xrefs.py finds no reference to it (an unwind
+  table's at most; the constructor it would unwind is ours), so no entry. 0x14c410 (a folded destructor, ~cImposterSliceEntry's shape) is
+  cTextureAtlas / cLotImposterManager's, not this class's. The shared_vf thunks 0x2c7ded, 0x2c7df5, 0x2c7e80,
+  0x2c7e88, 0x2c7e90 have no entries (folded).
+- ORIGINAL-BUG (reproduced): Shutdown clears the images but keeps the atlases and floor tiles (only Stop clears them), so
+  a face met before and drawn again after a Shutdown reads past the image vectors (the drawers don't check); the test
+  leaves the acquires out after a Shutdown until the next Stop. UpdateIncidence ends the wall pass at the first pair of
+  the wrong size and leaks the table (the floors' pass goes on). DrawFloorTile fills at the walls' scale. A failed image
+  creation in Blend is pushed as null. Not reproduced: the kernel loops about 2^30 times for a width or height of 0
+  (ours writes nothing). The kernel reads mm7 without setting it (the x87 register 7's mantissa); ours takes 0 and the
+  test clears it first.
+- A floor image shorter than its tiles makes DrawFloorTile write before the image (the rows count down from the
+  height); the game's images are always the texture's size, and the test makes images only a row taller.
+- Big vectors: storage of 4096 bytes or more is carved 32-aligned from a larger block on both sides at a heap-dependent
+  offset, so the test notes those vectors block-relative.
+- In effect through callers (traps Hooks.cLightMapManager_Create; ClassId's only caller is the nTSSG COM director
+  0x244e30, ours: Hooks.COMDirectors_TSSG_Construct).
+- Mutants: 71 (build/lg6b_mutants.json, lg6b_mutants2.json). First run 68: 61 killed, 2 equivalent (MakeFloorImage's
+  reserve row `y <= height` to `<`: the next test skips that tile whatever `free` holds; MakeIncidenceTable's `+ 0xb`
+  to `+ 0xf`: the same address for any 8-aligned block), 5 test gaps fixed on both sides: the walls' debug colours and a
+  scale of 0 in slot 10 (lightMapDebug and the incidence scale now set alike), the floor incidence height test (images
+  sometimes a row taller), Blend's growth loop (never runs in the manager, whose two groups grow together: the new
+  SG_LightMapManagerBlendGroups) and the kernel's saturation of its second sum (wide weights). Those 5 and 3 new ones
+  (ClassId, the growth loop dropped, the blend count) killed; all 68 rerun against the final test.
+
+LG6c notes (lane 261108u, 2026-11-08). cShadowManager (src/sg/cShadowManager.{h,cpp}, tests/sg_shadow_manager.cpp
+(lane IR's small slots) and tests/sg_shadow_manager_life.cpp (the life test), db/status/cShadowManager.jsonl): a COM
+director class (class 0x0bf9c04f, interface 0xcbf9c006) of 0xd4 bytes, faces cIShadowManager +0 (18 slots, vtable
+0xdb68ac) and cIGZMessageTarget2 +4 (0xdb68f8); cTSSGSystem keeps it at +0xa8. The layout is in the header.
+- The row's labels were off: 0x2e7ba0 is the factory (hooked, the only constructor call), 0x2e63a0 the constructor,
+  0x2e6c70 the destructor, 0x2e6e10 the deleting destructor. Everything but the factory is in effect through it
+  (traps on Hooks.cShadowManager_Create). The +4 face's QueryInterface / Release adjustor thunks (0x2e89ed, 0x2e8a25,
+  8 bytes) are verified through our vtable and never hooked; +4 slot 1 is shared_vf_1f4daf, slot 12 shared_vf_1758b0.
+- 0x2e8a00 (ResetResources, 16 bytes: ReleaseResources then CreateResources) has a family_likely ConcRT match in the
+  library list; it is the class's, not library code.
+- Library (no entries; ours is std::vector / deque / set / unordered_map): 0x2e5aa0, 0x2e5ad0, 0x2e5bd0, 0x2e5d90,
+  0x2e5f20, 0x2e5f90, 0x2e60d0, 0x2e6140, 0x2e6aa0, 0x2e6ac0, 0x2e6af0, 0x2e6b30, 0x2e6be0, 0x2e9c30, 0x2e9d10,
+  0x2e9eb0, and the shared tree / list bodies 0x1d5c20, 0x1d8450, 0x1d91e0, 0x1d99b0. AddRef is the library-matched
+  0x15e520. The EH funclets' owners (tools/ehinfo.py): 0xd2b1de AcquireShadow, 0xd2af07 the constructor, 0xd2ae43 /
+  0xd2ae63 / 0xd2ae83 the library bodies 0x2e5d90 / 0x2e60d0 (and 0x2e5f20) / 0x2e5f90. cShadowEntry's destructor
+  0x2e6db0 is reached from those and from library 0x2e6ac0 / 0x2e6be0 (callers_handled).
+- Queueing: Queue pushes a used entry once (the flag +0x28); QueueAll (the camera moved more than 1e-6 squared, a
+  requeue message) pushes every used entry without reading or setting the flag; Unqueue (ReleaseShadow) clears it.
+  DrainQueue pops up to four per Update and hands each to 0x2e9920, which never writes +0x28 either (confirmed by
+  LG6d), so a drawn entry stays flagged and Queue ignores it until QueueAll or its release.
+- AcquireShadow sizes the texture by the node's bounds (0x3ad230): refused when any axis is inverted or the largest
+  extent is under 0.15; under 0.5 a quarter, under 1.5 a half, over 3 double, capped at baseShadowResolution. A NaN
+  extent passes every test and keeps the resolution (the comparisons are written in the original's direction). In the
+  render-target mode (+0xd0) the renderer (+0x50) makes the target and a negative first key refuses it.
+- DoMessage: two requeue messages, a wall's or a fence's segment (segment words +3 or +5), a level's lot rectangles
+  (16-byte rectangles in a block vector freed through 0x195720), a changed segment (kept in the set +0x10 for Update's
+  SegmentChanged / Invalidate: the segment's two tile quadrants, normal and reversed, each object told through its
+  shadow user's slot 15).
+- ORIGINAL-BUG (reproduced, not reached by the test): Update uses the settings service without a null test; DoMessage
+  uses the message's standard face, its object and the object's segment face unchecked.
+- Test pitfalls: the class is final, so `this->QueryInterface` / `Release` inside it devirtualise to direct calls; the
+  original goes through the vtable (slots 1 and 17), so ours calls through explicit vtable indexing where the original
+  does. The shadow vector's (0x98-byte elements) blocks normalise differently on the two sides (large-block alignment),
+  so its three pointers are left out of the word comparison; the elements are compared by content.
+  The original's statics 0x10d9448 (pass-1 fill) and 0xffdfcc (shadow fill) are our own constants.
+- Test: sg_shadow_manager_life (random lives on each side, the factory or the constructor, then calls through both
+  vtables; the services stood in on both sides, the drawing on real fakes since LG6d; details in the test's header). Lane IR's
+  sg_shadow_manager.cpp keeps the small slots; its deleting-destructor test (destructor stood in) gave way to the life
+  test's real deletes.
+- Mutants: 48, 47 killed. The survivor (Queue without its queued-flag test) is equivalent: Queue's only caller,
+  AcquireShadow, has just stored a fresh entry. The deleting destructor and the thunks are the compiler's (no
+  mutants); the heap counts and the call trace cover them.
+
+LG6d notes (lane 261109a, 2026-11-09). cShadowManager's drawing, same files and status group as LG6c.
+- MakeStaticShadow (slot 10): the node is taken from its parent (kept counted) and put under the +0xc4 transform node,
+  unturned (lifted by the snow setting), the viewer +0xbc turned by ShadowDirection; when FitShadowCamera fits, a light
+  (0xe4 bytes, constructed by 0x3a40d0: vbptr +0x1c, cILight face +0x2c) goes into a new light holder (class
+  0x253d2018), an image is made at the resolution and added to the texture service as `shadowLight_%x` (the light's
+  address), RenderStatic draws into it and the light gets the texture (slot 14) and the matrix (slot 13); the holder is
+  the handle out. Then the node goes back to its old parent.
+- DrawShadow 0x2e9920: the entry's node found by name through 0x20defb's object (slot 23), PrepareNode, put under
+  +0xc4 turned to the owner's facing (FacingPointerToNotch, NotchQuaternion), the viewer turned to the light direction;
+  when the camera fits, RenderTarget (first key >= 0) or RenderStatic into the entry's matrix, the entry's box the root
+  bone's transform relative to the node (0xaeb2c0) or the identity, the matrix stamp bumped. It never clears +0x28.
+- PrepareNode 0x2e7020 binds material GUOBOff to five shadow subsets (0x3ad4a0), then walks every shape node below
+  (filter mask 0xf, cIShapeRefNode), each shape's part lods, each part's extensions: a cIDataListExtension named
+  tsNoShadow (case-insensitive) lists int items; each non-zero one binds GUOBOff to the item's name on the shape, on a
+  clone swapped in first when the shape has more than one referrer (signed count).
+- FitShadowCamera 0x3ad080: ShadowBounds 0x3ad230 (each flagged, not-everywhere shape node's box, its floor clamped at
+  0, taken into the viewer's frame; children recursed unless the mask says skip) then an orthographic box with 0.5 to
+  spare, y the depth, and the pixel aspect; refused for an inverted box or a squared extent under 1e-4.
+  FindRootBone 0x3ace40: the animated face's bones 0x6c918d88 / 0xe6e97a71, else nodes root_rot / root_trans, then
+  chairdining_rot / chairdining_trans.
+- ORIGINAL-BUG (reproduced): with no ready texture MakeStaticShadow hands the light an unwritten matrix (the test notes
+  the matrix only when the brush drew); MakeStaticShadow's failed-image path skips the restore (the node stays under
+  +0xc4); a parent gone between two asks, an item a data list does not hand out and a failed clone are used unchecked.
+- Still original: 0x3ad4a0, 0x3ca190 / 0x3ca030 (the blur brush's draws), 0xae1ed0, 0xae7490, 0xaeb2c0, 0x3a40d0,
+  0x20dfb5, 0x20defb. Next to them: cShadow (0x355d20) and ShadowUpdateSettings 0x356e40 also call the two hooked
+  helpers.
+- Test: sg_shadow_manager_life (slot 10 and Update's draws on real fakes) and sg_shadow_draw_helpers (the five helpers
+  called directly; 400 seeds). The box generator holds sizes either side of the 1e-4 threshold.
+- Mutants: 34, 33 killed (each function at least one), the survivor equivalent (DrawShadow without its mRefC0 test:
+  mRefBC and mRefC0 are set and dropped together). "Key 0 drawn static" first survived: the life test drew no key-0
+  entry, so it now runs 2400 seeds, render-target mode in half the lives and key 0 weighted.
 
 Each lane starts with an owner check on its groups (`coverage.py queue ... --group <class>`, the `~owner` lines):
 cDisplayList, cGeometryNode, cIndexedMeshBuilder, cShapeRefNodeT, cLotSkirt and cLotImposterDisplay are 65-95%

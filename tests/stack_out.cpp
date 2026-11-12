@@ -328,9 +328,11 @@ const Frame *Analyse(uint32_t start)
 }
 
 // The original function whose call returns to `ret` (an RVA): among the functions the harness knows (hooked or
-// tested), the nearest ones starting before it whose code reaches that call.
-const Frame *Owner(uint32_t ret, unsigned &call)
+// tested), the nearest ones starting before it whose code reaches that call. `known` says a function with that call was
+// found, whether or not its frame could be analysed (null is returned when it could not).
+const Frame *Owner(uint32_t ret, unsigned &call, bool &known)
 {
+    known = false;
     uint32_t best[8] = {};
     unsigned n = 0;
     auto consider = [&](uint32_t s) {
@@ -356,6 +358,7 @@ const Frame *Owner(uint32_t ret, unsigned &call)
         for (unsigned c = 0; c < f->nCalls; ++c)
             if (f->callRet[c] == ret) {
                 call = c;
+                known = true;
                 return f->ok ? f : nullptr;
             }
     }
@@ -380,7 +383,12 @@ size_t Measure(const void *ptr, uintptr_t floor, bool &onStack, bool &original)
         if (!ReturnAddress(w)) continue;
         if (!ImageSpan().Has(w)) return 0; // ours (or the test's)
         unsigned call = 0;
-        const Frame *f = Owner(uint32_t(w - kGameBase), call);
+        bool known = false;
+        const Frame *f = Owner(uint32_t(w - kGameBase), call, known);
+        // A known function's call whose frame can't be analysed: the object is that frame's or one above it, and its
+        // size is not known. Scanning on would only find deeper or stale return addresses (lane 261110k: a stale one
+        // below 0x40dd30's frame gave a 4-byte out 6 bytes, depending on which test ran before).
+        if (known && !f) return 0;
         if (!f) continue;
         // esp at the call was q + 4 (the return address just below it), `callDepth` bytes below the entry esp
         const uintptr_t entry = q + 4 + uintptr_t(f->callDepth[call]);

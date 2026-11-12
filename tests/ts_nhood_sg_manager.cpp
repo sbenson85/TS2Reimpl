@@ -14,6 +14,7 @@
 #include "code_patch.h"
 #include "game/game.h"
 #include "sg/DetailObject.h"
+#include "sg/SGUtilities.h"
 #include "sg/cRenderGroupNameIterator.h"
 #include "shape.h"
 #include "stack_out.h"
@@ -1175,7 +1176,7 @@ DIFF_TEST(NHoodSG_BuildScene, 0x2a8780)
     shape::StandIn remerge(0x2a5d70, &M::RebuildMergedLayers, &Stand5d70);
     shape::StandIn flora(0x2a5ef0, &M::AddFloraOccupant, &StandAddFlora);
     shape::StandIn others(0x2a63a0, &M::AddOtherOccupant, &StandAddOther);
-    shape::CodePatch sceneRoot(0xae7e60, reinterpret_cast<void *>(&StandSceneRoot));
+    shape::StandIn sceneRoot(0xae7e60, &nGZSceneGraph::ResetShapesInTree, &StandSceneRoot);
     shape::StandIn merge(0x2a5340, &M::MergeOccupant, &StandMerge);
     shape::StandIn handOn(0x2a9100, &M::HandOnPending, &StandHandOn);
     for (uint32_t seed = 0; seed < 600; ++seed)
@@ -1773,7 +1774,7 @@ DIFF_TEST(NHoodSG_RebuildMergedLayers, 0x2a5d70)
     shape::StandIn faceC(0x2a7130, &M::AddFaceCOccupant, &StandFaceC);
     shape::StandIn merge(0x2a7be0, &M::MergeLayerChildren, &StandMergeLayer);
     shape::StandIn clear(0x2a5860, &M::ClearLayers1And2, &StandMergeA);
-    shape::CodePatch priority(0xaeb070, reinterpret_cast<void *>(&StandLayerPriority));
+    shape::StandIn priority(0xaeb070, &nGZSceneGraph::SetLayerTagInTree, &StandLayerPriority);
     for (uint32_t seed = 0; seed < 400; ++seed)
         Run(ctx, "RebuildMergedLayers", seed, 2, true, [&](M *m, int route, std::mt19937 &rng) -> uint32_t {
             ResetMine();
@@ -1861,7 +1862,7 @@ DIFF_TEST(NHoodSG_BuildFloraNode, 0x2a5a40)
 {
     shape::CodePatch placement(0x2a8640, reinterpret_cast<void *>(&StandPlacement));
     shape::CodePatch rotation(0x1a72c0, reinterpret_cast<void *>(&StandRotation));
-    shape::CodePatch setting(0xaeac50, reinterpret_cast<void *>(&StandSetting));
+    shape::StandIn setting(0xaeac50, &nGZSceneGraph::SetFlagInTree, &StandSetting);
     gGNodeVT[1] = reinterpret_cast<void *>(&GAddRef);
     gGNodeVT[2] = reinterpret_cast<void *>(&GRelease);
     gGNodeVT[64] = reinterpret_cast<void *>(&GPlace);
@@ -2108,8 +2109,8 @@ void __fastcall StandAttach(void *self, void *, void *at, void *node)
 
 DIFF_TEST(NHoodSG_AddFaceCOccupant, 0x2a7130)
 {
-    shape::CodePatch modelOf(0xaeb9a0, reinterpret_cast<void *>(&StandModelOf));
-    shape::CodePatch shapeOf(0xaeb8a0, reinterpret_cast<void *>(&StandShapeOf));
+    shape::StandIn modelOf(0xaeb9a0, &nGZSceneGraph::TransformOfChild, &StandModelOf);
+    shape::StandIn shapeOf(0xaeb8a0, &nGZSceneGraph::ShapeRefOfNodeOrChild, &StandShapeOf);
     shape::CodePatch scene(0x211ce1, reinterpret_cast<void *>(&StandScene));
     shape::CodePatch attach(0x2a53f0, reinterpret_cast<void *>(&StandAttach));
     gVB2GroupVT[34] = reinterpret_cast<void *>(&VB2Group);
@@ -2213,7 +2214,7 @@ void LogText(const cRZString &s)
 
 DIFF_TEST(NHoodSG_PrepareBuildAll, 0x2a81f0)
 {
-    shape::CodePatch cube(0xaeba70, reinterpret_cast<void *>(&StandCubeShape));
+    shape::StandIn cube(0xaeba70, &nGZSceneGraph::ShapeRefOfNodeOrSubtree, &StandCubeShape);
     for (uint32_t seed = 0; seed < 600; ++seed)
         Run(ctx, "PrepareBuildAll", seed, 2, true, [&](M *m, int route, std::mt19937 &rng) -> uint32_t {
             ResetMine();
@@ -2321,13 +2322,13 @@ void __fastcall StandQueue(void *self, void *, const nTSSG::SGNodeEntry *entry)
 DIFF_TEST(NHoodSG_AddFloraOccupant, 0x2a5ef0)
 {
     shape::CodePatch state(0x211da3, reinterpret_cast<void *>(&StandState));
-    shape::CodePatch cube(0xaeba70, reinterpret_cast<void *>(&StandCubeShape));
+    shape::StandIn cube(0xaeba70, &nGZSceneGraph::ShapeRefOfNodeOrSubtree, &StandCubeShape);
     shape::CodePatch scene(0x211ce1, reinterpret_cast<void *>(&StandScene));
     shape::CodePatch placement(0x2a8640, reinterpret_cast<void *>(&StandPlacement));
     shape::CodePatch rotation(0x1a72c0, reinterpret_cast<void *>(&StandRotation));
     shape::CodePatch attach(0x2a53f0, reinterpret_cast<void *>(&StandAttach));
     shape::CodePatch tell(0x2a9000, reinterpret_cast<void *>(&StandTell));
-    shape::CodePatch setting(0xaeac50, reinterpret_cast<void *>(&StandSetting));
+    shape::StandIn setting(0xaeac50, &nGZSceneGraph::SetFlagInTree, &StandSetting);
     shape::CodePatch queue(0x2a9c60, reinterpret_cast<void *>(&StandQueue));
     shape::StandIn layer(0x2a7f20, &M::LayerOf, &StandLayerOf);
     gVB2GroupVT[34] = reinterpret_cast<void *>(&VB2Group);
@@ -2436,14 +2437,14 @@ uint32_t ShapeBounds(Obj *, uint32_t *a)
 
 DIFF_TEST(NHoodSG_AddOtherOccupant, 0x2a63a0)
 {
-    shape::CodePatch modelOf(0xaeb9a0, reinterpret_cast<void *>(&StandModelPick));
-    shape::CodePatch shapeOf(0xaeb8a0, reinterpret_cast<void *>(&StandShapePick));
+    shape::StandIn modelOf(0xaeb9a0, &nGZSceneGraph::TransformOfChild, &StandModelPick);
+    shape::StandIn shapeOf(0xaeb8a0, &nGZSceneGraph::ShapeRefOfNodeOrChild, &StandShapePick);
     shape::CodePatch prepare(0xb3c070, reinterpret_cast<void *>(&StandPrepareFound));
     shape::CodePatch extra(0x267560, reinterpret_cast<void *>(&StandExtra));
     shape::CodePatch placement(0x2a8640, reinterpret_cast<void *>(&StandPlacement));
     shape::CodePatch rotation(0x1a72c0, reinterpret_cast<void *>(&StandRotation));
     shape::CodePatch attach(0x2a53f0, reinterpret_cast<void *>(&StandAttach));
-    shape::CodePatch setting(0xaeac50, reinterpret_cast<void *>(&StandSetting));
+    shape::StandIn setting(0xaeac50, &nGZSceneGraph::SetFlagInTree, &StandSetting);
     shape::CodePatch queue(0x2a9c60, reinterpret_cast<void *>(&StandQueue));
     shape::StandIn footprint(0x2a8570, &M::FootprintIn, &StandFootprintIn);
     gVB2GroupVT[34] = reinterpret_cast<void *>(&VB2Group);
@@ -2615,8 +2616,8 @@ const char *const kRoadHoodNames[] = {"", "N001", "Pleasantview"};
 DIFF_TEST(NHoodSG_AddRoadOccupant, 0x2a69b0)
 {
     shape::CodePatch normal(0x2a5900, reinterpret_cast<void *>(&StandNormal));
-    shape::CodePatch names(0xaed340, reinterpret_cast<void *>(&StandNameBuilder));
-    shape::CodePatch priority(0xaeb070, reinterpret_cast<void *>(&StandLayerPriority));
+    shape::StandIn names(0xaed340, &nGZSceneGraph::BindNamedBuilderItems, &StandNameBuilder);
+    shape::StandIn priority(0xaeb070, &nGZSceneGraph::SetLayerTagInTree, &StandLayerPriority);
     shape::CodePatch attach(0x2a53f0, reinterpret_cast<void *>(&StandAttach));
     gMeshBaseVT[1] = reinterpret_cast<void *>(&MeshAddRef);
     gMeshBaseVT[2] = reinterpret_cast<void *>(&MeshRelease);

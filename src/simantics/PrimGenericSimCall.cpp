@@ -7,6 +7,7 @@
 #include "simantics/PrimGenericSimCallOriginalsB.h"
 #include "simantics/PrimXCommon.h"
 #include "misc/HexParse.h"
+#include "world/WorldTileRects.h"
 
 using primX::Call;
 
@@ -151,12 +152,12 @@ void RotateVector(float *vector, const float *quaternion)
 
 const int32_t *FirstTileOfBox(int32_t *scratch, const float *box)
 {
-    return OriginalFunction<const int32_t *(__cdecl *)(int32_t *, const float *), 0x7eed90>()(scratch, box);
+    return reinterpret_cast<const int32_t *>(worldrect::SegmentToQuadrants(reinterpret_cast<worldmath::TileQuadrant *>(scratch), box));
 }
 
 const int32_t *SecondTileOfBox(int32_t *scratch, const float *box)
 {
-    return OriginalFunction<const int32_t *(__cdecl *)(int32_t *, const float *), 0x7eec00>()(scratch, box);
+    return reinterpret_cast<const int32_t *>(worldrect::ReversedSegmentToQuadrants(reinterpret_cast<worldmath::TileQuadrant *>(scratch), box));
 }
 
 void *ObjectOnTile(const int32_t *tile, int32_t mode)

@@ -9,11 +9,13 @@
 #include "rz/RZMemory.h"
 #include "rz/RZMessageServer.h"
 #include "rz/cRZMessage2Standard.h"
+#include "ts/cTSEffectsCollection.h"
 
 #include <bit>
 #include <cmath>
 #include <cstring>
 #include <new>
+#include <utility>
 
 using fx::EffectsTransform;
 
@@ -44,6 +46,8 @@ constexpr int kNodeRigid = 140;    // 0x230 (out, 0): the world placement again,
 constexpr uint32_t kDescBillboard = 1;       // faces the camera (about the vertical, or aimed when kDescAim)
 constexpr uint32_t kDescAim = 2;
 constexpr uint32_t kDescCamera = 4;          // follows the camera (and takes none from a resource)
+constexpr uint32_t kDescOwnerCamera = 4;
+constexpr uint32_t kDescWaitForStop = 8; // runs until it is told to stop
 constexpr uint32_t kDescCompose = 0x20;
 constexpr uint32_t kDescUnitScale = 0x100;
 constexpr uint32_t kDescUnitRotation = 0x200;
@@ -149,7 +153,60 @@ void InitBlock(EffectsTransform &block)
 
 void *FloatArgument(float value) { return reinterpret_cast<void *>(static_cast<uintptr_t>(std::bit_cast<uint32_t>(value))); }
 
+// What the child's copies share: the flag byte, a zero version, the rotation, scale and translation.
+void CopyPlacement(EffectsTransform &to, const EffectsTransform &from)
+{
+    to.flags = from.flags;
+    to.Version() = 0;
+    std::memcpy(&to.m[0][0], &from.m[0][0], sizeof(to.m));
+    to.scale = from.scale;
+    to.translation = from.translation;
+}
+
 } // namespace
+
+EffectsTransform fx::ComposedPlacement(const EffectsTransform &target, const EffectsTransform &source)
+{
+    return ComposeCopy(target, source);
+}
+
+cTSVisualChild::cTSVisualChild() : effect(nullptr), unknown3c(0), weight(0.0f), flags(0)
+{
+    placement.flags = 0;
+    placement.Version() = 0;
+    InitBlock(placement);
+}
+
+cTSVisualChild::cTSVisualChild(const cTSVisualChild &other)
+    : effect(other.effect), unknown3c(other.unknown3c), weight(other.weight), flags(other.flags), indexes(other.indexes)
+{
+    CopyPlacement(placement, other.placement);
+    if (effect) effect->AddRef();
+}
+
+cTSVisualChild::cTSVisualChild(cTSVisualChild &&other)
+    : effect(other.effect), unknown3c(other.unknown3c), weight(other.weight), flags(other.flags),
+      indexes(std::move(other.indexes))
+{
+    CopyPlacement(placement, other.placement);
+    if (effect) effect->AddRef();
+}
+
+cTSVisualChild &cTSVisualChild::operator=(const cTSVisualChild &other)
+{
+    std::memcpy(&placement, &other.placement, sizeof(placement));
+    cITSComponentEffect *const old = effect;
+    if (other.effect != old) {
+        if (other.effect) other.effect->AddRef();
+        effect = other.effect;
+        if (old) old->Release();
+    }
+    unknown3c = other.unknown3c;
+    weight = other.weight;
+    flags = other.flags;
+    indexes = other.indexes;
+    return *this;
+}
 
 cTSVisualChild::~cTSVisualChild()
 {
@@ -452,6 +509,39 @@ void cTSVisualEffect::WalkIndex(int32_t index)
             if (description) child.effect->Slot11(static_cast<uint32_t>(reinterpret_cast<uintptr_t>(description)));
         }
     }
+}
+
+void cTSVisualEffect::Describe(const EffectEntry *entry)
+{
+    mDescription = reinterpret_cast<const cTSVisualDescription *>(entry);
+    mParameter48 = entry->mParams[1];
+    mParameter4c = entry->mParams[2];
+    if (mDescription->flags & kDescOwnerCamera)
+        mCamera.Assign(VirtualSlot<cIGZUnknown *(__thiscall *)(void *)>(mOwner.Get(), 43)(mOwner.Get()));
+}
+
+bool cTSVisualEffect::IsDone()
+{
+    if (!mRunning || mEffectIndex < 0) return true;
+    if (!mStopping && (mDescription->flags & kDescWaitForStop)) return false;
+    for (cTSVisualChild &child : mChildren)
+        if (!(child.flags & 1) && child.effect->IsRunning()) return false;
+    Slot4(1);
+    if (mParameter48 != 0) {
+        if (void *service = GetCachedMessageServer()) {
+            // The original calls an allocation failure's null object; here nothing is posted.
+            void *memory = RZMemory::Malloc(cRZMessage2Standard::kSize);
+            if (cRZMessage2Standard *message = memory ? static_cast<cRZMessage2Standard *>(memory)->Construct() : nullptr) {
+                message->AddRef();
+                message->SetId(mParameter48);
+                message->SetValue0(mParameter4c);
+                message->SetValue1(0);
+                VirtualSlot<void(__thiscall *)(void *, void *, uint32_t)>(service, 4)(service, message, 0);
+                message->Release();
+            }
+        }
+    }
+    return true;
 }
 
 void cTSVisualEffect::ReplayEvents()
@@ -769,3 +859,5 @@ cTSVisualEffect *__fastcall cTSVisualEffectAdapters::Construct(void *memory, voi
 {
     return ::new (memory) cTSVisualEffect;
 }
+
+void __fastcall cTSVisualEffectAdapters::DestructChild(cTSVisualChild *child, void *) { child->~cTSVisualChild(); }

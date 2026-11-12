@@ -29,8 +29,8 @@
 // Every object the code reaches is a recording fake: tests/ts_services_fixture.h's (up to slot 79) and this file's own
 // (the world's objects, the view, the lot scene, the scene node, the model, the posted audio event), which log their
 // calls and hand out what the case chose. Stood in for on both sides: the message-id walks (0x1c0458 / 0x1c081e), the
-// stopwatch's Elapsed (0x1c9256, a clock that steps by the op's amount on every read); on the image: the stopwatch restart
-// 0x1c95ec, game new / delete, the scene graph's named-node search 0xae7490 and bounding box 0xae7d00. The ray's
+// stopwatch's Elapsed (0x1c9256, a clock that steps by the op's amount on every read), the scene graph's named-node search
+// 0xae7490 and bounding box 0xae7d00; on the image: the stopwatch restart 0x1c95ec, game new / delete. The ray's
 // constructor / assignment / destructor (0x18e720 / 0x18e880 / 0x18e860), the point transform 0x19c900 and the
 // quaternion rotation 0x1a6c40 run as the image's (ours is simgeom's, verified). Compared after every operation: the
 // result, the event log, every demon field (the never-written +0x64 and the stopwatch's +4 too, when both blocks start as
@@ -50,6 +50,7 @@
 #include "ts_services_fixture.h"
 
 #include "audio/cTSAudioTSObjectUpdateDemon.h"
+#include "sg/SGUtilities.h"
 #include "game/game.h"
 #include "misc/UtilitiesC.h"
 #include "rz/MiscHelpersB.h"
@@ -1122,8 +1123,8 @@ struct Fixture {
     shape::CodePatch gameDelete{0x824624, shape::CodeOf(&GameDelete)};
     FilledHeap filledHeap; // ours' allocations filled as GameNew fills the original's
     shape::CodePatch restart{0x1c95ec, shape::CodeOf(&StandRestart)};
-    shape::CodePatch findNode{0xae7490, shape::CodeOf(&StandFindNode)};
-    shape::CodePatch bounds{0xae7d00, shape::CodeOf(&StandBounds)};
+    shape::StandIn findNode{0xae7490, &nGZSceneGraph::FindNodeByName, &StandFindNode};
+    shape::StandIn bounds{0xae7d00, &nGZSceneGraph::GrowByShapeBounds, &StandBounds};
     shape::StandIn walk5{0x1c0458, &KeyMapSlot5Walker::CallSlot5ForEachKey, &StandWalk5};
     shape::StandIn walk6{0x1c081e, &KeyMapWalker::CallSlot6ForEachKey, &StandWalk6};
     shape::StandIn elapsed{0x1c9256, &cRZStopwatch::Elapsed, &StandElapsed};

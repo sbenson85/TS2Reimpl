@@ -9,8 +9,9 @@
 // Fakes (sizes and behaviour from the callees, not from our structs): the director framework's class factory (the group node,
 // the shape-reference node and the shape are told apart by class id), the scene-graph nodes (tree walkers: TestFlag, children
 // and siblings, layers, attributes, flags, Clone), the resource service and its manager (Load), the key parser, and the
-// original-only callees of the primitive path (the part makers 0xaef310 / 0xaef5b0 / 0xaf05b0 / 0xaef950, the material id
-// 0xc05be0 and its 4-byte holder 0xae8820 / 0xae8870), each patched over the image on both sides.
+// callees of the primitive path (the box, sphere and cone makers 0xaef5b0 / 0xaf05b0 / 0xaef950 (ours, verified) and 0xaef310
+// and 0xc05be0, tested in ts_model_effect_parts.cpp, stood in on both sides; the material handles 0xae8820 / 0xae8870 run
+// for real on each side against a fake material manager, GetCachedQueriedObject 0xae8900 stood in on both sides).
 //
 // The primitive path's cache (the original's global 0x10fd3cc, ours a never-freed table) cannot be reset, so its test runs one
 // sequence per side. Names are always heap strings: the original's key is made from the name's raw bytes (see
@@ -24,10 +25,12 @@
 #include "free_recorder.h"
 #include "game/game.h"
 #include "gz/cVector4fEvent.h"
+#include "misc/UtilitiesE.h"
 #include "rz/Singleton_20ddfb.h"
 #include "rz/StaticGetters.h"
 #include "rz/StringKeyParser.h"
 #include "sg/SGNodeInterfaces.h"
+#include "sg/SGUtilities.h"
 #include "shape.h"
 #include "ts/cTSCompDescription.h"
 #include "ts/cTSModelEffect.h"
@@ -370,16 +373,19 @@ uint32_t __cdecl StandMatId()
     Ev({evMatId, gW->matId});
     return gW->matId++;
 }
-void *__fastcall StandHandle(uint32_t *self, void *, uint32_t id)
+// The material manager the handles (0xae8820 / 0xae8870 and the cache's assignment) ask for: its slots 20 (AddRefIndex) and
+// 21 (ReleaseIndex) log the index.
+void *gMatVT[kFakeNodeSlots];
+MNode gMat;
+void __fastcall MatAddRef(MNode *, void *, uint32_t id) { Ev({evHandle, id}); }
+void __fastcall MatRelease(MNode *, void *, uint32_t id) { Ev({evHandleEnd, id}); }
+void *StandMatMgr()
 {
-    Ev({evHandle, id});
-    *self = id;
-    return self;
-}
-void __fastcall StandHandleEnd(uint32_t *self, void *)
-{
-    Ev({evHandleEnd, *self});
-    *self = ~0u;
+    std::memcpy(gMatVT, gFakeNodeVT, sizeof(gMatVT));
+    gMatVT[20] = reinterpret_cast<void *>(&MatAddRef);
+    gMatVT[21] = reinterpret_cast<void *>(&MatRelease);
+    gMat = MNode{gMatVT, 0x7d, 1, nullptr, nullptr, nullptr, nullptr, 0};
+    return &gMat;
 }
 
 // Everything a test patches, for as long as it lives.
@@ -387,13 +393,12 @@ struct Stands {
     shape::StandIn framework{0x1ae18d, &GetDirectorFrameworkObject, &StandCom};
     shape::StandIn service{0x14323f, &GetServiceObject, &StandService};
     shape::StandIn parse{0xae6e60, &StringKeyParser::ParseKey, &StandParse};
-    shape::CodePatch axes{0xaef310u, shape::CodeOf(&StandAxes)};
-    shape::CodePatch box{0xaef5b0u, shape::CodeOf(&StandBox)};
-    shape::CodePatch sphere{0xaf05b0u, shape::CodeOf(&StandSphere)};
-    shape::CodePatch cone{0xaef950u, shape::CodeOf(&StandCone)};
-    shape::CodePatch matId{0xc05be0u, shape::CodeOf(&StandMatId)};
-    shape::CodePatch handle{0xae8820u, shape::CodeOf(&StandHandle)};
-    shape::CodePatch handleEnd{0xae8870u, shape::CodeOf(&StandHandleEnd)};
+    shape::StandIn axes{0xaef310u, &cTSModelEffect::MakeAxesPart, &StandAxes};
+    shape::StandIn box{0xaef5b0u, &nGZSceneGraph::MakeBoxMesh, &StandBox};
+    shape::StandIn sphere{0xaf05b0u, &nGZSceneGraph::MakeSphereMesh, &StandSphere};
+    shape::StandIn cone{0xaef950u, &nGZSceneGraph::MakeConeMesh, &StandCone};
+    shape::StandIn matId{0xc05be0u, &cTSModelEffect::GetWhiteMaterial, &StandMatId};
+    shape::StandIn materials{0xae8900u, &GetCachedQueriedObject, &StandMatMgr};
 };
 
 void Prepare(World &w)

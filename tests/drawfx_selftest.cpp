@@ -242,8 +242,8 @@ DIFF_TEST(DrawFx_StrictWords, 0)
     using OneFn = uint32_t(__thiscall *)(void *, uint32_t);
 
     // The old 'i' (a table not converted: drawfx::Norm guesses): the original's side rewrites the word as tag | offset,
-    // ours leaves it, and the logs differ though both sides behaved the same (the runner adds normaudit's note to such a
-    // failure: "lay inside a block registered on the other side").
+    // ours leaves it, so the logged words differ though both sides behaved the same (the one-sided flake: the logs as
+    // vectors differ). Same's symmetric rule (DrawFx_SymmetricGuess) compares the pair as the data it is on both sides.
     auto guess = [&](uint8_t *block) {
         return drawfx::Side([] { Reset(), gL.Reset<kLegacyProbe>(204); }, [&] {
             drawfx::AddRange(block, 64, 0x7c000000);
@@ -252,8 +252,9 @@ DIFF_TEST(DrawFx_StrictWords, 0)
     };
     auto a = guess(blockOrig), b = guess(blockOurs);
     std::string f = Compare(ctx, a.first, b.first);
-    Expect(ctx, a.first[0].words[0] == 0x7c000008 && b.first[0].words[0] == data && !f.empty() && normwords::TakeErrors().empty(),
-           "the old guess did not fail one-sided:", f);
+    Expect(ctx, a.first[0].words[0] == 0x7c000008 && b.first[0].words[0] == data && !(a.first == b.first) && f.empty() &&
+                    normwords::TakeErrors().empty(),
+           "the old guess's one-sided word (logged differently, compared as data):", f);
 
     // The test's own pointer logging through Ptr (what a dumper's pointer words use in place of Norm, lane RK): a data
     // word fails, on either side, and the same pointer into each side's block is the same record.
@@ -357,6 +358,73 @@ DIFF_TEST(DrawFx_StrictWords, 0)
     drawfx::Side(Reset, [&] { drawfx::Note("p", drawfx::Ptr(0x1234u)); });
     Expect(ctx, Has(normwords::TakeErrors(), "drawfx::Ptr at drawfx_selftest.cpp", "below 0x10000"),
            "Ptr accepted a small integer", "");
+}
+
+// Same's symmetric rule for guessed words (drawfx_core.h, lane 261108w): a word is a pointer only when both sides' guesses
+// read it as one. Each side registers "the same" block at its own address (the original's first, ours second) and logs
+// the words given, through drawfx::Norm and through a legacy 'i' argument. A one-sided data word (the flake of
+// LotInfo_AddConnection and Particles_Renderable_Pilot_*, 2026-11-08: a data word inside one side's block) compares as
+// data; every real difference (another offset, a pointer against other data, a record equal to the other side's data, a
+// different word next to a forgiven one, another order) still fails.
+DIFF_TEST(DrawFx_SymmetricGuess, 0)
+{
+    normwords::TakeErrors();
+    static uint8_t blockOrig[64], blockOurs[64];
+    using OneFn = uint32_t(__thiscall *)(void *, uint32_t);
+    constexpr uint32_t kTag = 0x7c000000;
+    // One side: its block registered, then each word logged twice (a note through Norm, then a legacy 'i' argument).
+    auto side = [&](uint8_t *block, std::vector<uint32_t> words) {
+        return drawfx::Side([] { Reset(), gL.Reset<kLegacyProbe>(204); }, [&] {
+            drawfx::AddRange(block, 64, kTag);
+            for (uint32_t w : words) drawfx::Note("word", drawfx::Norm(w)), Slot<OneFn>(gL, 10, w);
+        });
+    };
+    auto check = [&](const char *what, std::vector<uint32_t> orig, std::vector<uint32_t> ours, bool equal,
+                     const char *named = nullptr) {
+        auto a = side(blockOrig, orig), b = side(blockOurs, ours);
+        const std::string f = Compare(ctx, a.first, b.first);
+        const bool ok = equal ? f.empty() : !f.empty() && (!named || f.find(named) != std::string::npos);
+        Expect(ctx, ok && normwords::TakeErrors().empty(), what, f.empty() ? "(passed)" : f);
+        return a.first == b.first; // the old rule: the logs as they are
+    };
+    const uint32_t inOurs = drawfx::P(blockOurs + 0x17), inOrig = drawfx::P(blockOrig + 0x17);
+
+    // The flake, reproduced: the same data word inside ours' block only (LotInfo: orig 1316a9b7, ours e0000017), and inside
+    // the original's only (GimexFshDirectory_ParseEntry: orig 80000001 against ours' raw word). The old rule failed both.
+    Expect(ctx, !check("one-sided data word in ours' block:", {5, inOurs, 7}, {5, inOurs, 7}, true), "old rule passed",
+           "the one-sided word");
+    Expect(ctx, !check("one-sided data word in the original's block:", {inOrig}, {inOrig}, true), "old rule passed",
+           "the one-sided word");
+    // Real pointers: the same offset into each side's block is the same record; another offset differs.
+    check("the same pointer into each side's block:", {drawfx::P(blockOrig + 4)}, {drawfx::P(blockOurs + 4)}, true);
+    check("pointers at different offsets:", {drawfx::P(blockOrig + 4)}, {drawfx::P(blockOurs + 8)}, false, "call 0");
+    // A pointer on one side, other data on the other: the raw words differ, so they still differ (either way round).
+    check("a pointer against data:", {drawfx::P(blockOrig + 4)}, {0x1234}, false, "call 0");
+    check("data against a pointer:", {0x1234}, {drawfx::P(blockOurs + 4)}, false, "call 0");
+    check("data against a pointer to the same raw word's place:", {inOurs}, {inOurs + 1}, false, "call 0");
+    // The difference the old guess hid: a record on one side equal to the other side's data. The old rule passed it.
+    Expect(ctx, check("a record equal to the other side's data:", {drawfx::P(blockOrig + 4)}, {kTag | 4}, false, "guessed word"),
+           "old rule failed", "the hidden difference");
+    check("a fake against its id as data:", {drawfx::P(&gA)}, {201}, false, "guessed word");
+    // A forgiven pair forgives only its own words: a different data word next to it still differs.
+    check("a forgiven word next to a different one:", {inOurs, 5}, {inOurs, 6}, false, "call 2");
+    // The guesses pair by order: the same words in another order differ.
+    check("one-sided words in another order:", {inOurs, 9}, {9, inOurs}, false, "call 0");
+    // A forgiven pair forgives both its words, not one: an unguessed word equal to the original's half of the pair,
+    // against another word in ours, still differs.
+    {
+        auto raw = [&](uint8_t *block, uint32_t unguessed) {
+            return drawfx::Side([] { Reset(), gL.Reset<kLegacyProbe>(204); }, [&] {
+                drawfx::AddRange(block, 64, kTag);
+                drawfx::Note("word", drawfx::Norm(inOurs));
+                drawfx::Note("raw", unguessed);
+            });
+        };
+        auto a = raw(blockOrig, inOurs), b = raw(blockOurs, 0x55u);
+        const std::string f = Compare(ctx, a.first, b.first);
+        Expect(ctx, !f.empty() && f.find("call 1") != std::string::npos && normwords::TakeErrors().empty(),
+               "a forgiven pair forgave one half:", f.empty() ? "(passed)" : f);
+    }
 }
 
 DIFF_TEST(WinFx_SelfTest, 0)

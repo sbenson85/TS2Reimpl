@@ -6,10 +6,12 @@
 #include "game/vtable.h"
 #include "gz/cIGZCOM.h"
 #include "gz/cVector4fEvent.h"
+#include "misc/UtilitiesE.h" // GetCachedQueriedObject
 #include "rz/Singleton_20ddfb.h"
 #include "rz/StaticGetters.h"
 #include "rz/StringKeyParser.h"
 #include "rz/cRZString.h"
+#include "sg/SGUtilities.h"
 #include "sg/cShape.h"
 #include "sg/cShapeRefNode.h"
 #include "ts/cTSCompDescription.h"
@@ -78,6 +80,82 @@ template <class T> void MakeObject(fx::CountedRef<T> &ref, uint32_t classId, uin
     com->GetClassObject(classId, iid, reinterpret_cast<void **>(ref.Address()));
 }
 
+// The primitive parts' bones of a mesh: the object of class 0x9bffc10d, a builder face with a virtual cIGZUnknown base.
+namespace builder {
+constexpr uint32_t kPartClass = 0x7ba3838c, kPartIid = 0x5ba38381, kClass = 0x9bffc10d, kIid = 0x9bffc101;
+constexpr int kBegin = 0, kEnd = 1, kAddVertex = 9, kBeginSubset = 27, kBeginTriangle = 28, kEndTriangle = 29, kAddIndex = 35;
+constexpr int kPartSetMesh = 32;
+cIGZUnknown *AsUnknown(void *object)
+{
+    const int32_t *const bases = *reinterpret_cast<int32_t **>(static_cast<uint8_t *>(object) + 4);
+    return reinterpret_cast<cIGZUnknown *>(static_cast<uint8_t *>(object) + bases[1] + 4);
+}
+} // namespace builder
+
+} // namespace
+
+// Three flat diamonds of size `size`, one along each axis, in the subsets the bone markers' materials bind to.
+void **__cdecl cTSModelEffect::MakeAxesPart(void **out, float size)
+{
+    using namespace builder;
+    static const float kVertices[12][3] = {
+        {0, 0, 0.1f}, {1, 0, 0}, {0, 0.1f, 0}, {0, -0.1f, 0},
+        {0, 0, 0.1f}, {0, 1, 0}, {0.1f, 0, 0}, {-0.1f, 0, 0},
+        {0, 0.1f, 0}, {0, 0, 1}, {0.1f, 0, 0}, {-0.1f, 0, 0},
+    };
+    static const int kCorners[9] = {1, 0, 3, 1, 2, 0, 1, 3, 2};
+    static const char *const kSubsets[3] = {"subsetX", "subsetY", "subsetZ"};
+
+    *out = nullptr;
+    auto *com = static_cast<cIGZCOM *>(GetDirectorFrameworkObject());
+    com->GetClassObject(kPartClass, kPartIid, out);
+    void *mesh = nullptr;
+    com = static_cast<cIGZCOM *>(GetDirectorFrameworkObject());
+    com->GetClassObject(kClass, kIid, &mesh);
+    VirtualCall<void(__thiscall *)(void *, void *), kPartSetMesh>(*out, mesh ? AsUnknown(mesh) : nullptr);
+    VirtualCall<void(__thiscall *)(void *, int), kBegin>(mesh, 0);
+    for (const float *vertex = kVertices[0]; vertex != kVertices[0] + 36; vertex += 3) {
+        const float scaled[3] = {vertex[0] * size, vertex[1] * size, vertex[2] * size};
+        VirtualCall<void(__thiscall *)(void *, const float *), kAddVertex>(mesh, scaled);
+    }
+    for (int subset = 0; subset < 3; ++subset) {
+        VirtualCall<void(__thiscall *)(void *, const char *), kBeginSubset>(mesh, kSubsets[subset]);
+        for (int corner = 0; corner < 9; corner += 3) {
+            VirtualCall<void(__thiscall *)(void *), kBeginTriangle>(mesh);
+            for (int i = 0; i < 3; ++i)
+                VirtualCall<void(__thiscall *)(void *, int), kAddIndex>(mesh, kCorners[corner + i] + subset * 4);
+            VirtualCall<void(__thiscall *)(void *), kEndTriangle>(mesh);
+        }
+    }
+    VirtualCall<void(__thiscall *)(void *), kEnd>(mesh);
+    if (mesh) AsUnknown(mesh)->Release();
+    return out;
+}
+
+// The white blended material of the primitives: the material manager's, made there the first time.
+uint32_t __cdecl cTSModelEffect::GetWhiteMaterial()
+{
+    constexpr int kHas = 31, kFind = 19, kAdd = 23;                       // the queried object
+    constexpr int kSetName = 10, kSetDefinition = 12, kSetProperty = 13; // the material
+    using SetFn = void(__thiscall *)(void *, const char *);
+    using PropertyFn = void(__thiscall *)(void *, const char *, const char *);
+    void *const materials = GetCachedQueriedObject();
+    if (VirtualCall<bool(__thiscall *)(void *, const char *), kHas>(materials, "modelEffectWhite"))
+        return VirtualCall<uint32_t(__thiscall *)(void *, const char *), kFind>(materials, "modelEffectWhite");
+    void *material = nullptr;
+    static_cast<cIGZCOM *>(GetDirectorFrameworkObject())->GetClassObject(0x49596978, 0x49596972, &material);
+    VirtualCall<SetFn, kSetName>(material, "modelEffectWhite");
+    VirtualCall<SetFn, kSetDefinition>(material, "StandardMaterial");
+    VirtualCall<PropertyFn, kSetProperty>(material, "stdMatDiffCoef", "1, 1, 1");
+    VirtualCall<PropertyFn, kSetProperty>(material, "stdMatShapeColorIndex", "0");
+    VirtualCall<PropertyFn, kSetProperty>(material, "stdMatAlphaBlendMode", "blend");
+    const uint32_t id = VirtualCall<uint32_t(__thiscall *)(void *, void *, int), kAdd>(materials, material, 2);
+    if (material) static_cast<cIGZUnknown *>(material)->Release();
+    return id;
+}
+
+namespace {
+
 // Game 0x10fd3cc: the shapes made for primitives, by key.
 using ShapeCache = std::unordered_map<std::string, fx::CountedRef<cIShape>>;
 ShapeCache &Cache()
@@ -90,10 +168,6 @@ struct Raw24 {
     uint32_t w[6];
 };
 
-using PartFn = void **(__cdecl *)(void **, float);
-using BoxFn = void **(__cdecl *)(void **, const float *, const float *);
-using SphereFn = void **(__cdecl *)(void **, float, int, const char *, int);
-using ConeFn = void **(__cdecl *)(void **, float, float, int, int);
 using QueryFn = uint32_t(__thiscall *)(void *, uint32_t, uint32_t, void **);
 
 } // namespace
@@ -218,7 +292,7 @@ void cTSModelEffect::AddPrimitive(const cTSModelDescription *d)
         fx::CountedRef<cIShape> shape;
         MakeObject(shape, kShapeClass, kShapeIid);
         void *part = nullptr;
-        OriginalFunction<PartFn, 0xaef310>()(&part, Desc(this)->mFloat20);
+        MakeAxesPart(&part, Desc(this)->mFloat20);
         shape->AddPart(static_cast<cIGZUnknown *>(part), 0);
         shape->BindMaterial("MV_BoneMarkerX", "subsetX");
         shape->BindMaterial("MV_BoneMarkerY", "subsetY");
@@ -236,11 +310,11 @@ void cTSModelEffect::AddPrimitive(const cTSModelDescription *d)
     if (name == "cube") {
         const float low[3] = {-f, -f, -f};
         const float high[3] = {f, f, f};
-        OriginalFunction<BoxFn, 0xaef5b0>()(&made, low, high);
+        nGZSceneGraph::MakeBoxMesh(reinterpret_cast<nGZSceneGraph::cIGeometryNode **>(&made), low, high);
     } else if (name == "sphere") {
-        OriginalFunction<SphereFn, 0xaf05b0>()(&made, f, 0x10, "subset0", 1);
+        nGZSceneGraph::MakeSphereMesh(reinterpret_cast<nGZSceneGraph::cIGeometryNode **>(&made), f, 0x10, "subset0", true);
     } else if (name == "cone") {
-        OriginalFunction<ConeFn, 0xaef950>()(&made, f, f + f, 1, 0x10);
+        nGZSceneGraph::MakeConeMesh(reinterpret_cast<nGZSceneGraph::cIGeometryNode **>(&made), f, f + f, true, 0x10);
     } else {
         return;
     }
@@ -254,14 +328,14 @@ void cTSModelEffect::AddPrimitive(const cTSModelDescription *d)
     fx::CountedRef<cIShape> shape;
     MakeObject(shape, kShapeClass, kShapeIid);
     shape->AddPart(part.Get(), 0);
-    uint32_t handle = 0;
-    const uint32_t id = OriginalFunction<uint32_t(__cdecl *)(), 0xc05be0>()();
-    OriginalFunction<void(__thiscall *)(void *, uint32_t), 0xae8820>()(&handle, id);
-    shape->BindMaterial("modelEffectWhite", "subset0");
-    ref->AddShape(shape.Get());
-    mNode->AddChild(ref.Get());
-    Cache()[std::string(key.ToChar())].Assign(shape.Get());
-    OriginalFunction<void(__thiscall *)(void *), 0xae8870>()(&handle);
+    {
+        // The white material held while the shape binds it (0xae8820 ... 0xae8870).
+        const nGZSceneGraph::ShapeMaterialHandle handle(static_cast<int32_t>(GetWhiteMaterial()));
+        shape->BindMaterial("modelEffectWhite", "subset0");
+        ref->AddShape(shape.Get());
+        mNode->AddChild(ref.Get());
+        Cache()[std::string(key.ToChar())].Assign(shape.Get());
+    }
     shape.Reset();
     ref.Reset();
 }

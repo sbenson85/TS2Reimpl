@@ -216,7 +216,7 @@ struct cTSPersonObjectRecord {
 static_assert(offsetof(cTSPersonObjectRecord, mFlagA) == 0xa, "layout");
 
 namespace nTSSG {
-// A display list render strategy's per-object state (0x64 bytes; the destructor 0x36f5c0 is still the original's).
+// A display list render strategy's per-object state (0x64 bytes; the destructor 0x36f5c0 is lane 261108m's DynamicStrategyState).
 struct cDisplayListDynamicRenderStrategyState {
     static constexpr uint32_t kIid = 0x6d548978;
     bool QueryInterface(uint32_t iid, void **out); // slot 0, 0x373d20 (ret 8): 1 and kIid, null out refused

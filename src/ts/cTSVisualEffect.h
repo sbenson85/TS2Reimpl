@@ -32,6 +32,8 @@ struct cTSVisualDescription {
     uint32_t flags;
 };
 
+struct EffectEntry;
+
 // One child of the effect (0x54 bytes): a component effect with the placement it runs at inside the effect's.
 struct cTSVisualChild {
     fx::EffectsTransform placement; // +0 the child's placement in the effect's
@@ -41,8 +43,16 @@ struct cTSVisualChild {
     uint32_t flags;                 // +0x44 bit 3: takes event indexes, bit 5: left out of events
     std::vector<int32_t> indexes;   // +0x48
 
-    cTSVisualChild(const cTSVisualChild &) = delete;
-    cTSVisualChild &operator=(const cTSVisualChild &) = delete;
+    // The walk's new child (0xbcb4c0): the identity placement, no effect, no indexes. The byte at +1 unset, the weight zero
+    // (unset there, and written before it is read).
+    cTSVisualChild();
+    // 0xbc4540: the placement's version zero and its byte at +1 left alone, the effect counted, the indexes copied.
+    cTSVisualChild(const cTSVisualChild &other);
+    // 0xbc41e0 is the range of these (for a middle insert the vector never does: at its end it copies, 0xbc30e0, as this may
+    // throw): as the copy, with the indexes taken. The source keeps its effect, counted once more.
+    cTSVisualChild(cTSVisualChild &&other);
+    // 0xbc57a0: every placement byte (the version too), the effect counted, the indexes assigned.
+    cTSVisualChild &operator=(const cTSVisualChild &other);
     // 0xbc5380: the indexes freed, then the effect released.
     ~cTSVisualChild();
 };
@@ -119,6 +129,12 @@ public:
     // 0xbe8c80: the stored events and resources told to the children again (the effects manager does it after it rebuilt the
     // children, 0xbcb4c0); the stored index (event 0xf) walked on top.
     void ReplayEvents();
+    // 0xbe9670 (ret 4): the effect made from the manager's entry: the description, the entry's message pair (+0xc, +0x10), and
+    // with description bit 2 the owner's camera. The manager's entries are a cTSVisualDescription by their flag word.
+    void Describe(const EffectEntry *entry);
+    // 0xbe8de0: not running (or with no index) it is done; otherwise not while it waits for its stop (description bit 3) or
+    // a child that counts (flag bit 0 clear) still runs. Once done it stops, and its message goes out (id +0x48, value +0x4c).
+    bool IsDone();
 
     // The object's fields.
     uint32_t mRefs;                          // +0x10 the effect's count (not the rz count at +0xc)
@@ -164,4 +180,5 @@ static_assert(offsetof(cTSVisualEffect, mRefs) == 0x10 && offsetof(cTSVisualEffe
 // The RVA hook for the constructor (the pool factory 0xbc9ab0 is its only caller): every effect the pool makes is ours.
 struct cTSVisualEffectAdapters {
     static cTSVisualEffect *__fastcall Construct(void *memory, void *);
+    static void __fastcall DestructChild(cTSVisualChild *child, void *); // 0xbc5380
 };

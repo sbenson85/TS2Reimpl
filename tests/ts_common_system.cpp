@@ -41,6 +41,7 @@
 #include "misc/UtilitiesE.h"
 #include "rz/cRZFile.h"
 #include "rz/cRZString.h"
+#include "sg/SGUtilities.h" // CollectTextureNames
 #include "ts/cTSCatalog.h" // GZStringList
 #include "ts/cTSCommonSystem.h"
 #include "ts/cTSCommonSystemObjects.h"
@@ -1003,7 +1004,7 @@ struct Scope {
     shape::CodePatch gameFree{0x82540f, shape::CodeOf(&GameFree)};
     shape::StandIn lookup{0xcb4690, &product::GetProductPaths, &StandLookup};
     shape::StandIn appProduct{0xcb4950, &product::NewestProductExecutable, &StandAppProduct};
-    shape::CodePatch walk{0xae8090, shape::CodeOf(&StandWalk)};
+    shape::StandIn walk{0xae8090, &nGZSceneGraph::CollectTextureNames, &StandWalk};
     shape::StandIn exprRegistry{0xae8980, &GetMaterialParserCached, &StandExprRegistry};
     shape::CodePatch renderer{0xb3bbd0, shape::CodeOf(&StandRenderer)};
     shape::CodePatch fileSystem{0x9c59d9, shape::CodeOf(&StandFileSystem)};

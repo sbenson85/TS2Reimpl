@@ -4,6 +4,7 @@
 
 #include "game/original.h"
 #include "simantics/PrimSCommon.h"
+#include "world/WorldHeights.h"
 
 #include <cstring>
 #include <emmintrin.h>
@@ -221,8 +222,6 @@ namespace {
 
 using CachedFn = void *(__cdecl *)();
 using U32Fn = uint32_t(__cdecl *)(uint32_t value, int32_t a, int32_t b);
-using TwoFn = uint32_t(__cdecl *)(uint32_t value, int32_t a);
-using OneFn = uint32_t(__cdecl *)(uint32_t value);
 using PtrFn = uint32_t(__cdecl *)(uint32_t *value);
 
 // Owner 14, 15 and 17: the float attribute of the interface the QueryInterface found.
@@ -493,7 +492,7 @@ uint32_t SimOperandSource::Read(int32_t ownerArg, uint32_t idArg, SimDataRef *de
             break;
         }
         case 3:
-            value = static_cast<uint16_t>(OriginalFunction<TwoFn, 0x7e4250>()(v, 2));
+            value = static_cast<uint16_t>(worldheights::RoomAreaInTiles(static_cast<int32_t>(v), 2));
             break;
         case 4: {
             void *service = cached();
@@ -525,7 +524,7 @@ uint32_t SimOperandSource::Read(int32_t ownerArg, uint32_t idArg, SimDataRef *de
             break;
         }
         case 6:
-            value = static_cast<uint8_t>(OriginalFunction<OneFn, 0x7e43c0>()(v));
+            value = static_cast<uint8_t>(worldheights::RoomMostlyFlagged(static_cast<int32_t>(v)));
             break;
         case 7:
             value = (static_cast<uint16_t>(OriginalFunction<U32Fn, 0x7decd0>()(v, 2, 1)) == 0) ? 1 : 0;

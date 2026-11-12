@@ -11,8 +11,8 @@
 // slot, the destructor (0x8bb120, reached only from Release) and the members (FlushState 0x8bbef0, DrawKind6 0x8befb0 and
 // the primitive builders behind Dispatch, src/gz/cGZDrawContextBuilders.cpp) are in effect through their callers. Dispatch
 // 0x8bc040 is hooked at its RVA (cGZDrawContextAdapters::Dispatch): the builders call it back (kinds 0, 2, 4, 5), a cycle
-// the in-effect check needs cut. Only the rectangle intersection 0x373520 (shared by many classes) stays game code
-// (original_calls).
+// the in-effect check needs cut. The rectangle intersection 0x373520 (shared by many classes) is ours since lane
+// 261108s (src/gz/cGZRect.h).
 #include <cstdint>
 #include <vector>
 

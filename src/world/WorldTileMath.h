@@ -11,7 +11,7 @@
 // Quadrant bytes (the fourth field of a tile record, WorldTile::segments): bit 0 = west (x - 1/3), bit 1 = south (y + 1/3),
 // bit 2 = east, bit 3 = north; 15 (and 255) mean the whole tile. Sides are 1, 2, 4, 8; corners are 3, 6, 9, 12.
 //
-// The ground height under a position is the world layer's GroundHeightAt (0x7e4680), still an original here.
+// The ground height under a position is the world layer's GroundHeightAt (0x7e4680, src/world/WorldHeights.h).
 
 namespace worldmath {
 
@@ -43,7 +43,7 @@ int32_t *__cdecl FloatsToFixed16(int32_t *out, const float *in);
 // 0x7dd160: out = (x, y, GroundHeightAt({x, y, level - 1})). Note the parameter order: (out, y, x, level).
 void __cdecl PositionAtGround(float *out, float y, float x, int32_t level);
 // 0x7dd1b0: GroundHeightAt({x, y, level - 1}). (y, x, level) as above.
-float __cdecl HeightAtLevel(float y, float x, int32_t level);
+double __cdecl HeightAtLevel(float y, float x, int32_t level); // the ground height as the original leaves it in st0
 
 // ---- facings ----
 // 0x7dcee0: (float)(int16)(-facing) * pi/4, in an x87 register.

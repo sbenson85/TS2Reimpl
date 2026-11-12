@@ -1,6 +1,7 @@
 // nTSSG::cNHoodOccupantManager (lane GO): the node builders: the build-all preparation and the flora, other, face-C and road occupants.
 // Split from one file along these concerns; the shared helpers are in nTSSGNHoodOccupantManagerInternal.h.
 #include "sg/DetailObject.h"
+#include "sg/SGUtilities.h"
 #include "std/StdInstances.h"
 #include "ts/nTSSGNHoodOccupantManager.h"
 #include "ts/nTSSGNHoodOccupantManagerInternal.h"
@@ -164,7 +165,7 @@ void cNHoodOccupantManager::PrepareBuildAll()
     using Find = uint32_t(__thiscall *)(void *, const char *, uint32_t *, uint32_t, uint32_t, cIGZUnknown **, uint32_t);
     VirtualCall<Find, kSgFindSlot>(sg, *GameAddress<const char *>(kFxCubeNameCell), nullptr, 0, kModelType, &found.mObject, 0);
     if (found.mObject && VirtualCall<bool(__thiscall *)(void *), kModelValidSlot>(found.mObject)) {
-        auto *cube = static_cast<cIGZUnknown *>(OriginalFunction<void *(__cdecl *)(void *), 0xaeba70>()(found.mObject));
+        auto *cube = static_cast<cIGZUnknown *>(nGZSceneGraph::ShapeRefOfNodeOrSubtree(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(found.mObject)));
         CountedLocal heldCube(cube);
         if (!cube || int32_t(VirtualCall<Get0, kShapeCountSlot>(cube)) < 1) return;
         uint32_t scratch[3];
@@ -237,7 +238,7 @@ void cNHoodOccupantManager::AddFloraOccupant(cIGZUnknown *occupant)
     VirtualCall<Find, kSgFindSlot>(mSgSystem.mObject, name.mString.ToChar(), groupOrNull, 0, kModelType, &found.mObject, 0);
     if (found.mObject) {
         SGRef shape;
-        shape.mObject = static_cast<cIGZUnknown *>(OriginalFunction<void *(__cdecl *)(void *), 0xaeba70>()(found.mObject));
+        shape.mObject = static_cast<cIGZUnknown *>(nGZSceneGraph::ShapeRefOfNodeOrSubtree(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(found.mObject)));
         if (shape.mObject) shape.mObject->AddRef();
         VirtualCall<Child, kSetShapeSlot>(AsPointer(VirtualCall<Get0, kShapeOwnerSlot>(shape.mObject)), shape.mObject);
         if (VirtualCall<Valid, kModelValidSlot>(shape.mObject)) {
@@ -269,7 +270,8 @@ void cNHoodOccupantManager::AddFloraOccupant(cIGZUnknown *occupant)
             shape.mObject);
         OriginalFunction<void(__thiscall *)(cNHoodOccupantManager *, cIGZUnknown *), 0x2a9000>()(this, occupant);
         if (!mBuildAll) {
-            OriginalFunction<void(__cdecl *)(cIGZUnknown *, uint32_t, uint32_t), 0xaeac50>()(shape.mObject, kFloraSettingB, 1);
+            nGZSceneGraph::SetFlagInTree(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(shape.mObject),
+                                         kFloraSettingB, 1);
             SGNodeEntry entry;
             entry.mNode.mObject = shape.mObject;
             if (shape.mObject) shape.mObject->AddRef();
@@ -317,7 +319,7 @@ bool cNHoodOccupantManager::AddOtherOccupant(cIGZUnknown *occupant)
     using Find = uint32_t(__thiscall *)(void *, const char *, uint32_t *, uint32_t, uint32_t, cIGZUnknown **, uint32_t);
     VirtualCall<Find, kSgFindSlot>(sg, name.mString.ToChar(), groupOrNull, 0, kModelType, &found.mObject, 0);
     if (!found.mObject || !VirtualCall<bool(__thiscall *)(void *), kModelValidSlot>(found.mObject)) return true;
-    auto *model = static_cast<cIGZUnknown *>(OriginalFunction<void *(__cdecl *)(void *), 0xaeb9a0>()(found.mObject));
+    auto *model = static_cast<cIGZUnknown *>(nGZSceneGraph::TransformOfChild(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(found.mObject)));
     CountedLocal heldModel(model);
     if (!model) return false;
     VirtualBaseRef extra;
@@ -331,7 +333,7 @@ bool cNHoodOccupantManager::AddOtherOccupant(cIGZUnknown *occupant)
     if (VirtualCall<bool(__thiscall *)(void *, uint32_t, cIGZUnknown **), 0>(model, kShapeNodeIid, &shape.mObject)) {
         VirtualCall<Child, kSetShapeSlot>(found.mObject, shape.mObject);
     } else {
-        AssignCounted(shape, static_cast<cIGZUnknown *>(OriginalFunction<void *(__cdecl *)(void *), 0xaeb8a0>()(model)));
+        AssignCounted(shape, static_cast<cIGZUnknown *>(nGZSceneGraph::ShapeRefOfNodeOrChild(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(model))));
         if (shape.mObject) VirtualCall<Child, kSetShapeSlot>(model, shape.mObject);
     }
     if (!shape.mObject) return false;
@@ -365,7 +367,8 @@ bool cNHoodOccupantManager::AddOtherOccupant(cIGZUnknown *occupant)
         VirtualCall<Vector, kShapeBoundsSlot>(shape.mObject, bounds);
         if (bounds[5] > kTallShape ||
             FootprintIn(AsPointer(VirtualCall<Get0, kOccupantRecordSlot>(occupant)), mViewRect, 0)) {
-            OriginalFunction<void(__cdecl *)(cIGZUnknown *, uint32_t, uint32_t), 0xaeac50>()(shape.mObject, kFloraSettingB, 1);
+            nGZSceneGraph::SetFlagInTree(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(shape.mObject),
+                                         kFloraSettingB, 1);
             SGNodeEntry entry; // 0x2a4350's copy of {shape, 0}
             entry.mNode.mObject = shape.mObject;
             shape.mObject->AddRef();
@@ -461,13 +464,13 @@ bool cNHoodOccupantManager::AddFaceCOccupant(cIGZUnknown *occupant)
     using Find = uint32_t(__thiscall *)(void *, const char *, uint32_t *, uint32_t, uint32_t, cIGZUnknown **, uint32_t);
     VirtualCall<Find, kSgFindSlot>(sg, name.mString.ToChar(), groupOrNull, 0, kModelType, &found.mObject, 0);
     if (found.mObject && VirtualCall<bool(__thiscall *)(void *), kModelValidSlot>(found.mObject)) {
-        auto *model = static_cast<cIGZUnknown *>(OriginalFunction<void *(__cdecl *)(void *), 0xaeb9a0>()(found.mObject));
+        auto *model = static_cast<cIGZUnknown *>(nGZSceneGraph::TransformOfChild(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(found.mObject)));
         CountedLocal heldModel(model);
         SGRef shape;
         if (VirtualCall<bool(__thiscall *)(void *, uint32_t, cIGZUnknown **), 0>(model, kShapeNodeIid, &shape.mObject)) {
             VirtualCall<Child, kSetShapeSlot>(found.mObject, shape.mObject);
         } else {
-            AssignCounted(shape, static_cast<cIGZUnknown *>(OriginalFunction<void *(__cdecl *)(void *), 0xaeb8a0>()(model)));
+            AssignCounted(shape, static_cast<cIGZUnknown *>(nGZSceneGraph::ShapeRefOfNodeOrChild(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(model))));
             VirtualCall<Child, kSetShapeSlot>(model, shape.mObject);
         }
         VirtualCall<uint32_t(__thiscall *)(void *, const char *), kNodeGroupSlot>(shape.mObject,
@@ -547,7 +550,7 @@ bool cNHoodOccupantManager::AddRoadOccupant(cIGZUnknown *occupant)
     name.mString.Sprintf(GameAddress<const char>(kRoadNameFormat), mNeighborhoodName.mString.ToChar(), id);
     using AttachBuilder = uint32_t(__thiscall *)(void *, cIGZUnknown *, uint32_t);
     VirtualCall<AttachBuilder, kPartBuilderSlot>(part.mObject, builder.mObject, 0);
-    OriginalFunction<NameBuilder, 0xaed340>()(name.mString.ToChar(), builder.mObject, part.mObject);
+    nGZSceneGraph::BindNamedBuilderItems(name.mString.ToChar(), builder.mObject, part.mObject);
     SGRef group;
     MakeCounted(group, kGroupNodeClass, kShapeNodeIid);
     using AddPart = uint32_t(__thiscall *)(void *, cIGZUnknown *);
@@ -590,11 +593,11 @@ bool cNHoodOccupantManager::AddRoadOccupant(cIGZUnknown *occupant)
         SGString pieceName;
         pieceName.mString.Sprintf(GameAddress<const char>(kRoadPieceFormat), piece.mId);
         VirtualCall<AttachBuilder, kPartBuilderSlot>(piecePart.mObject, pieceBuilder.mObject, 0);
-        OriginalFunction<NameBuilder, 0xaed340>()(pieceName.mString.ToChar(), pieceBuilder.mObject, piecePart.mObject);
+        nGZSceneGraph::BindNamedBuilderItems(pieceName.mString.ToChar(), pieceBuilder.mObject, piecePart.mObject);
         VirtualCall<AddPart, kGroupAddPartSlot>(group.mObject, piecePart.mObject);
         // leaving: the name, the part, the mesh, the builder
     }
-    OriginalFunction<void(__cdecl *)(cIGZUnknown *, uint32_t), 0xaeb070>()(group.mObject, kMergedLayerPriority);
+    nGZSceneGraph::SetLayerTagInTree(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(group.mObject), kMergedLayerPriority);
     VirtualCall<uint32_t(__thiscall *)(void *, const char *), kNodeGroupSlot>(group.mObject, GameAddress<const char>(kPropsText));
     void *record = AsPointer(VirtualCall<Get0, kOccupantRecordSlot>(occupant));
     OriginalFunction<void(__thiscall *)(cNHoodOccupantManager *, void *, cIGZUnknown *), 0x2a53f0>()(this, record, group.mObject);

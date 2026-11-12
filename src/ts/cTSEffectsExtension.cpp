@@ -5,10 +5,12 @@
 #include "game/vtable.h"
 #include "rz/Singleton_20ddfb.h"
 #include "sg/SGLocalString.h"
+#include "sg/SGUtilities.h" // GetNodeTag, FindNodeByName
 
 #include <new>
-#include <functional>
+#include <tuple>
 #include <unordered_map>
+#include <functional>
 #include <vector>
 
 namespace nGZSceneGraph {
@@ -43,49 +45,6 @@ uint32_t RecordHash(const std::string &first, const std::string &second, uint32_
     return static_cast<uint32_t>(std::hash<std::string>{}(first)) | static_cast<uint32_t>(std::hash<std::string>{}(second)) |
            static_cast<uint32_t>(std::hash<uint32_t>{}(discriminator));
 }
-
-// The registry's insert (0xcc4e30) and destructor (0xcc5280) are library code: the toolchain's map over the same 0x20 bytes,
-// on operator new as the original's, of a key (0x44 bytes: the first two fields and the discriminator of a
-// TSEffectInsertValue; its copy 0x4f5a10 and destructor 0x257860 are the game's) and a value holding the instance counted.
-struct RegistryKey {
-    RegistryKey(const RegistryKey &other)
-    {
-        OriginalFunction<RegistryKey *(__thiscall *)(RegistryKey *, const RegistryKey *), 0x4f5a10>()(this, &other);
-    }
-    RegistryKey &operator=(const RegistryKey &) = delete;
-    ~RegistryKey() { OriginalFunction<void(__thiscall *)(RegistryKey *), 0x257860>()(this); }
-    const TSEffectInsertValue &Fields() const { return *reinterpret_cast<const TSEffectInsertValue *>(this); }
-    alignas(4) uint8_t mBytes[0x44];
-};
-struct RegistryValue {
-    RegistryValue(const RegistryValue &other) : mInstance(other.mInstance), mKind(other.mKind), mFlag(other.mFlag)
-    {
-        if (mInstance) VirtualCall<AddRefFn, 1>(mInstance);
-    }
-    RegistryValue &operator=(const RegistryValue &) = delete;
-    ~RegistryValue() { ReleaseObject(mInstance); }
-    void *mInstance;
-    uint32_t mKind;
-    uint8_t mFlag;
-};
-struct RegistryHash {
-    size_t operator()(const RegistryKey &key) const
-    {
-        const TSEffectInsertValue &fields = key.Fields();
-        return RecordHash(fields.first.mString, fields.second.mString, fields.discriminator);
-    }
-};
-struct RegistryEqual {
-    bool operator()(const RegistryKey &a, const RegistryKey &b) const
-    {
-        const TSEffectInsertValue &x = a.Fields(), &y = b.Fields();
-        return x.first.mString == y.first.mString && x.second.mString == y.second.mString &&
-               x.discriminator == y.discriminator;
-    }
-};
-using Registry = std::unordered_map<RegistryKey, RegistryValue, RegistryHash, RegistryEqual>;
-static_assert(sizeof(Registry) == sizeof(TSEffectsRegistry) && sizeof(Registry::value_type) == sizeof(TSEffectInsertValue),
-              "the registry's layout");
 }
 
 TSEffectFindResult *cTSEffectsExtension::FindRecord(TSEffectFindResult *result, const TSEffectFindKey *key, uint32_t hash)
@@ -155,24 +114,73 @@ void cTSEffectsExtension::ConfigureInstance(void *instance, void *node)
     ApplyStateBytes(instance);
 }
 
-// The registry's insert (library code, the toolchain's map above) of a record
-// holding a counted `instance`; the temporary reference of the value is dropped again.
+TSEffectRecordKey::TSEffectRecordKey(const std::string &firstText, const std::string &secondText, uint32_t value)
+    : discriminator(value)
+{
+    first.mVTable = cRZString::VTable();
+    first.mString = firstText;
+    first.mRefCount = 0;
+    second.mVTable = cRZString::VTable();
+    second.mString = secondText;
+    second.mRefCount = 0;
+}
+
+TSEffectRecordKey::TSEffectRecordKey(const TSEffectFindKey &key)
+    : TSEffectRecordKey(key.firstText, key.secondText, key.discriminator)
+{
+}
+
+TSEffectRecordKey::TSEffectRecordKey(const TSEffectRecordKey &other)
+    : TSEffectRecordKey(other.first.mString, other.second.mString, other.discriminator)
+{
+}
+
+TSEffectRecordValue::TSEffectRecordValue(void *object, uint32_t kindValue, uint8_t flagValue)
+    : instance(object), kind(kindValue), flag(flagValue)
+{
+    if (instance) VirtualCall<AddRefFn, 1>(instance);
+}
+
+TSEffectRecordValue::TSEffectRecordValue(const TSEffectRecordValue &other)
+    : TSEffectRecordValue(other.instance, other.kind, other.flag)
+{
+}
+
+TSEffectRecordValue::~TSEffectRecordValue()
+{
+    ReleaseObject(instance);
+}
+
+namespace {
+struct RecordKeyHash {
+    size_t operator()(const TSEffectRecordKey &key) const
+    {
+        return RecordHash(key.first.mString, key.second.mString, key.discriminator);
+    }
+};
+struct RecordKeyEqual {
+    bool operator()(const TSEffectRecordKey &a, const TSEffectRecordKey &b) const
+    {
+        return a.first.mString == b.first.mString && a.second.mString == b.second.mString && a.discriminator == b.discriminator;
+    }
+};
+using RecordMap = std::unordered_map<TSEffectRecordKey, TSEffectRecordValue, RecordKeyHash, RecordKeyEqual>;
+static_assert(sizeof(RecordMap) == sizeof(TSEffectsRegistry));
+static_assert(sizeof(RecordMap::value_type) == sizeof(TSEffectInsertValue));
+} // namespace
+
+// The library's insert (0xcc4e30, rehash 0xcc6c60, 0xcc6a80); a key already there changes nothing.
 void cTSEffectsExtension::InsertRecord(const TSEffectFindKey &key, void *instance, uint32_t kind, uint8_t flag)
 {
-    TSEffectInsertValue value;
-    value.first.mVTable = cRZString::VTable();
-    value.first.mString = key.firstText;
-    value.first.mRefCount = 0;
-    value.second.mVTable = cRZString::VTable();
-    value.second.mString = key.secondText;
-    value.second.mRefCount = 0;
-    value.discriminator = key.discriminator;
-    value.instance = instance;
-    if (instance) VirtualCall<AddRefFn, 1>(instance);
-    value.kind = kind;
-    value.flag = flag;
-    reinterpret_cast<Registry *>(&mRegistry)->insert(reinterpret_cast<const Registry::value_type &>(value));
-    ReleaseObject(value.instance);
+    const RecordMap::value_type value(std::piecewise_construct, std::forward_as_tuple(key),
+                                      std::forward_as_tuple(instance, kind, flag));
+    reinterpret_cast<RecordMap *>(&mRegistry)->insert(value);
+}
+
+// The library's destructor (0xcc5280, 0xcc4db0): the buckets, then every record with its reference, then the sentinel.
+void cTSEffectsExtension::DestroyRegistry()
+{
+    reinterpret_cast<RecordMap *>(&mRegistry)->~RecordMap();
 }
 
 cTSEffectsExtension::cTSEffectsExtension()
@@ -218,7 +226,7 @@ cTSEffectsExtension::~cTSEffectsExtension()
 
 void cTSEffectsExtension::Destruct()
 {
-    reinterpret_cast<Registry *>(&mRegistry)->~unordered_map();
+    DestroyRegistry();
     mText.Destruct();
 }
 
@@ -256,8 +264,9 @@ bool cTSEffectsExtension::IsKindOf(uint32_t iid)
 uint8_t cTSEffectsExtension::vf0()
 {
     cIObjectGraphNode *const owner = GetOwner();
-    using DisplayNameFn = const char *(__cdecl *)(void *);
-    const char *const displayName = OriginalFunction<DisplayNameFn, 0xae7900>()(owner);
+    // 0xae7900 (ours); the owner as the game passes it.
+    const char *const displayName =
+        nGZSceneGraph::GetNodeTag(reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(owner));
     if (displayName) mText.mString.assign(displayName);
     else mText.Sprintf("node 0x%08x", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(owner)));
     return 1;
@@ -352,8 +361,7 @@ void *cTSEffectsExtension::FindEffectNode(const char *name, void *node)
 {
     if (!name || !*name || _stricmp(name, "locator") == 0)
         return node;
-    using FindNodeByNameFn = void *(__cdecl *)(const char *, void *, int);
-    return OriginalFunction<FindNodeByNameFn, 0xae7490>()(name, node, 0xf);
+    return nGZSceneGraph::FindNodeByName(name, static_cast<nGZSceneGraph::cICompositionTreeNode *>(node), 0xf);
 }
 bool cTSEffectsExtension::vf3(const uint16_t *name, std::vector<uint16_t> *out)
 {
@@ -689,8 +697,7 @@ void *__cdecl cTSEffectsExtensionAdapters::FindEffectNode(const char *name, void
 {
     if (!name || !*name || _stricmp(name, "locator") == 0)
         return node;
-    using FindNodeByNameFn = void *(__cdecl *)(const char *, void *, int);
-    return OriginalFunction<FindNodeByNameFn, 0xae7490>()(name, node, 0xf);
+    return nGZSceneGraph::FindNodeByName(name, static_cast<nGZSceneGraph::cICompositionTreeNode *>(node), 0xf);
 }
 TSEffectFindResult *__fastcall cTSEffectsExtensionAdapters::FindRecord(void *registry, void *, TSEffectFindResult *result,
                                                                         const TSEffectFindKey *key, uint32_t hash)

@@ -324,9 +324,12 @@ void Capture(Blob &b, cTSLotInfo *lot)
 {
     const uint32_t *w = reinterpret_cast<const uint32_t *>(lot);
     for (unsigned off : {0x00u, 0x08u, 0x0cu, 0x10u, 0x14u}) b.push_back(lotshape::VtCode(w[off / 4]));
+    // Data words as they are; only +0x84 (a counted pointer) through Norm. A data word through Norm (the key's full-range
+    // randoms) that lay inside one side's lot was rewritten on that side only (seed 2147483891 word 27, orig 1316a9b7 ours
+    // e0000017, 2026-11-08: docs/lane/test.md, "Normalised words").
     for (unsigned off : {0x04u, 0x18u, 0x1cu, 0x3cu, 0x40u, 0x44u, 0x48u, 0x4cu, 0x6cu, 0x70u, 0x74u, 0x78u, 0x7cu, 0x84u, 0x94u,
                          0xa0u, 0xa4u, 0xa8u})
-        b.push_back(Norm(w[off / 4]));
+        b.push_back(off == 0x84u ? Norm(w[off / 4]) : w[off / 4]);
     b.push_back(lot->mBase == &gFakes[kBase] ? 1u : lot->mBase ? 2u : 0u);
     CaptureString(b, lot->mName);
     CaptureString(b, lot->mDescription);

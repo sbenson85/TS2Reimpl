@@ -15,6 +15,7 @@
 #include "ts_services_fixture.h"
 
 #include "game/game.h"
+#include "sg/SGUtilities.h"
 #include "sg/cTSSGSystem.h"
 
 #include <cstdint>
@@ -84,7 +85,7 @@ uint32_t ItemAt(Obj *, uint32_t *args) { return 0x500 + args[0]; }
 struct Fixture {
     AllocatorScope allocator;
     Globals globals;
-    shape::CodePatch scene{GameAddress<void>(0xae3c00), shape::CodeOf(&StandSceneObject)};
+    shape::StandIn scene{0xae3c00, &nGZSceneGraph::DetachChoreoQueue, &StandSceneObject};
     shape::CodePatch cars{GameAddress<void>(0xb3c2b0), shape::CodeOf(&StandCars)};
     Fixture()
     {

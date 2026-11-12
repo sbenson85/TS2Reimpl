@@ -291,8 +291,8 @@ struct StandIns {
     shape::StandIn c11{0xbf8360u, &cTSScreenComponentDescription::Create, &StandCreate<11>};
     shape::StandIn c12{0xbf6f90u, &cTSWaterComponentDescription::Create, &StandCreate<12>};
     shape::StandIn c13{0xbf9370u, &cTSLightComponentDescription::Create, &StandCreate<13>};
-    shape::CodePatch effectWrite{0xbf9ee0u, shape::CodeOf(&StandEffectWrite)};
-    shape::CodePatch effectRead{0xbf9da0u, shape::CodeOf(&StandEffectRead)};
+    shape::StandIn effectWrite{0xbf9ee0u, &cTSEffectsResource::WriteEffect, &StandEffectWrite};
+    shape::StandIn effectRead{0xbf9da0u, &cTSEffectsResource::ReadEffect, &StandEffectRead};
 };
 
 // ---- a side ----

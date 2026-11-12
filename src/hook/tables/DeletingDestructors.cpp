@@ -11,7 +11,6 @@ const HookSpec kHooks[] = {
     {"nPathPlanner_cAStarSearch_vf0", 0x20ac60, 32, 0xad2a8817, MemberAddress(&nPathPlanner::cAStarSearch::DeletingDestructor)},
     {"cSLTokenFieldBase_vf0", 0x9b9f20, 32, 0x6616366a, MemberAddress(&cSLTokenFieldBase::DeletingDestructor)},
     {"cTSDelauneyMesh_vf0", 0xb54680, 32, 0x57f7d43d, MemberAddress(&cTSDelauneyMesh::DeletingDestructor)},
-    {"nTSSG_cFloorColorGrid_vf0", 0x3c4870, 32, 0x7aa96af2, MemberAddress(&nTSSG::cFloorColorGrid::DeletingDestructor)},
     {"cTSSliceImposterCreator_vf0", 0xb51410, 32, 0x6cad191e, MemberAddress(&cTSSliceImposterCreator::DeletingDestructor)},
     {"HTTPMessage_vf0", 0x98da4f, 32, 0xdfd0464c, MemberAddress(&HTTPMessage::DeletingDestructor)},
     {"TickerMessage_vf0", 0x960123, 31, 0xaff0a6e7, MemberAddress(&TickerMessage::DeletingDestructor)},

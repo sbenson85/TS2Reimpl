@@ -19,7 +19,8 @@
 #include "rz/StaticGetters.h"    // GetDirectorFrameworkObject
 #include "rz/StaticGetters2.h"   // ServiceCell
 #include "rz/cRZFile.h"
-#include "ts/cTSCatalog.h"            // GZStringList
+#include "sg/SGUtilities.h"           // CollectTextureNames
+#include "ts/cTSCatalog.h"           // GZStringList
 #include "ts/cTSContentRegistry.h"    // cITSContentRegistry
 #include "ts/cTSCommonSystemObjects.h"
 #include "ts/cTSCustomContentSupport.h" // ContentString
@@ -408,9 +409,10 @@ bool cTSCommonSystem::CollectTextureKeys(cIGZUnknown *object, CommonTextureKeys 
     cIGZUnknown *node = nullptr;
     bool collected = false;
     if (object->QueryInterface(kSceneNodeIid, reinterpret_cast<void **>(&node))) {
-        std::vector<ServiceCell> names;
-        OriginalFunction<void(__cdecl *)(std::vector<ServiceCell> *, cIGZUnknown *), 0xae8090>()(&names, node);
-        for (ServiceCell &cell : names) {
+        // The cells are Closed in order by the vector's destruction, before the node's Release.
+        std::vector<nGZSceneGraph::CountedServiceCell> names;
+        nGZSceneGraph::CollectTextureNames(&names, reinterpret_cast<nGZSceneGraph::cICompositionTreeNode *>(node));
+        for (nGZSceneGraph::CountedServiceCell &cell : names) {
             StringKeyParser::Result key{};
             ContentString name(reinterpret_cast<const char *>(static_cast<uintptr_t>(Dispatch8(&cell))));
             name.s.mString.append("_txtr", 5);
@@ -418,7 +420,6 @@ bool cTSCommonSystem::CollectTextureKeys(cIGZUnknown *object, CommonTextureKeys 
             out->push_back(key);
         }
         collected = !names.empty();
-        for (ServiceCell &cell : names) cell.Close();
     }
     if (node) node->Release();
     return collected;

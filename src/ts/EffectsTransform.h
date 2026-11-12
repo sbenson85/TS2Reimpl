@@ -36,6 +36,9 @@ struct EffectsTransform {
 };
 static_assert(sizeof(EffectsTransform) == 0x38, "EffectsTransform layout");
 
+// 0xbe8f90 (src/ts/cTSVisualEffect.cpp): a copy of `source` with `target` composed onto it, the version 1.
+EffectsTransform ComposedPlacement(const EffectsTransform &target, const EffectsTransform &source);
+
 // The arithmetic with `a` the first operand. When both operands are NaN, SSE keeps the first one's payload (quieted), and
 // these sums meet NaNs of two kinds: a passed-in one and the default one an invalid operation makes (0 * inf, inf - inf:
 // sign set). A plain `a + b` leaves the operand order to the compiler, which swaps commutative operands (also of the

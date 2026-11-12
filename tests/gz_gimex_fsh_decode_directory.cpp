@@ -198,12 +198,12 @@ Buf MakeChain(std::mt19937 &rng, int32_t platform, const Types &types, bool code
     return chain;
 }
 
-// Every word of an entry, pointers as ordinals.
+// Every word of an entry, pointers as ordinals (EntryWord).
 std::vector<uint32_t> DescribeEntry(const Entry &entry)
 {
     std::vector<uint32_t> words;
     const uint32_t *p = reinterpret_cast<const uint32_t *>(&entry);
-    for (size_t i = 0; i < sizeof(Entry) / 4; ++i) words.push_back(BlockWord(p[i]));
+    for (size_t i = 0; i < sizeof(Entry) / 4; ++i) words.push_back(EntryWord(p, i));
     return words;
 }
 
@@ -422,7 +422,7 @@ DIFF_TEST(GimexFshDirectory_BuildDirectory, 0x885f9b)
         const int failAt = rng() % 9 == 0 ? 0 : -1;
         const uint32_t seed = rng();
         Directory *result[2];
-        std::vector<uint32_t> snap[2], logs[2];
+        std::vector<uint32_t> snap[2], logs[2], raw[2], where[2];
         uint32_t ordinals[2];
         for (int side = 0; side < 2; ++side) {
             std::mt19937 local(seed);
@@ -436,6 +436,22 @@ DIFF_TEST(GimexFshDirectory_BuildDirectory, 0x885f9b)
             logs[side] = gLog;
             ordinals[side] = Ordinal(result[side]);
             snap[side] = Snapshot(result[side], true);
+            // For a failure's detail: the result's words raw, and where each lies among the side's blocks.
+            raw[side].clear();
+            where[side].clear();
+            if (result[side] != nullptr) {
+                const uint32_t *w = reinterpret_cast<const uint32_t *>(result[side]->entries);
+                for (size_t k = 0; k < sizeof(Entry) / 4 * static_cast<size_t>(result[side]->count); ++k) {
+                    raw[side].push_back(w[k]);
+                    uint32_t found = 0xffffffffu;
+                    for (size_t b = 0; b < gAllBlocks.size(); ++b) {
+                        const uintptr_t at = reinterpret_cast<uintptr_t>(gAllBlocks[b]);
+                        if (w[k] >= at && w[k] <= at + gSizes[b] + gGuard + 0x40)
+                            found = static_cast<uint32_t>(b + 1) << 20 | (w[k] - static_cast<uint32_t>(at));
+                    }
+                    where[side].push_back(found);
+                }
+            }
         }
         ++ctx.cases;
         if (logs[0].size() > 40) ++expanded;
@@ -446,6 +462,20 @@ DIFF_TEST(GimexFshDirectory_BuildDirectory, 0x885f9b)
             ctx.Fail("round %d platform %d: the directories or blocks differ afterwards (word %zu of %zu/%zu: %08x vs %08x)", round,
                      platform, first, snap[0].size(), snap[1].size(), first < snap[0].size() ? snap[0][first] : 0,
                      first < snap[1].size() ? snap[1][first] : 0);
+            // The entry word it is (the snapshot ends with the entries) and its raw value and place on each side.
+            const size_t fromEnd = snap[0].size() - first;
+            if (snap[0].size() == snap[1].size() && fromEnd <= raw[0].size() && raw[0].size() == raw[1].size()) {
+                const size_t k = raw[0].size() - fromEnd;
+                char place[2][40];
+                for (int side = 0; side < 2; ++side) {
+                    if (where[side][k] == 0xffffffffu)
+                        std::snprintf(place[side], sizeof(place[side]), "in no block");
+                    else
+                        std::snprintf(place[side], sizeof(place[side]), "block %u +0x%x", where[side][k] >> 20, where[side][k] & 0xfffff);
+                }
+                ctx.Fail("  entry %zu +0x%zx: original %08x (%s), ours %08x (%s)", k / (sizeof(Entry) / 4), k % (sizeof(Entry) / 4) * 4,
+                         raw[0][k], place[0], raw[1][k], place[1]);
+            }
         }
         CompareLogs(ctx, "BuildDirectory", round, logs[0], logs[1]);
     }

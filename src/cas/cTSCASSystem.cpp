@@ -1,5 +1,6 @@
 // nTSCASCore::cTSCASSystem (lanes IU, JI): the whole class in the standalone shape (src/cas/cTSCASSystem.h).
 #include "cas/cTSCASSystem.h"
+#include "sg/SGUtilities.h"
 
 #include "game/game.h"
 #include "game/original.h"
@@ -106,7 +107,10 @@ bool SimOutfit(void *sim, void **out) { return OriginalFunction<bool(__cdecl *)(
 // answers a pointer to the id).
 void *NameIdTables() { return OriginalFunction<void *(__cdecl *)(), 0x20df26>()(); }
 // 0xaeba70 (__cdecl, game code): a mesh resource's model (uncounted; null for none).
-cIGZUnknown *ModelOf(void *mesh) { return OriginalFunction<cIGZUnknown *(__cdecl *)(void *), 0xaeba70>()(mesh); }
+cIGZUnknown *ModelOf(void *mesh)
+{
+    return nGZSceneGraph::ShapeRefOfNodeOrSubtree(static_cast<nGZSceneGraph::cICompositionTreeNode *>(mesh));
+}
 constexpr uint32_t kFaceMeshIid = 0xe519c92c;        // a part's mesh resource
 constexpr uint32_t kThumbnailType = 0xcccef852, kThumbnailIid = 0xaccef84c;
 constexpr const char *kFaceName = "face";

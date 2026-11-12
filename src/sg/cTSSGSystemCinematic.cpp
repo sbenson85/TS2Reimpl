@@ -8,6 +8,7 @@
 #include "rz/StaticGetters.h"
 #include "rz/StaticGetters2.h"
 #include "rz/StopwatchMore.h"
+#include "sg/SGUtilities.h"
 
 namespace {
 
@@ -44,12 +45,13 @@ constexpr uint32_t kObjectHiding = 0xdaf004;
 constexpr uint32_t kCinematicNames[] = {0xdae494, 0xdae4a0, 0xdae4ac};
 constexpr uint32_t kCinematicNameFlags = 0xf;
 
-// The cached sound probe (0x9c5b7e) and the per-object cleanup helper (0xaeb0e0), not replaced yet.
+// The cached sound probe (0x9c5b7e), not replaced yet, and the per-object cleanup (0xaeb0e0, ours: render layer `name`
+// removed from the nodes with flag 4).
 void *SoundProbe() { return OriginalFunction<void *(__cdecl *)(), 0x9c5b7e>()(); }
 void CleanUpNamed(void *object, uint32_t name)
 {
-    OriginalFunction<void(__cdecl *)(void *, uint32_t, uint32_t, const char *, uint32_t), 0xaeb0e0>()(
-        object, 4, 0, GameAddress<const char>(name), kCinematicNameFlags);
+    nGZSceneGraph::SetLayersByFlag(static_cast<nGZSceneGraph::cICompositionTreeNode *>(object), 4, nullptr,
+                                   GameAddress<const char>(name), kCinematicNameFlags);
 }
 
 // Slot 97 (0) and the three named cleanups.

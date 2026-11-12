@@ -28,6 +28,11 @@ const HookSpec kHooks[] = {
     {"FUN_a07ef990", 0x7ef990, 28, 0xdc321ca5, reinterpret_cast<void *>(&worldcatalog::FlagSlot64)},
     {"FUN_a07ef9b0", 0x7ef9b0, 29, 0xd95ba5b3, reinterpret_cast<void *>(&worldcatalog::Slot80)},
     {"WorldUtils_CatalogKind", 0x7ef9d0, 27, 0x76e744bd, reinterpret_cast<void *>(&worldcatalog::Kind)},
+    {"FUN_a07ef3f0", 0x7ef3f0, 32, 0x9746b7ec, worldcatalog::ProductFlag10},
+    {"FUN_a07ef430", 0x7ef430, 32, 0x91e6bdbe, worldcatalog::ProductFlag11},
+    {"FUN_a07ef470", 0x7ef470, 32, 0x2a3175df, worldcatalog::PartitionValue},
+    {"FUN_a07ef510", 0x7ef510, 32, 0x8528a3fc, worldcatalog::ProductResource},
+    {"FUN_a07ef590", 0x7ef590, 32, 0xd3872169, worldcatalog::AnyPartitionHas},
 };
 REGISTER_HOOKS(kHooks);
 

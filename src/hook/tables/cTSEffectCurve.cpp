@@ -20,6 +20,7 @@ const HookSpec kHooks[] = {
     {"cTSEffectCurve_Divide", 0xbdc9f0, 32, 0x5d725c62, MemberAddress(&cTSEffectCurve::Divide)},
     {"cTSEffectCurve_Destroy", 0xbe1b80, 32, 0x4b9b22db, reinterpret_cast<void *>(&cTSEffectCurveAdapters::Destroy)},
     {"cTSEffectCurve_Assign", 0xbe21f0, 32, 0x25b8bf44, reinterpret_cast<void *>(&cTSEffectCurveAdapters::Assign)},
+    {"cTSEffectCurve_CheckSinCoefficients", 0xbdcdb0, 32, 0x94cf18eb, MemberAddress<&cTSEffectCurve::CheckSinCoefficients>()},
 };
 REGISTER_HOOKS(kHooks);
 

@@ -220,7 +220,7 @@ having before scenegraph's world-facing lanes:
 
 | lane | clusters | KB | needs | risk | model |
 |---|---|---:|---|---|---|
-| WU-1 | tile maths, tile rects, catalog accessors, iterators, heights | 16.2 | fake cIWorldDB in the global 0x10cc45c, or our cWorldDB; a fake catalog in cITSGlobals | low: mostly pure; 0x7e4680 is the one with thought in it | Sonnet medium | **Part 1 done (lane RY): tile maths and catalog accessors verified, fixture tests/worldfx.h. Left: tile rects 0x7eec00-0x7ef3b0, catalog helpers 0x7ef3f0-0x7ef590, iterators 0x7f0e00-0x7f1df0, heights 0x7e4000-0x7e5b50 (0x7e4680 GroundHeightAt, still original; semantics in the lane note). 0x7dd770 and 0x7ddcf0 call the partitions service: WU-2.**
+| WU-1 | tile maths, tile rects, catalog accessors, iterators, heights | 16.2 | fake cIWorldDB in the global 0x10cc45c, or our cWorldDB; a fake catalog in cITSGlobals | low: mostly pure; 0x7e4680 is the one with thought in it | Sonnet medium | **Done: part 1 (lane RY) tile maths and catalog accessors, fixture tests/worldfx.h; part 2 (lane YA, ran as RZ) tile rect leftovers, wall catalogue helpers, GroundHeightAt and the ground predicates, the iterators, the heights queries (src/world/WorldHeights.cpp, WorldHeightQueries.cpp, WorldIterators.cpp, WorldTileRects.cpp, WorldCatalog.cpp; the grid world fixture tests/worldgrid.h); then the effects' world colliders and the plane collider (below). Left mapped: 0x7f1a30. 0x7dd770 and 0x7ddcf0 call the partitions service: WU-2.**
 | WU-2 | tile predicates | 24.0 | WU-1 | medium: unnamed slots of the world's sublayers (partitions, roofs), the fence and wall bit meanings | Opus for the first third, then Sonnet |
 | WU-3 | wall accessors, tile edges, the last of the director (0.7) | 10.2 | WU-1 | medium: edge geometry | Sonnet medium |
 | SP-1 | SnapState, footprint rects 0x7e95b0, 0x7e9050 | 7.2 | WU-1; the node allocators are already understood (simantics.md) | low | Sonnet medium |
@@ -233,6 +233,30 @@ to the module, no generic helper from elsewhere. The world-lot and objects split
 code does, not something the module's layout shows; 0x7e72b0 and small ones like it could go either way. Those samples
 are reads of the code, but they were picked inside bands drawn from the same reading, and most of the other functions
 I saw only as one-line digests, which show their neighbours, so they aren't an independent check of the address rule.
+
+### The effects' world colliders (lane YA, ran as RZ, 2026-11-08)
+
+The particle effects collide with the world through six objects of ?A0x65722b7a that the registrar 0x3a3c30 (called by
+cTSSGSystemInit) names in the effects manager: the constraints pinToFloor / pinToTops / pinToPools (slot 3 Apply) and the
+colliders wallsAndFloors / walls / floors (cITSEffectsCollider: slot 5 Collide 0x3a30f0 takes both points to the world,
+the distance `context[+0x4c] * 0.5 * radius`, then slot 7 CollideWorld). Floors: CollideFloors 0x3a35e0 (falling against
+the floor over the ground under `from`, rising against the ceiling under the level above, level against the floor under
+`to`; each misses over to the other surface). Walls: CollideWalls 0x3a39e0, the placement service's wall object slots 21
+(sphere) and 19 (segment). All in src/world/WorldColliders.cpp, hooked, test tests/world_colliders.cpp.
+
+- GetStateSize 0x3a3c20 and CopyState 0x3a35b0 are folded across six classes: common_system's (lane LF), inherited.
+- The floors' rising crossing measured from min(ceiling ground, from.z) only differs from one measured from from.z at the
+  top level (below it, the level scan 0x7e28d0 only stops at a level whose next level's ground is at least from.z + 0.01),
+  where the level above is outside the world and HasFloorOrGroundAt is false: unobservable.
+- cTSSGSystemInit (src/sg/cTSSGSystemInit.cpp) still calls 0x3a3c30 as an original: the coordinator switches it.
+
+The plane collider cTSPlaneCollider (the effects manager's "plane", src/world/WorldPlaneCollider.cpp): a parallelogram,
+its state 0x78 bytes (unit normal, d, the four corners, the placement for Draw). Collide tests the move against the plane
+raised by the radius, the crossing inside by an even-odd edge count on the normal's dominant projection. Its four slot
+bodies are hooked at their RVAs (one reference each, vtable 0xe8ce50); cTSEffectsManager::Init still builds the object.
+Test lessons (tests/world_plane_collider.cpp): the operand order of the fx helpers only shows with NaNs of both signs in
+both operands, and `-1.0f * NaN` keeps the NaN's sign, so build signed NaNs from bits; the edge-count thresholds (dv
+over 1e-6, u >= 0) need an edge leaning by a hair off the projection axis with straight-down moves that keep their bits.
 
 ### Out of world-lot
 

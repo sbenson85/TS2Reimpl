@@ -65,7 +65,7 @@ description (lane PF, 2026-10-29: 45% of all notes bytes were the same text past
   (`tools/status.py`). `trace-verified` is its own column, never added to `verified`. `replaced` counts toward image
   independence, not toward `verified`. Entries with `absorbed_by` are done in the subsystem figures and have their
   own line in `tools/status.py`'s output; they count toward neither `verified` nor the status table's `reimplemented`.
-- **Standalone bytes:** `verified` code that reaches no original code: no `original_calls`, and no direct callee of ours
+- **Verified, no known original calls** (was "standalone bytes"; `tools/status.py` prints it): `verified` code that reaches no original code: no `original_calls`, and no direct callee of ours
   that has them (a lower bound: virtual calls are not followed).
 - **Original callees:** a replacement may call an original function nobody has replaced yet only through
   `OriginalFunction<Fn, 0xRVA>()` (src/game/original.h; a direct `call rel32`, as the original's own calls;

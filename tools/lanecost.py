@@ -31,7 +31,9 @@ ARMS = [("sonnet", "high"), ("sonnet", "medium"), ("opus", "low"), ("opus", "med
 
 # $/MTok (input, output, cache read), API list prices 2026-10. Cache writes: 1.25x input (5 min
 # TTL) or 2x (1 h). Haiku 5.5 charges more above 100k-token prompts (0.5 / 2.5, handled in cost()).
-PRICES = {"fable": (10.0, 50.0, 0.25), "opus": (4.0, 20.0, 0.20), "sonnet": (2.0, 10.0, 0.20),
+# Fable 5.2 (the coordinator from 2026-11-09) is 8 / 40 (user, 2026-11-11); its cache-read price is not known here and
+# is scaled with the input price. family() takes the first key the model id contains, so the 5.2 key comes first.
+PRICES = {"fable-5-2": (8.0, 40.0, 0.20), "fable": (10.0, 50.0, 0.25), "opus": (4.0, 20.0, 0.20), "sonnet": (2.0, 10.0, 0.20),
           "haiku": (0.10, 0.50, 0.01)}
 DONE = ("verified", "trace-verified", "replaced")
 
@@ -148,8 +150,11 @@ def status_at(rev, names):
 
 
 def lane_letter(text):
-    m = re.match(r"(?:Merge )?lane ([A-Z]+\d*)\b", text, re.I)
-    return m.group(1).upper() if m else None
+    # 261108a (tools/lanename.py, from 2026-11-08) or the older two-letter names
+    m = re.match(r"(?:Merge )?lane (\d{6}[a-z]|[A-Z]+\d*)\b", text, re.I)
+    if not m:
+        return None
+    return m.group(1).lower() if m.group(1)[0].isdigit() else m.group(1).upper()
 
 
 def outcomes(sizes):

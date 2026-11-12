@@ -3,6 +3,7 @@
 
 #include "game/original.h"
 #include "misc/X87.h"
+#include "world/WorldHeights.h"
 
 #include <cmath>
 #include <cstring>
@@ -22,10 +23,10 @@ constexpr double kTwoPiDouble = 6.2831854820251465; // 0xdbed40
 constexpr float kPiFloat = 3.1415927410125732f;
 constexpr float kThird = 0.33333334f;
 
-// The world layer's ground height (0x7e4680, __cdecl, the point by pointer, the result in st0): still the original's.
+// The world layer's ground height (0x7e4680, src/world/WorldHeights.h), as the float these callers store.
 float GroundHeightAt(const nTSWorld::WorldPoint *point)
 {
-    return OriginalFunction<float(__cdecl *)(const nTSWorld::WorldPoint *), 0x7e4680>()(point);
+    return static_cast<float>(worldheights::GroundHeightAt(point));
 }
 
 // The compiler's floor to an integer: round (v - 0.5) to nearest with the magic number, read the low bits of the sum, and
@@ -113,16 +114,16 @@ int32_t *__cdecl FloatsToFixed16(int32_t *out, const float *in)
 
 void __cdecl PositionAtGround(float *out, float y, float x, int32_t level)
 {
-    const float height = HeightAtLevel(y, x, level);
+    const float height = static_cast<float>(HeightAtLevel(y, x, level));
     out[0] = x;
     out[1] = y;
     out[2] = height;
 }
 
-float __cdecl HeightAtLevel(float y, float x, int32_t level)
+double __cdecl HeightAtLevel(float y, float x, int32_t level)
 {
     nTSWorld::WorldPoint point = {x, y, level - 1};
-    return GroundHeightAt(&point);
+    return worldheights::GroundHeightAt(&point); // passed on unrounded, as the original's tail does
 }
 
 // ---- facings ----

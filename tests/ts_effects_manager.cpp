@@ -10,7 +10,8 @@
 // random generator's state). At the end the destructor: its log and the frees by size.
 //
 // Code that is not ours yet is stood in for on both sides (CodePatch over the image's entry, which our OriginalFunction
-// calls reach too): the callback timer's constructor / destructor 0x9ccf32 / 0x9ccfa9, the cheats 0xbc5aa0 / 0xbdb700,
+// calls reach too): the callback timer's constructor / destructor 0x9ccf32 / 0x9ccfa9, the cheats 0xbc5aa0 / 0xbdb700
+// (ours since lane YB, tests/ts_effect_cheats.cpp: StandIn over both sides; the stands also register what they make),
 // the message server getter 0x9c5a89, ApplyDetail 0xbcb4c0, the effect re-attach 0xbead40, the name matcher 0x9ccea3,
 // (in the older tests also the effect reload 0xbc9e20 and Update 0xbc6fe0, slot 19, called by UpdateMs; the lifecycle test
 // runs both for real), the overlay manager constructor 0xbd9fd0, the effect description 0xbe9670 and the done check 0xbe8de0 (lane XG), and in
@@ -50,7 +51,9 @@
 #include "misc/UtilitiesC.h"
 #include "rz/MiscHelpersB.h"
 #include "simantics/ServiceRefVector.h"
+#include "ts/cTSEffectCheats.h"
 #include "ts/cTSEffectsManager.h"
+#include "ts/cTSOverlayManager.h"
 #include "ts/cTSVisualEffect.h"
 
 #include <algorithm>
@@ -880,9 +883,15 @@ void PushOptions(Blob &b)
 void *OurSlot(uint32_t slot)
 {
     alignas(8) static uint8_t block[sizeof(Mgr)];
+    // The constructor registers the cheats through StandCheatsA, already patched in by then: gCheats would still point
+    // into an earlier test's World (a dead stack frame), so it reads null here (no references taken).
+    Fake *saved[3];
+    std::memcpy(saved, gCheats, sizeof(saved));
+    std::memset(gCheats, 0, sizeof(gCheats));
     Mgr *m = ::new (block) Mgr;
     void *code = (*reinterpret_cast<void *const *const *>(m))[slot];
     m->Mgr::~Mgr();
+    std::memcpy(gCheats, saved, sizeof(saved));
     gEv.clear();
     return code;
 }
@@ -890,10 +899,10 @@ void *OurSlot(uint32_t slot)
 struct StandIns {
     shape::StandIn timerCtor{0x9ccf32u, &cRZCallbackTimer::Construct, &StandTimerCtor};
     shape::StandIn timerDtor{0x9ccfa9u, &cRZCallbackTimer::Destruct, &StandTimerDtor};
-    shape::CodePatch cheatsA{0xbc5aa0u, shape::CodeOf(&StandCheatsA)};
-    shape::CodePatch cheatsB{0xbdb700u, shape::CodeOf(&StandCheatsB)};
+    shape::StandIn cheatsA{0xbc5aa0u, &MakeEffectCheats, &StandCheatsA};
+    shape::StandIn cheatsB{0xbdb700u, &MakeOverlayCheat, &StandCheatsB};
     shape::StandIn server{0x9c5a89u, &GetCachedMessageServer, &StandServer};
-    shape::CodePatch apply{0xbcb4c0u, shape::CodeOf(&StandApply)};
+    shape::StandIn apply{0xbcb4c0u, &Mgr::ApplyDetail, &StandApply};
     shape::StandIn reattach{0xbead40u, &cTSVisualEffect::Follow, &StandReattach};
     shape::StandIn match{0x9ccea3u, &RZWildcard::MatchCase, &StandMatch};
     shape::StandIn reload{0xbc9e20u, &Mgr::ApplyParserState, &StandReloadEffects};
@@ -1460,19 +1469,19 @@ void PushFakes(Blob &b, World &w)
 struct LifeStands {
     shape::StandIn timerCtor{0x9ccf32u, &cRZCallbackTimer::Construct, &StandTimerCtor};
     shape::StandIn timerDtor{0x9ccfa9u, &cRZCallbackTimer::Destruct, &StandTimerDtor};
-    shape::CodePatch cheatsA{0xbc5aa0u, shape::CodeOf(&StandCheatsA)};
-    shape::CodePatch cheatsB{0xbdb700u, shape::CodeOf(&StandCheatsB)};
+    shape::StandIn cheatsA{0xbc5aa0u, &MakeEffectCheats, &StandCheatsA};
+    shape::StandIn cheatsB{0xbdb700u, &MakeOverlayCheat, &StandCheatsB};
     shape::StandIn server{0x9c5a89u, &GetCachedMessageServer, &StandServer};
-    shape::CodePatch apply{0xbcb4c0u, shape::CodeOf(&StandApply)};
+    shape::StandIn apply{0xbcb4c0u, &Mgr::ApplyDetail, &StandApply};
     shape::CodePatch reattach{0xbead40u, shape::CodeOf(&StandReattach)};
     shape::StandIn match{0x9ccea3u, &RZWildcard::MatchCase, &StandMatch};
     shape::StandIn walk5{0x1c0458u, &KeyMapSlot5Walker::CallSlot5ForEachKey, &StandWalk5};
     shape::StandIn walk6{0x1c081eu, &KeyMapWalker::CallSlot6ForEachKey, &StandWalk6};
     shape::StandIn framework{0x1ae18du, &GetDirectorFrameworkObject, &StandFrameworkLife};
     shape::StandIn pathExists{0x1c1242u, &cRZFile::PathExists, &StandPathExists};
-    shape::CodePatch overlay{0xbd9fd0u, shape::CodeOf(&StandOverlay)};
-    shape::CodePatch describe{0xbe9670u, shape::CodeOf(&StandDescribe)};
-    shape::CodePatch done{0xbe8de0u, shape::CodeOf(&StandDone)};
+    shape::StandIn overlay{0xbd9fd0u, &cTSOverlayManager::Construct, &StandOverlay};
+    shape::StandIn describe{0xbe9670u, &cTSVisualEffect::Describe, &StandDescribe};
+    shape::StandIn done{0xbe8de0u, &cTSVisualEffect::IsDone, &StandDone};
     shape::CodePatch effectCtor{0xbe86a0u, shape::CodeOf(&StandEffectCtor)};
     shape::CodePatch newEffect{shape::CodeOf(&Mgr::NewVisualEffect), shape::CodeOf(&StandNewEffect)};
     // The image's operator new / delete (its CRT is not initialised here) go to the test's heap, like ours.

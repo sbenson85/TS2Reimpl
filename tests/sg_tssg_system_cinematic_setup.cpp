@@ -7,7 +7,7 @@
 // and value, the selection; its virtual base answers the name), the lot (slot 29 objects by id, slot 16 the selected
 // id), the objects (owner redirection, actor interface, pieces), mRefB4's animated entry and the scene manager's camera.
 // The object's own slots 26 (find animation), 28 (play) and 29 (end) are a test vtable that logs and answers. The check
-// 0xae1ed0 is stood in over the image. The three vectors start with 0..2 old entries and spare capacity 0..2, so pushes
+// 0xae1ed0 (nGZSceneGraph::AnimatedFaceOf) is stood in on both sides. The three vectors start with 0..2 old entries and spare capacity 0..2, so pushes
 // take both the in-place and the reallocating path.
 //
 // Compared after each run: the event log (every call with its arguments, AddRef / Release), the result and *error, the
@@ -20,6 +20,7 @@
 #include "ts_services_fixture.h"
 
 #include "game/game.h"
+#include "sg/SGUtilities.h"
 #include "sg/cTSSGSystem.h"
 
 #include <cctype>
@@ -217,7 +218,7 @@ int __cdecl StandAccepts(void *object)
 
 struct Fixture {
     Globals globals;
-    shape::CodePatch accepts{GameAddress<void>(0xae1ed0), shape::CodeOf(&StandAccepts)};
+    shape::StandIn accepts{0xae1ed0, &nGZSceneGraph::AnimatedFaceOf, &StandAccepts};
     Fixture()
     {
         for (uint32_t cell : kCells) globals.SetWord(cell, 0);

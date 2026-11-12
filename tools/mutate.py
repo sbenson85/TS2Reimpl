@@ -17,6 +17,8 @@ can't be trusted (lane KY's coordinator mutants). `--force-filter` runs anyway, 
 the report: e.g. a caller's test reaches a helper that has no status entry).
 Before any mutant, a clean run of the filter must pass (else nothing is counted); each mutant's run then times out
 after 5x the clean run's time (at least 20 s, at most --timeout), so a hanging mutant costs about as much as a clean run.
+A mutant that times out there is run once more at the full --timeout before it counts as killed (false kills under
+load, 2026-11-08).
 Prints one line per mutant as it finishes, `N. [json i]` (N counts from 1 in the json's order, i is the mutant's
 0-based index in the json list) and its "name" if it has one, with the tests that failed (or the test the runner died in, or the last
 test that finished before a hang), then the totals and a last line `MUTATE DONE` (also after "not applicable" or a
@@ -261,6 +263,10 @@ def main():
                 outcome, detail = "build error", errors[0][:100]
             else:
                 outcome, detail, tests = run_tests(args.filter, timeout, jobs=args.jobs)
+                if outcome == "timeout" and timeout < args.timeout:
+                    # The short timeout gives false kills under load (other builds, lanes): a timeout counts only
+                    # once the run also times out at the full --timeout.
+                    outcome, detail, tests = run_tests(args.filter, args.timeout, jobs=args.jobs)
             if outcome == "no tests":
                 say(f"--filter {args.filter!r} selects no test: stopped (nothing counted)")
                 say("MUTATE DONE")

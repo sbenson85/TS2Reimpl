@@ -8,12 +8,12 @@
 //
 // Compared: results, out buffers (bits), the event log, the object's bytes (normalised), every fake's reference count.
 #include "difftest.h"
-#include "sg_deleting_destructors.h"
 #include "ts_services_fixture.h"
 
 #include "game/game.h"
 #include "sg/cShadowManager.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <random>
@@ -34,7 +34,8 @@ enum : uint32_t { evSelf = 0x84, evService };
 enum : unsigned { fRenderer = 0, fService };
 
 alignas(16) uint8_t gObject[kObjectSize];
-alignas(16) cShadowEntry gEntries[4];
+// Raw bytes (cShadowEntry is not trivial: its name is a string); the code under test reads them as four entries.
+alignas(16) uint8_t gEntries[4 * sizeof(cShadowEntry)];
 alignas(16) uint32_t gOut[20];
 
 uint32_t __fastcall SelfAddRef(void *self, void *)
@@ -67,6 +68,13 @@ struct Fixture {
     }
 };
 
+uint32_t StampOf(int32_t index)
+{
+    uint32_t stamp;
+    std::memcpy(&stamp, gEntries + index * sizeof(cShadowEntry) + offsetof(cShadowEntry, mMatrixStamp), 4);
+    return stamp;
+}
+
 cShadowManager *Ours() { return reinterpret_cast<cShadowManager *>(gObject); }
 
 void Start(std::mt19937 &gen, uint8_t *start, unsigned entries)
@@ -75,7 +83,7 @@ void Start(std::mt19937 &gen, uint8_t *start, unsigned entries)
     void *vt = gSelfVT, *renderer = &F(fRenderer);
     std::memcpy(start, &vt, 4);
     std::memcpy(start + 0x50, &renderer, 4);
-    cShadowEntry *first = gEntries, *last = gEntries + entries, *end = gEntries + 4;
+    cShadowEntry *first = reinterpret_cast<cShadowEntry *>(gEntries), *last = first + entries, *end = first + 4;
     std::memcpy(start + 0x54, &first, 4);
     std::memcpy(start + 0x58, &last, 4);
     std::memcpy(start + 0x5c, &end, 4);
@@ -212,7 +220,7 @@ DIFF_TEST(sg_shadow_manager_entries, 0x2e9480)
             uint32_t *stamp = nullptr;
             if (stampKind) {
                 stamp = &gOut[19];
-                *stamp = stampKind == 1 && index >= 0 && index < 4 ? gEntries[index].mMatrixStamp : 0x5bad5bad;
+                *stamp = stampKind == 1 && index >= 0 && index < 4 ? StampOf(index) : 0x5bad5bad;
             }
             ctx.Mark(side ? "ours" : "original");
             uint32_t result = 0;
@@ -237,15 +245,4 @@ DIFF_TEST(sg_shadow_manager_entries, 0x2e9480)
         }
         Same(ctx, outcome[0], outcome[1], "entries", seed);
     }
-}
-
-// 0x2e6e10 the deleting destructor: the destructor 0x2e6c70 stood in; flags 0..3 and random; 0xd4 bytes freed on bit 0.
-DIFF_TEST(sg_shadow_manager_deleting_destructor, 0x2e6e10)
-{
-    Fixture fixture;
-    auto original = ctx.Original<void *(__thiscall *)(void *, uint32_t)>(0x2e6e10);
-    sgdel::Run(
-        ctx, 0x2e6c70, kObjectSize, [&](void *p, uint32_t flags) { return original(p, flags); },
-        [](void *p, uint32_t flags) -> void * { return static_cast<cShadowManager *>(p)->DeletingDestructor(flags); },
-        0x2e6e10u);
 }

@@ -6,6 +6,7 @@
 // and the property set's SetProperty are replaced in their vtables, so the real objects (file, property set, strings)
 // still run their other code on both sides.
 #include "sg/cTextureManager.h"
+#include "sg/SGUtilities.h"
 #include "code_patch.h"
 #include "simantics_prims_aa.h"
 
@@ -370,7 +371,7 @@ DIFF_TEST(PrimAA_Prim6D, 0x5827e0)
     *tlsIndex.cell = _tls_index; // the game's TLS index cell: the director getter reads this module's block through it
     LoaderFixture loader(ctx);
     shape::StandIn parser(0xae7340, &nGZSceneGraph::ResolveResourceName, &ParseKeyStub); // the image's and ours
-    Redirect texture(ctx, 0xaece50, reinterpret_cast<void *>(&MakeTextureStub));
+    shape::StandIn texture(0xaece50, &nGZSceneGraph::MakeTextureFromBuffer, &MakeTextureStub); // the image's and ours
     Redirect finder(ctx, 0x54a410, reinterpret_cast<void *>(&FindResourceStub));
     Redirect option(ctx, 0xb394b0, reinterpret_cast<void *>(&OptionStub));
     AllocatorFixture allocator(ctx);

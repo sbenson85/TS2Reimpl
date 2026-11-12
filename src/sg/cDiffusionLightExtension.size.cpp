@@ -1,158 +1,190 @@
+// nTSSG::cDiffusionLightExtension's cIDiffusionLightExtension slots (the game's face vtable 0xdb6bdc; the class:
+// src/sg/cDiffusionLightExtension.h). Each game slot is a vtordisp thunk into its body (`sub ecx, [ecx-4]` then the
+// body, which addresses the object from the +0xb4 face); the RVAs below are the thunks', where each status entry starts.
+// Floats are copied as floats (movss): NaN payloads pass through as in the original. The setters' copies keep the
+// original's load order, which only shows when the argument points into the object itself.
 #include "sg/cDiffusionLightExtension.h"
-
-#include <cstdint>
-#include <cstring>
 
 namespace nTSSG {
 
-namespace {
-
-// The full object for this subobject: the displacement is the dword before the subobject's vtable pointer.
-uintptr_t FullOf(const cIDiffusionLightExtensionSub *self)
+// 0 (0x2ea27b): every override's flag cleared, in the original's order; the values stay.
+void cDiffusionLightExtension::ResetFlags()
 {
-    const uintptr_t address = reinterpret_cast<uintptr_t>(self);
-    const uint32_t displacement = *reinterpret_cast<const uint32_t *>(address - 4);
-    return address - displacement;
+    mHasMin = false;
+    mHasMax = false;
+    mHasIntensity = false;
+    mHasColor = false;
+    mHasIsDirectional = false;
+    mHasFalloff = false;
+    mHasDirectionalFalloff = false;
+    mHasWallIntensityScale = false;
+    mHasFloorIntensityScale = false;
+    mHasInterFloorFalloff = false;
 }
 
-// A field of the full object at a (negative) offset. Done in uintptr_t so the wrap matches the original's add.
-template <typename T> T &At(const cIDiffusionLightExtensionSub *self, int32_t offset)
+// ---- 1-10: an override and its flag ----
+
+// 1 (0x2ea948): both floats loaded before either is stored.
+void cDiffusionLightExtension::SetSourceMin(const float *xy)
 {
-    return *reinterpret_cast<T *>(FullOf(self) + static_cast<uintptr_t>(offset));
+    const float x = xy[0];
+    const float y = xy[1];
+    mMin[0] = x;
+    mMin[1] = y;
+    mHasMin = true;
 }
 
-uintptr_t AddressOf(const cIDiffusionLightExtensionSub *self, int32_t offset)
+// 2 (0x2ea908): as SetSourceMin.
+void cDiffusionLightExtension::SetSourceMax(const float *xy)
 {
-    return FullOf(self) + static_cast<uintptr_t>(offset);
+    const float x = xy[0];
+    const float y = xy[1];
+    mMax[0] = x;
+    mMax[1] = y;
+    mHasMax = true;
 }
 
-} // namespace
-
-// 0x2ea27b: the flags only, in the order the original clears them.
-void cIDiffusionLightExtensionSub::ResetFlags()
+// 3 (0x2ea842)
+void cDiffusionLightExtension::SetSourceIntensity(float value)
 {
-    At<uint8_t>(this, -0x5c) = 0;
-    At<uint8_t>(this, -0x50) = 0;
-    At<uint8_t>(this, -0x48) = 0;
-    At<uint8_t>(this, -0x38) = 0;
-    At<uint8_t>(this, -0x36) = 0;
-    At<uint8_t>(this, -0x30) = 0;
-    At<uint8_t>(this, -0x28) = 0;
-    At<uint8_t>(this, -0x20) = 0;
-    At<uint8_t>(this, -0x18) = 0;
-    At<uint8_t>(this, -0x10) = 0;
+    mIntensity = value;
+    mHasIntensity = true;
 }
 
-// 0x2ea948: both dwords are loaded before either is stored, as the original does (the value may alias the object).
-void cIDiffusionLightExtensionSub::SetPairP1(const void *value)
+// 4 (0x2ea749): the first two floats loaded and stored (one 8-byte move), then the third read and stored.
+void cDiffusionLightExtension::SetSourceColor(const float *rgb)
 {
-    uint32_t lo, hi;
-    std::memcpy(&lo, value, 4);
-    std::memcpy(&hi, static_cast<const uint8_t *>(value) + 4, 4);
-    At<uint32_t>(this, -0x64) = lo;
-    At<uint32_t>(this, -0x60) = hi;
-    At<uint8_t>(this, -0x5c) = 1;
+    const float r = rgb[0];
+    const float g = rgb[1];
+    mColor[0] = r;
+    mColor[1] = g;
+    mColor[2] = rgb[2];
+    mHasColor = true;
 }
 
-// 0x2ea842
-void cIDiffusionLightExtensionSub::SetFloatF3(uint32_t value)
+// 5 (0x2ea8ba): the argument's low byte stored as it is.
+void cDiffusionLightExtension::SetSourceIsDirectional(bool value)
 {
-    At<uint32_t>(this, -0x4c) = value;
-    At<uint8_t>(this, -0x48) = 1;
+    mIsDirectional = value;
+    mHasIsDirectional = true;
 }
 
-// 0x2ea749: the 8-byte head is loaded and stored before the dword at +8 is read, as in the original.
-void cIDiffusionLightExtensionSub::SetVec3V4(const void *value)
+// 6 (0x2ea7de)
+void cDiffusionLightExtension::SetSourceFalloff(float value)
 {
-    uint64_t head;
-    std::memcpy(&head, value, 8);
-    std::memcpy(&At<uint8_t>(this, -0x44), &head, 8);
-    uint32_t tail;
-    std::memcpy(&tail, static_cast<const uint8_t *>(value) + 8, 4);
-    At<uint32_t>(this, -0x3c) = tail;
-    At<uint8_t>(this, -0x38) = 1;
+    mFalloff = value;
+    mHasFalloff = true;
 }
 
-// 0x2ea8ba: the thunk and body read only the low byte of the argument (mov al, [esp+4]).
-void cIDiffusionLightExtensionSub::SetByteB5(uint32_t value)
+// 7 (0x2ea79e)
+void cDiffusionLightExtension::SetSourceDirectionalFalloff(float value)
 {
-    At<uint8_t>(this, -0x37) = static_cast<uint8_t>(value);
-    At<uint8_t>(this, -0x36) = 1;
+    mDirectionalFalloff = value;
+    mHasDirectionalFalloff = true;
 }
 
-// 0x2ea966
-void cIDiffusionLightExtensionSub::SetFloatF8(uint32_t value)
+// 8 (0x2ea966)
+void cDiffusionLightExtension::SetSourceWallIntensityScale(float value)
 {
-    At<uint32_t>(this, -0x24) = value;
-    At<uint8_t>(this, -0x20) = 1;
+    mWallIntensityScale = value;
+    mHasWallIntensityScale = true;
 }
 
-// 0x2ea87e
-void cIDiffusionLightExtensionSub::SetFloatF10(uint32_t value)
+// 9 (0x2ea81e)
+void cDiffusionLightExtension::SetSourceFloorIntensityScale(float value)
 {
-    At<uint32_t>(this, -0x14) = value;
-    At<uint8_t>(this, -0x10) = 1;
+    mFloorIntensityScale = value;
+    mHasFloorIntensityScale = true;
 }
 
-// 0x2ea926: the default's dwords are loaded before either is stored.
-void cIDiffusionLightExtensionSub::SetPairD11(const void *value)
+// 10 (0x2ea87e)
+void cDiffusionLightExtension::SetSourceInterFloorFalloff(float value)
 {
-    uint32_t lo, hi;
-    std::memcpy(&lo, value, 4);
-    std::memcpy(&hi, static_cast<const uint8_t *>(value) + 4, 4);
-    At<uint32_t>(this, -0x9c) = lo;
-    At<uint32_t>(this, -0x98) = hi;
+    mInterFloorFalloff = value;
+    mHasInterFloorFalloff = true;
 }
 
-// 0x2ea8de
-void cIDiffusionLightExtensionSub::SetPairD12(const void *value)
+// ---- 11-20: the defaults (no flag). 13 and 16-20 are folded bodies the game shares with unrelated classes:
+// 13 shared_vf_2b6a8a, 16 shared_vf_2ea7c2, 17 shared_vf_2ea77a (body 0x2ea790), 18 shared_vf_2748ea (body 0x274900),
+// 19 shared_vf_2ea802, 20 shared_vf_2ea862 ----
+
+// 11 (0x2ea926): both floats loaded before either is stored.
+void cDiffusionLightExtension::SetDefaultSourceMin(const float *xy)
 {
-    uint32_t lo, hi;
-    std::memcpy(&lo, value, 4);
-    std::memcpy(&hi, static_cast<const uint8_t *>(value) + 4, 4);
-    At<uint32_t>(this, -0x94) = lo;
-    At<uint32_t>(this, -0x90) = hi;
+    const float x = xy[0];
+    const float y = xy[1];
+    mDefaultMin[0] = x;
+    mDefaultMin[1] = y;
 }
 
-// 0x2ea728: same copy order as SetVec3V4, without a flag.
-void cIDiffusionLightExtensionSub::SetVec3D14(const void *value)
+// 12 (0x2ea8de): as SetDefaultSourceMin.
+void cDiffusionLightExtension::SetDefaultSourceMax(const float *xy)
 {
-    uint64_t head;
-    std::memcpy(&head, value, 8);
-    std::memcpy(&At<uint8_t>(this, -0x88), &head, 8);
-    uint32_t tail;
-    std::memcpy(&tail, static_cast<const uint8_t *>(value) + 8, 4);
-    At<uint32_t>(this, -0x80) = tail;
+    const float x = xy[0];
+    const float y = xy[1];
+    mDefaultMax[0] = x;
+    mDefaultMax[1] = y;
 }
 
-// 0x2ea8a2: stores the low byte, no flag.
-void cIDiffusionLightExtensionSub::SetByteD15(uint32_t value)
+void cDiffusionLightExtension::SetDefaultSourceIntensity(float value) { mDefaultIntensity = value; } // 13
+
+// 14 (0x2ea728): SetSourceColor's copy order.
+void cDiffusionLightExtension::SetDefaultSourceColor(const float *rgb)
 {
-    At<uint8_t>(this, -0x7c) = static_cast<uint8_t>(value);
+    const float r = rgb[0];
+    const float g = rgb[1];
+    mDefaultColor[0] = r;
+    mDefaultColor[1] = g;
+    mDefaultColor[2] = rgb[2];
 }
 
-// 0x2ea531: cmovne picks &P1 when the flag is nonzero, &D11 otherwise.
-void *cIDiffusionLightExtensionSub::GetPointerP1OrD11()
+// 15 (0x2ea8a2): the argument's low byte.
+void cDiffusionLightExtension::SetDefaultSourceIsDirectional(bool value) { mDefaultIsDirectional = value; }
+
+void cDiffusionLightExtension::SetDefaultSourceFalloff(float value) { mDefaultFalloff = value; }                       // 16
+void cDiffusionLightExtension::SetDefaultSourceDirectionalFalloff(float value) { mDefaultDirectionalFalloff = value; } // 17
+void cDiffusionLightExtension::SetDefaultSourceWallIntensityScale(float value) { mDefaultWallIntensityScale = value; } // 18
+void cDiffusionLightExtension::SetDefaultSourceFloorIntensityScale(float value) { mDefaultFloorIntensityScale = value; } // 19
+void cDiffusionLightExtension::SetDefaultSourceInterFloorFalloff(float value) { mDefaultInterFloorFalloff = value; }   // 20
+
+// ---- 21-30: the override while its flag is set, else the default (pointers to the object's own floats) ----
+
+const float *cDiffusionLightExtension::GetSourceMin() { return mHasMin ? mMin : mDefaultMin; }       // 21 (0x2ea531)
+const float *cDiffusionLightExtension::GetSourceMax() { return mHasMax ? mMax : mDefaultMax; }       // 22 (0x2ea50e)
+float cDiffusionLightExtension::GetSourceIntensity() { return mHasIntensity ? mIntensity : mDefaultIntensity; } // 23 (0x2ea4ae)
+const float *cDiffusionLightExtension::GetSourceColor() { return mHasColor ? mColor : mDefaultColor; } // 24 (0x2ea436)
+
+// 25 (0x2ea4ee): the stored byte (the original writes only al).
+bool cDiffusionLightExtension::GetSourceIsDirectional()
 {
-    return reinterpret_cast<void *>(At<uint8_t>(this, -0x5c) != 0 ? AddressOf(this, -0x64) : AddressOf(this, -0x9c));
+    return mHasIsDirectional ? mIsDirectional : mDefaultIsDirectional;
 }
 
-// 0x2ea4ae
-float cIDiffusionLightExtensionSub::GetFloatF3OrDefault()
+// 26 (0x2ea46e)
+float cDiffusionLightExtension::GetSourceFalloff() { return mHasFalloff ? mFalloff : mDefaultFalloff; }
+
+// 27 (0x2ea451)
+float cDiffusionLightExtension::GetSourceDirectionalFalloff()
 {
-    return At<uint8_t>(this, -0x48) != 0 ? At<float>(this, -0x4c) : At<float>(this, -0x8c);
+    return mHasDirectionalFalloff ? mDirectionalFalloff : mDefaultDirectionalFalloff;
 }
 
-// 0x2ea4ee: the original writes only al on both paths, so the caller's upper eax bits stay as they were.
-uint8_t cIDiffusionLightExtensionSub::GetByteB5OrD15()
+// 28 (0x2ea551)
+float cDiffusionLightExtension::GetSourceWallIntensityScale()
 {
-    return At<uint8_t>(this, -0x36) != 0 ? At<uint8_t>(this, -0x37) : At<uint8_t>(this, -0x7c);
+    return mHasWallIntensityScale ? mWallIntensityScale : mDefaultWallIntensityScale;
 }
 
-// 0x2ea436
-void *cIDiffusionLightExtensionSub::GetVec3V4OrD14()
+// 29 (0x2ea48e)
+float cDiffusionLightExtension::GetSourceFloorIntensityScale()
 {
-    return reinterpret_cast<void *>(At<uint8_t>(this, -0x38) != 0 ? AddressOf(this, -0x44) : AddressOf(this, -0x88));
+    return mHasFloorIntensityScale ? mFloorIntensityScale : mDefaultFloorIntensityScale;
+}
+
+// 30 (0x2ea4d1)
+float cDiffusionLightExtension::GetSourceInterFloorFalloff()
+{
+    return mHasInterFloorFalloff ? mInterFloorFalloff : mDefaultInterFloorFalloff;
 }
 
 } // namespace nTSSG

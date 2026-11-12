@@ -176,6 +176,9 @@ public:
     virtual int32_t GetDebugValue() = 0;                               // slot 44
 };
 
+struct cTSVisualChild;
+class cITSComponentEffect;
+
 class cTSEffectsManager : public cITSEffectsManager, public cIGZMessageTarget2, public cTSEffectsCollection {
 public:
     static constexpr uint32_t kOriginalVTable = 0xe8cd4c;
@@ -247,6 +250,7 @@ public:
 
     // Non-virtual members.
     void ReleaseAllEffects();   // 0xbcb1a0
+    void KillOrphans();         // 0xbc97f0 (lane YB, ts/cTSEffectCheats.cpp): the effects only the pool holds stopped
     void RefreshDetail();       // 0xbcb210
     void FlushPending();        // 0xbc59d0
     void ApplySettings();       // 0xbc6e10: the option globals read again (Update, Init)
@@ -257,6 +261,16 @@ public:
     cITSVisualEffect *AcquireEffect();           // 0xbc9ab0: a free or new pool effect, queued as pending
     int32_t FindEffectIndex(const std::string &key); // 0xbc8590: the usable variant of the name (lower case), else -1
     int32_t FindAliasIndex(uint32_t first, uint32_t second); // 0xbc8620: the same for a message-alias pair
+    // 0xbcb4c0 (ret 0xc): the effect's children brought to the level of detail and debug bits: when reloading all dropped and
+    // the effect's index found again; those no longer shown stopped and dropped (once they end, or at once with the stop-now
+    // word or bits 0x80800 of `changedBits`), the rest blended on a level change; the components newly shown (or all, with
+    // `activate` or reloading) made, placed and started; the stored events told again if any changed.
+    void ApplyDetail(cITSVisualEffect *effect, bool activate, uint32_t changedBits);
+    // 0xbc6050 (ret 0xc): the component's effect into `child`: a pool effect for type 0, else its description's. Chained
+    // components (word bit 1) are linked through `link` (the previous one's Slot10), bit 2 ending the chain.
+    void MakeChild(const EffectComponent &component, cTSVisualChild &child, cITSComponentEffect **link);
+    // 0xbcb260 (ret 8): event 0x101 to the child: the component's three ranges at this detail, and at the next one.
+    void SendChildBlend(const EffectComponent &component, cTSVisualChild &child);
     void ApplyParserState();                     // 0xbc9e20: the renderer's detail and the parser's message
     static void __stdcall SendText(const char *text); // 0xbca590 (ret 4, stdcall): the effects-text message (0x4ba66b69) to the message server
     static void __cdecl OnTimer(void *data);     // 0xbc7350 (cdecl, the data unused): the once-a-second message (0x697d01ed) to the server

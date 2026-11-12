@@ -4,6 +4,7 @@
 
 #include "rz/cRZString.h"
 #include "sg/cTextureManager.h"
+#include "sg/SGUtilities.h"
 
 #include <algorithm>
 #include <cmath>
@@ -180,13 +181,13 @@ struct TextureStands {
     shape::StandIn fromName{0xae8280u, &nGZSceneGraph::cTextureHandle::InitFromName, &StandHandleFromName};
     shape::StandIn release{0xae82b0u, &nGZSceneGraph::cTextureHandle::Destroy, &StandHandleRelease};
     shape::StandIn get{0xae8730u, &nGZSceneGraph::cTextureHandle::Get, &StandHandleGet};
-    shape::CodePatch density{0xaec1a0u, shape::CodeOf(&StandDensity)};
-    shape::CodePatch noise{0xaec6b0u, shape::CodeOf(&StandNoise)};
-    shape::CodePatch rampH{0xaec8e0u, shape::CodeOf(&StandRamp<44>)};
-    shape::CodePatch rampV{0xaecba0u, shape::CodeOf(&StandRamp<45>)};
-    shape::CodePatch mipTest{0xaec310u, shape::CodeOf(&StandMipTest)};
-    shape::CodePatch normalCube{0xaec4a0u, shape::CodeOf(&StandNormalCube)};
-    shape::CodePatch falloffCube{0xaebd70u, shape::CodeOf(&StandFalloffCube)};
+    shape::StandIn density{0xaec1a0u, &nGZSceneGraph::MakeDensityTexture, &StandDensity}; // the generators, both sides
+    shape::StandIn noise{0xaec6b0u, &nGZSceneGraph::MakeNoiseTexture, &StandNoise};
+    shape::StandIn rampH{0xaec8e0u, &nGZSceneGraph::MakeRampHTexture, &StandRamp<44>};
+    shape::StandIn rampV{0xaecba0u, &nGZSceneGraph::MakeRampVTexture, &StandRamp<45>};
+    shape::StandIn mipTest{0xaec310u, &nGZSceneGraph::MakeMipTestTexture, &StandMipTest};
+    shape::StandIn normalCube{0xaec4a0u, &nGZSceneGraph::MakeNormalCubeTexture, &StandNormalCube};
+    shape::StandIn falloffCube{0xaebd70u, &nGZSceneGraph::MakeFalloffCubeTexture, &StandFalloffCube};
 };
 
 // The vtables of the texture world (the manager, a texture, its first level), set up per case.

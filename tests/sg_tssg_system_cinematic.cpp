@@ -7,7 +7,7 @@
 // third vector's elements) are blocks whose virtual-base table reaches fakes. The three vectors point into test arrays
 // (clearing never frees). The getters' cells (sound probe 0x10f51b4, GetCachedSingletonB 0x10cc28c) hold fakes or are
 // empty and filled through the service object (slot 5); the app (0x10cc288) and the director's framework are fakes.
-// cRZStopwatch Stop and Elapsed (ours) are stood in on both sides; 0xaeb0e0 (not replaced) over the image.
+// cRZStopwatch Stop and Elapsed and 0xaeb0e0 (nGZSceneGraph::SetLayersByFlag), all ours, are stood in on both sides.
 //
 // Compared: the event log, the object's 0x3b8 bytes (normalised), every fake's reference count, the cells.
 #include "code_patch.h"
@@ -17,6 +17,7 @@
 #include "game/game.h"
 #include "rz/StopwatchMore.h"
 #include "rz/cRZStopwatch.h"
+#include "sg/SGUtilities.h"
 #include "sg/cTSSGSystem.h"
 
 #include <cstdint>
@@ -157,7 +158,7 @@ struct Fixture {
     Globals globals;
     shape::StandIn stop{0x1c9842, &stopwatch_more::Stop, &StandStop};
     shape::StandIn elapsed{0x1c9256, &cRZStopwatch::Elapsed, &StandElapsed};
-    shape::CodePatch cleanUp{GameAddress<void>(0xaeb0e0), shape::CodeOf(&StandCleanUp)};
+    shape::StandIn cleanUp{0xaeb0e0, &nGZSceneGraph::SetLayersByFlag, &StandCleanUp};
     Fixture()
     {
         gDualVT[1] = reinterpret_cast<void *>(&Dual1<1>);

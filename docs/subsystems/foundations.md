@@ -205,6 +205,7 @@ bytes) or of its class's vtable. Recorded so the closure lists them as "handed t
 | scenegraph | cReflectionViewerVisibilityQueryFilter 0.7, cRenderGroupsVisibilityQueryFilter 0.3, cNodeCloneContext 0.4, cTransformNodeT<cIObjectV> 1.1 |
 | rendering | nGZGraphic4::cTextureAtlas 0.4 (lane RB) |
 | sim-person / cas / world-lot | WantMapI16 0.8; std::set<SkinKey> 0.2, DNAVector<DNAWeightedGene> 0.1; cHeightField |
+| each owner's campaign (re-check 2026-11-08) | cAbstractBehaviorTypeT instances FD's 31 copies didn't cover, about 4.7 KB, no entries: <cITSCameraController…> and <cITSCameraSmooth…>, <cGenericControl…> (camera, scenegraph CM1-CM3), <cITSConfigurationChange…>, <cITSConfigDevice…>, <cITSMainToolbar…>, <cITSScreenGrab…>, <cITSWinSceneGraph…> (ui-game, scenegraph TS2), and <cIAbstractBehaviorType, cRefMultiThreaded> 0x146810-0x1481c0 (~1 KB, the only one foundations' own: take it with the next framework-gz touch). Rule as in "F1's rest": each instance goes with the class that derives from it |
 | each class's own campaign | the cRZString group (25.1 KB, 15.2 executed: ~40 classes' constructors that build a cRZString first; method in Scope) |
 | none (a filing artefact) | about 107 KB of ownerless code with basis `calls-into` framework-gz and 35 KB `called-only-from`: callers' code in the UI and start-up ranges (0x6xx..0x7xx, 0x99x, 0xc4x) that calls the framework. It belongs to its callers' campaigns; not foundations work |
 

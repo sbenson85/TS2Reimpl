@@ -4,6 +4,7 @@
 
 #include "game/original.h"
 #include "game/vtable.h"
+#include "sg/SGUtilities.h" // FindNodeByName
 #include "simantics/ServiceRefVector.h"
 
 #include <cstddef>
@@ -136,8 +137,9 @@ bool BodyPartSystemIface::GetNodeTransform(uint32_t a, uint32_t b, const char *n
     if (object != nullptr) VirtualCall<uint32_t(__thiscall *)(void *), 1>(object);
     bool found = false;
     if (object != nullptr) {
-        // FindNodeByName (cdecl): the node of that name, of node type 0xf.
-        void *const node = OriginalFunction<void *(__cdecl *)(const char *, void *, uint32_t), 0xae7490>()(name, object, 0xf);
+        // FindNodeByName (0xae7490, ours): the node of that name, search flags 0xf.
+        void *const node =
+            nGZSceneGraph::FindNodeByName(name, static_cast<nGZSceneGraph::cICompositionTreeNode *>(object), 0xf);
         if (node != nullptr) {
             using TransformSlot = const NodeTransform *(__thiscall *)(void *, NodeTransform *);
             NodeTransform scratch;

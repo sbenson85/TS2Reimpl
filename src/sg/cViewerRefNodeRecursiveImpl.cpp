@@ -17,6 +17,7 @@
 #include "rz/RZAutoRef.h"
 #include "rz/RZFrameworkHelpers.h"
 #include "sg/DetailObject.h"
+#include "sg/SGUtilities.h" // ProjectBox
 #include "sg/SGWorldTransformRefresh.h"
 #include "sg/cIDisplayList.h"
 #include "sg/cIViewerRefNode.h"
@@ -269,8 +270,7 @@ void cViewerRefNodeRecursiveImpl::Cull(cIBoundedNode *outer, cViewerView *view, 
             game_code::SetFrameRotation(&local, inverse.rotation);
             const cBoundBox box = mBound->GetBoundBoxIn(reinterpret_cast<const cTransform34 *>(&local));
             float extent[6]; // the screen box: low x, y, z then high x, y, z
-            OriginalFunction<void(__cdecl *)(float *, float *, const cBoundBox *, const float *), 0xaf22d0>()(
-                extent, extent + 3, &box, mvp);
+            nGZSceneGraph::ProjectBox(extent, extent + 3, &box, mvp); // 0xaf22d0
 
             const float minX = extent[0] > -1.0f ? extent[0] : -1.0f;
             const float minY = extent[1] > -1.0f ? extent[1] : -1.0f;

@@ -6,8 +6,9 @@
 // streams and of the check stand-in, the kind, the values (count, capacity, bits).
 //
 // Covered RVAs: 0xbdc8f0 / 0xbdc880 (constructors), 0xbdcb80 (Reset), 0xbdcd10 (SetConstant), 0xbdcd40 (SetKind),
-// 0xbdcd60 (Simplify), 0xbdcbd0 (SetValues), 0xbdca50 (GetMax), 0xbdcac0 (Read), 0xbdce40 (Write). Stood in on both sides:
-// the values check 0xbdcdb0 (not ours: it throws the game's exception for a wave's zero amplitude or frequency).
+// 0xbdcd60 (Simplify), 0xbdcbd0 (SetValues), 0xbdca50 (GetMax), 0xbdcac0 (Read), 0xbdce40 (Write), 0xbdcdb0 and the error
+// 0xbdc6f0, 0xbdc760 (tested through what is thrown, at the end). Stood in on both sides in the
+// operations: 0xbdcdb0, which EffectCurve_CheckSinCoefficients tests on its own.
 #include "ts_effects_collection.h"
 
 #include "code_patch.h"
@@ -212,7 +213,7 @@ void Operate(difftest::Context &ctx, int mode, cTSEffectCurve *c, uint32_t op, s
 // Random operations over every member on a curve each side's default constructor built.
 DIFF_TEST(EffectCurve_Operations, 0xbdcbd0)
 {
-    shape::CodePatch check{0xbdcdb0u, shape::CodeOf(&StandCheck)};
+    shape::StandIn check{0xbdcdb0u, &cTSEffectCurve::CheckSinCoefficients, &StandCheck};
     InStream in{kStreams.in};
     for (uint32_t seed = 0; seed < 400; ++seed) {
         Blob blobs[2];
@@ -324,4 +325,114 @@ DIFF_TEST(EffectCurve_ReadFailedWord, 0xbdcac0)
     }
     VirtualFree(page, 0, MEM_RELEASE);
     Same(ctx, blobs[0], blobs[1], "failed word", 0);
+}
+
+// ---- what the curve throws -----------------------------------------------------------------------------------------
+
+namespace {
+
+// The object read from the exception record, as command_parser.h's Thrown does for a cError; the message is a cRZString here.
+int CaptureCurveError(EXCEPTION_POINTERS *p, std::string *out)
+{
+    const EXCEPTION_RECORD *r = p->ExceptionRecord;
+    if (r->ExceptionCode != 0xE06D7363 || r->NumberParameters < 3) return EXCEPTION_CONTINUE_SEARCH;
+    const auto *error = reinterpret_cast<const cTSCurveError *>(r->ExceptionInformation[1]);
+    char head[64];
+    std::snprintf(head, sizeof(head), "%08x %08x %u %u ", uint32_t(reinterpret_cast<uintptr_t>(error->mVTable)),
+                  uint32_t(reinterpret_cast<uintptr_t>(error->mMessage.mVTable)), error->mMessage.mRefCount,
+                  uint32_t(error->mMessage.mString.capacity()));
+    *out = head + error->mMessage.mString;
+    const auto *info = reinterpret_cast<const uint32_t *>(r->ExceptionInformation[2]);
+    const auto *types = reinterpret_cast<const uint32_t *>(uintptr_t(info[3]));
+    for (uint32_t i = 0; i < types[0]; ++i) {
+        const auto *type = reinterpret_cast<const uint32_t *>(uintptr_t(types[1 + i]));
+        char one[96];
+        std::snprintf(one, sizeof(one), ";%s:%x", reinterpret_cast<const char *>(uintptr_t(type[1])) + 8, type[5]);
+        *out += one;
+    }
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+using CheckFn = void(__thiscall *)(const void *, const void *);
+struct CheckCall {
+    CheckFn original; // null: ours
+    const cTSEffectCurve *curve;
+    const std::vector<float> *values;
+};
+void RunCheck(const CheckCall &c)
+{
+    if (c.original) c.original(c.curve, c.values);
+    else c.curve->CheckSinCoefficients(*c.values);
+}
+bool Guarded(const CheckCall &c, std::string *out)
+{
+    __try {
+        RunCheck(c);
+        return false;
+    } __except (CaptureCurveError(GetExceptionInformation(), out)) {
+        return true;
+    }
+}
+
+const float kCheckValues[] = {0.0f, -0.0f, 1.0f, -2.5f, 1e-30f};
+
+} // namespace
+
+// Lists and waves, 0 to 4 values, each of the first two zero (either sign) or not.
+DIFF_TEST(EffectCurve_CheckSinCoefficients, 0xbdcdb0)
+{
+    const CheckFn original = ctx.Original<CheckFn>(0xbdcdb0);
+    std::mt19937 r(0xbdcdb0);
+    uint32_t threw = 0;
+    for (uint32_t seed = 0; seed < 3000; ++seed) {
+        cTSEffectCurve curve;
+        const uint32_t kinds[] = {cTSEffectCurve::kWave, cTSEffectCurve::kWave, cTSEffectCurve::kList, 2u, 0x80000000u};
+        curve.mKind = kinds[r() % 5];
+        std::vector<float> values(r() % 5);
+        for (float &v : values) v = kCheckValues[r() % 5];
+        std::string thrown[2];
+        const bool threwOriginal = Guarded({original, &curve, &values}, &thrown[0]);
+        const bool threwOurs = Guarded({nullptr, &curve, &values}, &thrown[1]);
+        if (threwOriginal != threwOurs || thrown[0] != thrown[1])
+            ctx.Fail("seed %u: threw %d '%s', ours %d '%s'", seed, int(threwOriginal), thrown[0].c_str(), int(threwOurs),
+                     thrown[1].c_str());
+        ++ctx.cases;
+        threw += threwOurs;
+    }
+    if (threw < 500 || threw > 2500) ctx.Fail("%u of the seeds threw", threw);
+}
+
+// The constructor's formatting (the game's four texts have no conversions: this is what any would do) and the copy.
+DIFF_TEST(EffectCurve_Error, 0xbdc6f0)
+{
+    using Make = void *(__cdecl *)(void *, const char *, ...);
+    using Copy = void *(__thiscall *)(void *, const void *);
+    const auto make = ctx.Original<Make>(0xbdc6f0);
+    const auto copy = ctx.Original<Copy>(0xbdc760);
+    const size_t lengths[] = {0, 1, 15, 16, 17, 100, 2046, 2047};
+    std::mt19937 r(0xbdc6f0);
+    const auto same = [&](const cTSCurveError &a, const cTSCurveError &b, const char *what, uint32_t seed) {
+        if (a.mVTable != b.mVTable || a.mMessage.mVTable != b.mMessage.mVTable || a.mMessage.mRefCount != b.mMessage.mRefCount ||
+            a.mMessage.mString != b.mMessage.mString || a.mMessage.mString.capacity() != b.mMessage.mString.capacity())
+            ctx.Fail("%s differs, seed %u: count %u/%u, sizes %u/%u", what, seed, a.mMessage.mRefCount, b.mMessage.mRefCount,
+                     uint32_t(a.mMessage.mString.size()), uint32_t(b.mMessage.mString.size()));
+    };
+    for (uint32_t seed = 0; seed < 400; ++seed) {
+        const std::string text(lengths[seed % 8], char('a' + r() % 26));
+        const uint32_t number = r();
+        alignas(8) uint8_t a[0x24], b[0x24], c[0x24], d[0x24];
+        const char *format = seed % 2 && text.size() < 2000 ? "%s=%x" : "%s";
+        make(a, format, text.c_str(), number);
+        auto &first = *reinterpret_cast<cTSCurveError *>(a);
+        auto &ours = *new (b) cTSCurveError(format, text.c_str(), number);
+        same(first, ours, "constructed", seed);
+        if (ours.mVTable != ctx.image.At<void>(cTSCurveError::kVTable)) ctx.Fail("the error's table");
+        // A source with references: the copy starts with none.
+        first.mMessage.mRefCount = ours.mMessage.mRefCount = 7;
+        copy(c, a);
+        auto &second = *new (d) cTSCurveError(ours);
+        same(*reinterpret_cast<cTSCurveError *>(c), second, "copied", seed);
+        ++ctx.cases;
+        for (uint8_t *object : {a, b, c, d}) reinterpret_cast<cTSCurveError *>(object)->mMessage.mString.~basic_string();
+    }
 }

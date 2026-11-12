@@ -10,6 +10,7 @@
 #include "game/original.h"
 #include "game/vtable.h"
 #include "gz/cGZAny.h"          // gz::AnyUint32
+#include "gz/cGZRect.h"         // GZRectIntersect
 #include "gz/cIGZPropertySet.h" // GZServiceString
 #include "ifaces/cIGZFrameWork.h"
 #include "ifaces/cIGZPropertySetString.h"
@@ -48,11 +49,8 @@ int32_t AreaEdge(float unrounded)
 inline int32_t CeilToInt(float value) { return static_cast<int32_t>(static_cast<float>(std::ceil(static_cast<double>(value)))); }
 inline int32_t FloorToInt(float value) { return static_cast<int32_t>(static_cast<float>(std::floor(static_cast<double>(value)))); }
 
-// 0x373520 (__thiscall, ret 8): `*out` = a & b when they overlap, else all zero. `out` may be `a`.
-inline void Intersect(cGZRect *out, const cGZRect *a, const cGZRect *b)
-{
-    OriginalFunction<bool(__thiscall *)(cGZRect *, const cGZRect *, const cGZRect *), 0x373520>()(out, a, b);
-}
+// 0x373520 (ours, src/gz/cGZRect.h): `*out` = a & b when they overlap, else all zero. `out` may be `a`.
+inline void Intersect(cGZRect *out, const cGZRect *a, const cGZRect *b) { GZRectIntersect(out, a, b); }
 
 // ApplyClip's projection for an empty clip (the image's 0xe4ed20): everything at z 0.5, nothing on screen.
 constexpr float kEmptyProjection[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5f, 1.0f};

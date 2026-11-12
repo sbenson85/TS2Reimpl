@@ -1,5 +1,7 @@
 #include "rz/RZMessageServer.h"
 #include "ts/cTSEffectsManager.h"
+#include "ts/cTSEffectCheats.h"
+#include "ts/cTSOverlayManager.h"
 
 #include "game/game.h"
 #include "game/original.h"
@@ -23,6 +25,7 @@
 #include "ts/cTSVisualEffect.h"
 
 #include <algorithm>
+#include <bit>
 #include <cctype>
 #include <cstring>
 #include <new>
@@ -64,11 +67,21 @@ cIGZUnknown *MessageServer()
     return static_cast<cIGZUnknown *>(GetCachedMessageServer());
 }
 
-// 0xbcb4c0 (thiscall on the manager, ret 8; not ours yet): applies the level of detail and debug bits to one effect.
-void ApplyDetail(cTSEffectsManager *manager, cITSVisualEffect *effect, uint32_t activate, uint32_t changedBits)
+// A component's placement: the words at +0x20, in the layout of EffectsTransform.
+const fx::EffectsTransform &ComponentPlacement(const EffectComponent &component)
 {
-    OriginalFunction<void(__thiscall *)(void *, void *, uint32_t, uint32_t), 0xbcb4c0>()(
-        static_cast<cITSEffectsManager *>(manager), effect, activate, changedBits);
+    return *reinterpret_cast<const fx::EffectsTransform *>(&component.mFlags20);
+}
+
+float ComponentFloat(const EffectComponent &component, size_t index) { return std::bit_cast<float>(component.mWords5c[index]); }
+
+// Whether a component is shown at a detail and debug bits: inside its detail range (the top one open when the detail is the
+// maximum) with the debug bits its mask (+0x78) selects equal to its value (+0x74).
+bool Shown(const EffectComponent &component, int32_t detail, uint32_t detailIsMax, uint32_t debugBits)
+{
+    return static_cast<int32_t>(component.mByte58) <= detail &&
+           detail < static_cast<int32_t>(component.mByte59 + detailIsMax) &&
+           (debugBits & component.mWords5c[7]) == component.mWords5c[6];
 }
 
 } // namespace
@@ -115,7 +128,7 @@ fx::CallbackTimerMember::~CallbackTimerMember()
 // ---- construction ----
 
 // 0xbc4870: the collection, every member in order (the maps with 8 buckets, the random generator seeded 0x1105), the six
-// message ids DoMessage handles, then the cheats (0xbc5aa0, 0xbdb700: not ours yet) registered into mCheats.
+// message ids DoMessage handles, then the cheats made (MakeEffectCheats, MakeOverlayCheat; ts/cTSEffectCheats.h: they never reach mCheats).
 cTSEffectsManager::cTSEffectsManager()
     : mInitialized(false), mRefCount(0), mState(0), mFlags(0), mByte8c(0), mMaxDetail(true), mNoFlush(false),
       mByteA58(false), mReloading(false), mWordA5C(3), mTimeMode(1), mWordA64(0), mMaxElapsed(0.0f), mDetail(-1),
@@ -132,8 +145,8 @@ cTSEffectsManager::cTSEffectsManager()
     mMessageIds.insert(0x522ced95);
     mMessageIds.insert(0xb23b7d6f);
     mDebugValue[0] = -1;
-    OriginalFunction<void(__cdecl *)(void *, void *), 0xbc5aa0>()(&mCheats, static_cast<cITSEffectsManager *>(this));
-    OriginalFunction<void(__cdecl *)(void *, void *), 0xbdb700>()(&mCheats, static_cast<cITSEffectsManager *>(this));
+    MakeEffectCheats(&mCheats, static_cast<cITSEffectsManager *>(this));
+    MakeOverlayCheat(&mCheats, static_cast<cITSEffectsManager *>(this));
 }
 
 // 0xbc5500: members in reverse order, then the collection.
@@ -240,7 +253,7 @@ void __cdecl cTSEffectsManager::OnTimer(void *)
 }
 
 // 0xbc8fa0 (slot 3): once. The message ids registered, the counters cleared, the maps object and two overlay managers
-// (0xbd9fd0, not ours yet) made and started, the parser and renderer created and joined, the resource factory registered
+// made and started, the parser and renderer created and joined, the resource factory registered
 // with the resource service, the settings service told to notify this of each option, the settings read, the plane collider
 // made, the one-second timer started, the cheats registered and the debug object kept. Always true.
 bool cTSEffectsManager::Init()
@@ -256,8 +269,7 @@ bool cTSEffectsManager::Init()
     VirtualSlot<bool(__thiscall *)(void *)>(mRefBCC.Get(), 3)(mRefBCC.Get());
     for (int i = 0; i < 2; ++i) {
         void *memory = ::operator new(0x78, std::nothrow);
-        cIGZUnknown *overlay =
-            memory ? static_cast<cIGZUnknown *>(OriginalFunction<void *(__thiscall *)(void *), 0xbd9fd0>()(memory)) : nullptr;
+        cIGZUnknown *overlay = memory ? static_cast<cITSOverlayManager *>(cTSOverlayManager::Construct(memory, nullptr)) : nullptr;
         mSlotObjects[i].Assign(overlay);
         VirtualSlot<bool(__thiscall *)(void *)>(mSlotObjects[i].Get(), 3)(mSlotObjects[i].Get());
     }
@@ -520,7 +532,7 @@ bool cTSEffectsManager::CreateEffect(uint32_t first, uint32_t second, void **out
     *reinterpret_cast<uint32_t *>(fields + 0x30) = second;
     *reinterpret_cast<int32_t *>(fields + 0x34) = index;
     if (index >= 0) {
-        OriginalFunction<void(__thiscall *)(void *, void *), 0xbe9670>()(effect, &mEffects[index]);
+        static_cast<cTSVisualEffect *>(effect)->Describe(&mEffects[index]);
         FlushPending();
         ScopedRef service{nullptr};
         if (void *framework = GetServiceObject())
@@ -570,7 +582,7 @@ bool cTSEffectsManager::CreateVisualEffect(const char *name, void **out)
     effectName.assign(mScratch.c_str(), mScratch.size());
     *reinterpret_cast<int32_t *>(fields + 0x34) = index;
     if (index >= 0) {
-        OriginalFunction<void(__thiscall *)(void *, void *), 0xbe9670>()(effect, &mEffects[index]);
+        static_cast<cTSVisualEffect *>(effect)->Describe(&mEffects[index]);
         FlushPending();
         ScopedRef service{nullptr};
         if (void *framework = GetServiceObject())
@@ -1236,11 +1248,199 @@ void cTSEffectsManager::ReleaseAllEffects()
     mPool.clear();
 }
 
+void cTSEffectsManager::SendChildBlend(const EffectComponent &component, cTSVisualChild &child)
+{
+    using fx::Add;
+    using fx::Mul;
+    using fx::Sub;
+    float values[6];
+    const int32_t low = component.mByte58;
+    const int32_t high = component.mByte59;
+    if (low < high - 1) {
+        const float start[3] = {ComponentFloat(component, 0), ComponentFloat(component, 2), ComponentFloat(component, 4)};
+        const float end[3] = {ComponentFloat(component, 1), ComponentFloat(component, 3), ComponentFloat(component, 5)};
+        const int32_t level = mDetail - low;
+        const float span = static_cast<float>(high - low);
+        const float here = static_cast<float>(level) / span;
+        const float next = static_cast<float>(level + 1) / span;
+        for (int i = 0; i < 3; ++i) {
+            const float range = Sub(end[i], start[i]);
+            values[i] = Add(Mul(range, here), start[i]);
+            values[3 + i] = mMaxDetail ? values[i] : Add(Mul(range, next), start[i]);
+        }
+    } else {
+        values[0] = ComponentFloat(component, 0);
+        values[1] = ComponentFloat(component, 2);
+        values[2] = ComponentFloat(component, 4);
+        values[3] = ComponentFloat(component, 1);
+        values[4] = ComponentFloat(component, 3);
+        values[5] = ComponentFloat(component, 5);
+    }
+    child.effect->HandleEvent(0x101, values, reinterpret_cast<void *>(uintptr_t{6}));
+}
+
+void cTSEffectsManager::MakeChild(const EffectComponent &component, cTSVisualChild &child, cITSComponentEffect **link)
+{
+    const auto assign = [&child](cITSComponentEffect *effect) {
+        cITSComponentEffect *const old = child.effect;
+        if (effect == old) return;
+        if (effect) effect->AddRef();
+        child.effect = effect;
+        if (old) old->Release();
+    };
+    auto *const owner = reinterpret_cast<cIGZUnknown *>(static_cast<cITSEffectsManager *>(this));
+    if (component.mType == 0) {
+        auto *const visual = static_cast<cTSVisualEffect *>(AcquireEffect());
+        cITSComponentEffect *const face = visual;
+        face->Attach(owner);
+        visual->mName = component.mName;
+        const int32_t index = FindEffectIndex(component.mName);
+        visual->mEffectIndex = index;
+        if (index >= 0) visual->Describe(&mEffects[index]);
+        visual->mUnknown38 = 1;
+        assign(face);
+    } else if (component.mType >= 1) {
+        const int32_t index = component.mIndex;
+        if (index < 0) return;
+        const auto &descriptions = mTables.data()[component.mType - 1].mDescriptions;
+        if (static_cast<size_t>(index) >= descriptions.size()) return;
+        assign(descriptions[index].Get()->CreateEffect());
+        if (child.effect) {
+            child.effect->Attach(owner);
+            if (component.mWord1c & 2) {
+                if (*link) (*link)->Slot10(reinterpret_cast<uintptr_t>(child.effect));
+                *link = (component.mWord1c & 4) ? nullptr : child.effect;
+            } else {
+                *link = nullptr;
+            }
+        }
+    }
+    child.flags = component.mWord1c;
+}
+
+void cTSEffectsManager::ApplyDetail(cITSVisualEffect *effectFace, bool activate, uint32_t changedBits)
+{
+    auto *const effect = static_cast<cTSVisualEffect *>(effectFace);
+    std::vector<cTSVisualChild> &children = effect->mChildren;
+    bool changed = false;
+
+    if (mReloading) {
+        for (size_t i = 0; i < children.size(); ++i) {
+            cTSVisualChild &child = children.data()[i];
+            child.effect->Stop(1);
+            child.effect->Detach();
+            if (cITSComponentEffect *const old = child.effect) {
+                child.effect = nullptr;
+                old->Release();
+            }
+        }
+        children.clear();
+        const int32_t index = effect->mName.empty() ? FindAliasIndex(effect->mUnknown2c, effect->mUnknown30)
+                                                    : FindEffectIndex(effect->mName);
+        effect->mEffectIndex = index;
+        if (index >= 0) effect->mDescription = reinterpret_cast<const cTSVisualDescription *>(&mEffects[index]);
+    }
+    if (effect->mEffectIndex < 0) return;
+
+    const uint32_t stopNow = (changedBits & 0x80800) ? 1 : mWordA64;
+    const EffectEntry *const entry = &mEffects.data()[effect->mEffectIndex];
+
+    // The children that stay move down over those dropped.
+    if (!children.empty()) {
+        size_t kept = 0;
+        for (size_t i = 0; i < children.size(); ++i) {
+            cTSVisualChild &child = children.data()[i];
+            const EffectComponent &component = entry->mComponents.data()[child.unknown3c];
+            bool keep = Shown(component, mDetail, mDetailIsMax, mDebugBits);
+            if (!keep) {
+                child.effect->Stop(stopNow);
+                keep = stopNow == 0 && child.effect->IsRunning();
+            }
+            if (!keep) {
+                child.effect->Detach();
+                if (cITSComponentEffect *const old = child.effect) {
+                    child.effect = nullptr;
+                    old->Release();
+                }
+                changed = true;
+                continue;
+            }
+            if (mDetailLevel != mPreviousDetailLevel) SendChildBlend(component, child);
+            if (i != kept) children.data()[kept] = child;
+            ++kept;
+        }
+        children.erase(children.begin() + kept, children.end());
+    }
+
+    // The components to make. Those of one random group (+0x7c, consecutive) share a roll out of 0x10000, each taking its
+    // weight (+0x7e) of the range; once one is reached the roll is out of range for the rest of the group.
+    const size_t count = entry->mComponents.size();
+    uint32_t group = 0;
+    uint32_t roll = 0;
+    uint32_t sum = 0;
+    cITSComponentEffect *link = nullptr;
+    bool skipNext = false;
+    for (size_t i = 0; i < count; ++i) {
+        const EffectComponent &component = entry->mComponents.data()[i];
+        const bool shownNow = Shown(component, mDetail, mDetailIsMax, mDebugBits);
+        const bool shownBefore = Shown(component, mPreviousDetail, mDetailIsMax, mPreviousDebugBits);
+        if (component.mIndex < 0) continue;
+        if (!(!shownBefore && shownNow) && !activate && !mReloading) continue;
+        if (component.mHalf7c == 0) {
+            group = 0;
+        } else {
+            if (component.mHalf7c != group) {
+                roll = mRandom.RandomUint32Uniform(0x10000);
+                sum = 0;
+            }
+            sum += component.mHalf7e;
+            group = component.mHalf7c;
+            if (sum < roll) continue;
+            roll = 0x10000;
+        }
+        if (!shownNow) continue;
+
+        changed = true;
+        const bool takesEvents = (component.mWord1c & 8) != 0;
+        if (!skipNext) {
+            cTSVisualChild child;
+            child.unknown3c = static_cast<uint32_t>(i);
+            MakeChild(component, child, &link);
+            if (child.effect) {
+                SendChildBlend(component, child);
+                std::memcpy(&child.placement, &ComponentPlacement(component), sizeof(child.placement));
+                child.weight = std::bit_cast<float>(component.mWord80);
+                const fx::EffectsTransform local = fx::ComposedPlacement(ComponentPlacement(component), effect->mBlockD);
+                child.effect->Update(&local, &effect->mBlockC);
+                if (effect->mFlags & 2) child.effect->SetFlagged(false);
+                if (effect->mRunning && !effect->mStopping) {
+                    if (activate) {
+                        child.effect->Start(0);
+                    } else if (mReloading) {
+                        child.effect->Start(1);
+                        effect->mFlag3a = 1;
+                    } else {
+                        child.effect->Start(stopNow);
+                    }
+                }
+                children.push_back(child);
+            }
+        }
+        if (takesEvents) {
+            // ORIGINAL-BUG: with no child yet this writes through the element before the vector's storage.
+            (children.end() - 1)->indexes.push_back(static_cast<int32_t>(i));
+            skipNext = (component.mWord1c & 0x10) == 0;
+        }
+    }
+
+    if (changed && (!effect->mEntries.empty() || !effect->mResources.empty())) effect->ReplayEvents();
+}
+
 // 0xbcb210: with a scene, the detail applied to every active effect (0xbcb4c0), then the pending effects activated.
 void cTSEffectsManager::RefreshDetail()
 {
     if (!mScene.Get()) return;
-    for (auto it = mActive.begin(); it != mActive.end(); ++it) ApplyDetail(this, mPool[*it].Get(), 0, 0);
+    for (auto it = mActive.begin(); it != mActive.end(); ++it) ApplyDetail(mPool[*it].Get(), false, 0);
     FlushPending();
 }
 
@@ -1254,7 +1454,7 @@ void cTSEffectsManager::FlushPending()
         const size_t start = mActive.size();
         mActive.insert(mActive.end(), mPending.begin(), mPending.end());
         mPending.clear();
-        for (auto it = mActive.begin() + start; it != mActive.end(); ++it) ApplyDetail(this, mPool[*it].Get(), 1, 0);
+        for (auto it = mActive.begin() + start; it != mActive.end(); ++it) ApplyDetail(mPool[*it].Get(), true, 0);
         --rounds;
     }
 }
@@ -1341,7 +1541,7 @@ void cTSEffectsManager::ActivityWalk()
     size_t kept = 0;
     for (size_t i = 0; i < mActive.size(); ++i) {
         cITSVisualEffect *effect = mPool[mActive[i]].Get();
-        if (!OriginalFunction<bool(__thiscall *)(void *), 0xbe8de0>()(effect)) {
+        if (!static_cast<cTSVisualEffect *>(effect)->IsDone()) {
             ++mWordB00;
             mActive[kept++] = mActive[i];
             continue;
@@ -1384,7 +1584,7 @@ void cTSEffectsManager::Update(float elapsed, float simElapsed)
         for (size_t i = 0; i < count; ++i) {
             cITSVisualEffect *effect = mPool[mActive[i]].Get();
             const int32_t index = VisualEffectFields::EffectIndex(effect);
-            if (index != -1 && (mEffects[index].mParams[0] & changed) != 0) ApplyDetail(this, effect, 0, changed);
+            if (index != -1 && (mEffects[index].mParams[0] & changed) != 0) ApplyDetail(effect, false, changed);
         }
         mPreviousDebugBits = mDebugBits;
         if (!mPending.empty()) FlushPending();

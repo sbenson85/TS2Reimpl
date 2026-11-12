@@ -1,18 +1,14 @@
+// nTSSG::cShadowManager (scenegraph LG6c, LG6d): the factory, and the two drawing helpers other code calls (the camera
+// fit and the root bone); everything else is in effect through them (src/sg/cShadowManager.h).
 #include "hook/hooks.h"
 #include "sg/cShadowManager.h"
 
 namespace {
 
 const HookSpec kHooks[] = {
-    {"nTSSG_cShadowManager_QueryInterface", 0x2e89a0, 32, 0x4e8709b5, MemberAddress(&nTSSG::cShadowManager::QueryInterface)},
-    {"nTSSG_cShadowManager_Release", 0x2e8a10, 21, 0x287544db, MemberAddress(&nTSSG::cShadowManager::Release)},
-    {"nTSSG_cShadowManager_vf6", 0x2e8d80, 32, 0x93025ebb, MemberAddress(&nTSSG::cShadowManager::SetOption)},
-    {"nTSSG_cShadowManager_vf11", 0x2e7b90, 12, 0x3f168b5d, MemberAddress(&nTSSG::cShadowManager::GetOptionBits)},
-    {"nTSSG_cShadowManager_vf13", 0x2e9620, 32, 0x04e496ed, MemberAddress(&nTSSG::cShadowManager::ShadowTexture)},
-    {"nTSSG_cShadowManager_vf14", 0x2e9480, 32, 0x4f89193b, MemberAddress(&nTSSG::cShadowManager::GetShadowMatrix)},
-    {"nTSSG_cShadowManager_vf15", 0x2e95a0, 32, 0x0f968863, MemberAddress(&nTSSG::cShadowManager::GetShadowScale)},
-    {"nTSSG_cShadowManager_vf16", 0x2e9500, 32, 0x014155f8, MemberAddress(&nTSSG::cShadowManager::GetShadowBox)},
-    {"nTSSG_cShadowManager_vf17", 0x2e6e10, 32, 0x15d8ead0, MemberAddress(&nTSSG::cShadowManager::DeletingDestructor)},
+    {"cShadowManager_Create", 0x2e7ba0, 32, 0xa3054eae, &nTSSG::cShadowManager::Create},
+    {"FitShadowCamera", 0x3ad080, 32, 0x16a5183f, &nTSSG::FitShadowCamera},
+    {"FindRootBone", 0x3ace40, 32, 0x38dbeac0, &nTSSG::FindRootBone},
 };
 REGISTER_HOOKS(kHooks);
 

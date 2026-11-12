@@ -28,6 +28,8 @@
 #   probe_e11.cpp, probe_rl3.cpp  the effects collection's containers over its real records, and the shader lists' sorts
 #                    (lane XI). $Rl2FlagSets and $RenderFlagSets gained /EHsc /O2 /GS- (the effects units) and /Ob3 sets: some
 #                    of the game's units only inline as they do under /Ob3 (0xbd76f0, the collider's special members).
+#   probe_lmm.cpp    the light map manager's two unordered_maps over the game's keys and functors (lane 261108q), three
+#                    single units with their own flags.
 # -Only SOURCE,... rebuilds only those sources' objects and keeps the rest of -Out (to try a probe change quickly);
 # -Only14 keeps only the C++14 copies (probe14*.obj) of the sources selected.
 # -Missing builds only the objects -Out lacks (a flag set added at the end of a list, or an interrupted build).
@@ -192,6 +194,15 @@ foreach ($flags in $Rl2FlagSets) {
         }
     }
     $i++
+}
+# probe_lmm.cpp: cLightMapManager's two hash maps over the game's keys and functors (lane 261108q). Three units, each what
+# library rows need ('family TI op flags', found by diffing): the floor map's _Find_last and _Forced_rehash (no /EH), the
+# wall map's _Find_last and clear, the wall map's _Forced_rehash. scenegraph.md, LG6 notes (the emplaces match no unit).
+foreach ($row in @('0 5 99 /O2', '1 0 99 /EHsc /O2', '1 37 99 /EHsc /O2')) {
+    $fam, $t, $op, $flags = $row -split ' ', 4
+    $tag = $flags -replace '[ /]', ''
+    $jobs_ += @{ src = 'probe_lmm.cpp'; obj = "probe_lmm${fam}_${t}_${op}_$tag.obj"; flags = $flags
+                 def = "/DFAM=$fam /DTI=$t /DOP=$op"; batch = $true; std = 'c++14' }
 }
 # Single units that needed their own shape (lane XI): 'probe family TI KN op flag-index', index into $RenderFlagSets for
 # probe_render, else $Rl2FlagSets. KN > 0 forces probe_knobs.h in. Each row below is what a library row needs, found by

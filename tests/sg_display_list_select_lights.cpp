@@ -203,6 +203,8 @@ DIFF_TEST(sg_display_list_grow_light_bytes, 0xaa27e0)
     Fixture fixture;
     for (uint32_t seed = 0; seed < 6000; ++seed) {
         Blob outcome[2];
+        std::string notes[2]; // each side's addresses and item words before and after, printed when the sides differ
+        for (std::string &n : notes) n.reserve(400); // no allocation inside a side
         for (int side = 0; side < 2; ++side) {
             HeldFrees held; // no address handed out twice in the side (LightPointers, "the block moved")
             std::mt19937 gen(seed * 7919u + 0xaa27e0u);
@@ -218,11 +220,32 @@ DIFF_TEST(sg_display_list_grow_light_bytes, 0xaa27e0)
             const uint32_t bytes = gen() % 4 == 0 ? size : gen() % 3 == 0 ? gen() % (size + 1) : size + gen() % 200;
             LightPointers pointers;
             pointers.Note(self);
+            std::string &note = notes[side];
+            {
+                char b[160];
+                std::snprintf(b, sizeof(b), "bytes %08x size %u cap %u used %u -> %u;", svcfx::P(self->mBytesA4.data()), size,
+                              static_cast<uint32_t>(self->mBytesA4.capacity()), self->mWordA0, bytes);
+                note = b;
+                for (const DrawItem &item : self->mItems) {
+                    std::snprintf(b, sizeof(b), " %08x", item.mWord3c);
+                    note += b;
+                }
+            }
             ctx.Mark(side ? "ours" : "original");
             if (side == 0)
                 ctx.Original<GrowFn>(0xaa27e0)(gObject, bytes);
             else
                 self->GrowLightBytes(bytes);
+            {
+                char b[64];
+                std::snprintf(b, sizeof(b), "; now %08x cap %u;", svcfx::P(self->mBytesA4.data()),
+                              static_cast<uint32_t>(self->mBytesA4.capacity()));
+                note += b;
+                for (const DrawItem &item : self->mItems) {
+                    std::snprintf(b, sizeof(b), " %08x", item.mWord3c);
+                    note += b;
+                }
+            }
             Blob &o = outcome[side];
             o.push_back(svcfx::P(self->mBytesA4.data()) == pointers.Before());
             VectorShape(o, self->mBytesA4);
@@ -236,7 +259,8 @@ DIFF_TEST(sg_display_list_grow_light_bytes, 0xaa27e0)
             Free(self->mBytesA4);
             FreeAll();
         }
-        Same(ctx, outcome[0], outcome[1], "grow light bytes", seed);
+        if (!Same(ctx, outcome[0], outcome[1], "grow light bytes", seed))
+            for (int side = 0; side < 2; ++side) ctx.Fail("  %s: %s", side ? "ours" : "original", notes[side].c_str());
         if (HeldFrees::Overflowed()) ctx.Fail("%s seed %u: more frees than HeldFrees holds", "grow light bytes", seed);
     }
 }

@@ -5,6 +5,7 @@
 #include "world/WorldTileMath.h"
 #include "rz/StaticGetters.h"
 #include "rz/cRZString.h"
+#include "sg/SGUtilities.h"
 #include "simantics/PrimTCommon.h"
 
 #include <cstring>
@@ -151,7 +152,8 @@ uint32_t PrimTObject::Prim17(void *frame, const PrimParamView *param)
                         skeleton.mRef.ResetVirtualBase();
                         if (Call<uint8_t>(objectX, 12, 0xfa1c39f7u, 0xfa1c39edu, &skeleton.mRef) != 0) {
                             Vec3 axis = GlobalVector(0x10dbdd8);
-                            void *node = OriginalFunction<void *(__cdecl *)(const char *, void *, int32_t), 0xae7490>()("root_rot", skeleton.mRef.mObject, 0xf);
+                            void *node = nGZSceneGraph::FindNodeByName( // 0xae7490
+                                "root_rot", static_cast<nGZSceneGraph::cICompositionTreeNode *>(skeleton.mRef.mObject), 0xf);
                             if (node == nullptr) {
                                 node = skeleton.mRef.mObject;
                                 axis = GlobalVector(0x10dbdcc);

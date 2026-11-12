@@ -11,55 +11,12 @@
 // every decal effect carries our vtables and the slots need no adapters.
 #include "rz/cRZString.h"
 #include "ts/cTSEffectBase.h"
+#include "ts/cTSOverlayManager.h"
 
 #include <cstddef>
 #include <cstdint>
 
 struct cTSDecalDescription;
-
-// The decal's numbers, read and written whole (0x28 bytes, cITSDecal's slots 4 and 5).
-struct cTSDecalParams {
-    fx::Vector3 mPosition; // +0x00
-    float mSize;           // +0x0c
-    float mRotation;       // +0x10 in turns
-    float mAspect;         // +0x14
-    float mRepeatU;        // +0x18
-    float mRepeatV;        // +0x1c
-    float mOffsetU;        // +0x20
-    float mOffsetV;        // +0x24
-    uint32_t mSpare;       // +0x28 nothing found reads it; GetParams and SetParams copy it (0xbdad90, 0xbdbea0)
-};
-static_assert(sizeof(cTSDecalParams) == 0x2c, "cTSDecalParams layout");
-
-// The interfaces (names from the game's RTTI; the slots are the ones this class calls, the others hold their place). The
-// objects are still the game's cTSDecal, cTSOverlay and cTSOverlayManager.
-class cITSOverlay : public cIGZUnknown {
-public:
-    virtual void SetVisible(bool value) = 0;              // 3 (only the low byte is read)
-    virtual void SetAlpha(float alpha) = 0;               // 4 (0xbdb420)
-    virtual void SetColor(const fx::Vector3 *color) = 0;  // 5 (0xbdb490)
-    virtual void SetDraw(uint32_t draw) = 0;              // 6 (0xbdb570)
-};
-
-class cITSDecal : public cIGZUnknown {
-public:
-    virtual void Slot3(void *) = 0;                       // 3 (0xbdb1e0; not called here)
-    virtual void SetParams(const cTSDecalParams *p) = 0;  // 4
-    virtual void GetParams(cTSDecalParams *p) = 0;        // 5
-    virtual cITSOverlay *GetOverlay() = 0;                // 6
-};
-
-class cITSOverlayManager : public cIGZUnknown {
-public:
-    virtual void Slot3() = 0; // 3
-    virtual void Slot4() = 0; // 4
-    // 5 (0xbda440): a new decal on the texture, or null.
-    virtual cITSDecal *CreateDecal(const char *texture, const fx::Vector3 *position, float size, float rotation) = 0;
-    virtual void Slot6(void *) = 0;                         // 6 (0xbda820)
-    virtual void Slot7(void *, void *, void *, void *, void *) = 0; // 7 (0xbda710)
-    virtual void Slot8(void *, void *, void *) = 0;         // 8 (0xbda610)
-    virtual void RemoveOverlay(cITSOverlay *overlay) = 0; // 9 (0xbdb390)
-};
 
 class cTSDecalEffect : public cTSEffectBase {
 public:

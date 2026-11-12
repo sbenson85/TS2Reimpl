@@ -4,6 +4,7 @@
 
 #include "game/original.h"
 #include "game/vtable.h"
+#include "sg/SGUtilities.h"
 
 #include <cstring>
 #include <vector>
@@ -103,9 +104,9 @@ using PointList = std::vector<PartPoint, CasAlloc<PartPoint>>;
 VertexElement FindElement(void *mesh, uint32_t block, uint32_t type)
 {
     VertexElement found;
-    const VertexElement *const r =
-        OriginalFunction<const VertexElement *(__cdecl *)(VertexElement *, void *, uint32_t, uint32_t, uint32_t, uint32_t), 0xaeda40>()(
-            &found, mesh, block, type, kElementIndex, kElementSize);
+    const auto *const r = reinterpret_cast<const VertexElement *>(nGZSceneGraph::FindLinkedElement(
+        reinterpret_cast<nGZSceneGraph::cGeometryElementHeader *>(&found),
+        static_cast<nGZSceneGraph::cIGeometryDataContainer *>(mesh), block, type, kElementIndex, kElementSize));
     return *r;
 }
 
